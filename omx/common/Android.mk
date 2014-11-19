@@ -13,7 +13,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES += \
 	$(TOP)/system/core/include \
-	$(TOP)/hardware/nexell/pyrope/omx/include \
+	$(TOP)/hardware/samsung_slsi/slsiap/omx/include \
 	$(NX_OMX_INCLUDES)
 
 LOCAL_SHARED_LIBRARIES := \

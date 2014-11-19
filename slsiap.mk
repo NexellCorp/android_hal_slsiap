@@ -1,26 +1,26 @@
 # hw composer HAL
 PRODUCT_PACKAGES += \
-	hwcomposer.pyrope
+	hwcomposer.slsiap
 
 # gralloc HAL
 PRODUCT_PACKAGES += \
-	gralloc.pyrope
+	gralloc.slsiap
 
 # audio HAL
 PRODUCT_PACKAGES += \
-	audio.primary.pyrope
+	audio.primary.slsiap
 
 # lights HAL
 PRODUCT_PACKAGES += \
-	lights.pyrope
+	lights.slsiap
 
 # power HAL
 PRODUCT_PACKAGES += \
-	power.pyrope
+	power.slsiap
 
 # keystore HAL
 PRODUCT_PACKAGES += \
-	keystore.pyrope
+	keystore.slsiap
 
 # ion library
 PRODUCT_PACKAGES += \
@@ -50,7 +50,7 @@ ifeq ($(EN_FFMPEG_EXTRACTOR),true)
 PRODUCT_PACKAGES += libNX_FFMpegExtractor
 endif
 
-# for ogl_4330
+# for ogl
 #PRODUCT_PACKAGES += \
 	#libVR \
 	#libGLESv1_CM_vr \
@@ -64,4 +64,4 @@ PRODUCT_PACKAGES += \
 	libhapticjavaapi
 endif
 
-PRODUCT_VENDOR_KERNEL_HEADERS := hardware/nexell/pyrope/kernel-headers
+PRODUCT_VENDOR_KERNEL_HEADERS := hardware/samsung_slsi/slsiap/kernel-headers

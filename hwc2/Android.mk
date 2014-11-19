@@ -51,9 +51,10 @@ LOCAL_C_INCLUDES += \
 	frameworks/native/include \
 	system/core/include \
 	hardware/libhardware/include \
-	linux/pyrope/library/src/libcec \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../include
+
+LOCAL_C_INCLUDES += linux/platform/$(TARGET_CPU_VARIANT)/library/src/libcec
 
 LOCAL_SRC_FILES := hwc.cpp \
 	renderer/HWCCommonRenderer.cpp \
