@@ -202,6 +202,7 @@ bool PreviewThread::threadLoop()
         if (UseZoom) {
             struct nxp_vid_buffer *srcBuf = ZoomController->getBuffer(dqIdx);
             private_handle_t const *dstHandle = stream->getNextBuffer();
+            ALOGV("dstHandle: %p", dstHandle);
             if (!dstHandle) {
                 ALOGE("can't get dstHandle!!!");
                 ERROR_EXIT();

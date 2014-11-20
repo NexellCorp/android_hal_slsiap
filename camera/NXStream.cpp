@@ -47,7 +47,7 @@ status_t NXStream::dequeueBuffer(buffer_handle_t **buffer)
     if (res == NO_ERROR) {
         if (findBufferIndex(*buffer) >= 0) {
             queue.queue(*buffer);
-            trace_buffer("user buffer dq -> internal buffer eq: %p", *buffer);
+            trace_buffer("user buffer dq -> internal buffer eq: %p", **buffer);
             return NO_ERROR;
         }
     }
@@ -67,7 +67,7 @@ status_t NXStream::enqueueBuffer(nsecs_t timestamp)
             // hPrivate->phys, hPrivate->phys1, hPrivate->phys2,
             // hPrivate->base, hPrivate->base1, hPrivate->base2 );
 
-            trace_buffer("internal buffer dq -> user buffer eq: %p", buffer);
+            trace_buffer("internal buffer dq -> user buffer eq: %p", *buffer);
             status_t ret = StreamOps->enqueue_buffer(StreamOps, timestamp, buffer);
             if (ret != NO_ERROR) {
                 StreamOps->cancel_buffer(StreamOps, buffer);
