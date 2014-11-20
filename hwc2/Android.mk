@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ifeq ($(PYROPE_HWC_VERSION),2)
+ifeq ($(SLSIAP_HWC_VERSION),2)
 
 LOCAL_PATH := $(call my-dir)
 
