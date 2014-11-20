@@ -5,7 +5,7 @@
 
 namespace android {
 
-#define TRACE_BUFFER
+//#define TRACE_BUFFER
 #ifdef TRACE_BUFFER
 #define trace_buffer(args...)  ALOGD(args)
 #else

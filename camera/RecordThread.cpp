@@ -153,7 +153,7 @@ bool RecordThread::threadLoop()
 
     if (InitialSkipCount) {
         InitialSkipCount--;
-        ALOGV("Preview Skip Frame: %d", InitialSkipCount);
+        ALOGV("Recorder Skip Frame: %d", InitialSkipCount);
         stream->cancelBuffer();
     } else {
         if (UseZoom) {
