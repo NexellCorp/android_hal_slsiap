@@ -122,6 +122,8 @@ status_t RecordThread::readyToRun()
         return NO_INIT;
     }
 
+    InitialSkipCount = get_board_preview_skip_frame(SensorId);
+
     ALOGD("readyToRun exit");
     return NO_ERROR;
 }
@@ -149,29 +151,35 @@ bool RecordThread::threadLoop()
 
     CHECK_AND_EXIT();
 
-    if (UseZoom) {
-        struct nxp_vid_buffer *srcBuf = ZoomController->getBuffer(dqIdx);
-        private_handle_t const *dstHandle = stream->getNextBuffer();
-        ZoomController->handleZoom(srcBuf, dstHandle);
-    }
+    if (InitialSkipCount) {
+        InitialSkipCount--;
+        ALOGV("Preview Skip Frame: %d", InitialSkipCount);
+        stream->cancelBuffer();
+    } else {
+        if (UseZoom) {
+            struct nxp_vid_buffer *srcBuf = ZoomController->getBuffer(dqIdx);
+            private_handle_t const *dstHandle = stream->getNextBuffer();
+            ZoomController->handleZoom(srcBuf, dstHandle);
+        }
 
 #ifdef USE_SYSTEM_TIMESTAMP
-    ret = stream->enqueueBuffer(systemTime(SYSTEM_TIME_MONOTONIC));
+        ret = stream->enqueueBuffer(systemTime(SYSTEM_TIME_MONOTONIC));
 #else
-    ret = v4l2_get_timestamp(Id, &timestamp);
-    if (ret < 0)
-        ALOGE("failed to v4l2_get_timestamp for %d", Id);
+        ret = v4l2_get_timestamp(Id, &timestamp);
+        if (ret < 0)
+            ALOGE("failed to v4l2_get_timestamp for %d", Id);
 
-    ALOGV("timestamp: %llu", timestamp);
-    stream->setTimestamp(timestamp);
+        ALOGV("timestamp: %llu", timestamp);
+        stream->setTimestamp(timestamp);
 
-    ret = stream->enqueueBuffer(timestamp);
+        ret = stream->enqueueBuffer(timestamp);
 #endif
-    if (ret != NO_ERROR) {
-        ALOGE("failed to enqueue_buffer (idx:%d)", dqIdx);
-        ERROR_EXIT();
+        if (ret != NO_ERROR) {
+            ALOGE("failed to enqueue_buffer (idx:%d)", dqIdx);
+            ERROR_EXIT();
+        }
+        ALOGV("end enqueueBuffer");
     }
-    ALOGV("end enqueueBuffer");
 
     ret = stream->dequeueBuffer(&buf);
     if (ret != NO_ERROR || buf == NULL) {
