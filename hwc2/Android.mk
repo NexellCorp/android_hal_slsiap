@@ -54,7 +54,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../include
 
-LOCAL_C_INCLUDES += linux/platform/$(TARGET_CPU_VARIANT)/library/src/libcec
+LOCAL_C_INCLUDES += linux/platform/$(TARGET_CPU_VARIANT2)/library/src/libcec
 
 LOCAL_SRC_FILES := hwc.cpp \
 	renderer/HWCCommonRenderer.cpp \
