@@ -467,8 +467,8 @@ static OMX_ERRORTYPE NX_VidEncSetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE 
 				pEncComp->outputFormat.eColorFormat = OMX_COLOR_FormatUnused;
 				pEncComp->outputFormat.nPortIndex= 1;
 				pEncComp->vpuCodecId = NX_AVC_ENC;
-			}else if( !strcmp( (OMX_STRING)pInRole->cRole, "video_encoder.mpeg4"  )  )
-			{
+			}
+			else if( !strcmp( (OMX_STRING)pInRole->cRole, "video_encoder.mpeg4"  )  ) {
 				//	Set Input Format
 				pEncComp->inputFormat.eCompressionFormat = OMX_VIDEO_CodingUnused;
 				pEncComp->inputFormat.eColorFormat = OMX_COLOR_FormatYUV420Planar;
@@ -478,6 +478,18 @@ static OMX_ERRORTYPE NX_VidEncSetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE 
 				pEncComp->outputFormat.eColorFormat = OMX_COLOR_FormatUnused;
 				pEncComp->outputFormat.nPortIndex= 1;
 				pEncComp->vpuCodecId = NX_MP4_ENC;
+			}
+			else if ( (!strcmp( (OMX_STRING)pInRole->cRole, "video_encoder.h263") ) || (!strcmp( (OMX_STRING)pInRole->cRole, "video_encoder.3gpp")) )
+			{
+				//	Set Input Format
+				pEncComp->inputFormat.eCompressionFormat = OMX_VIDEO_CodingUnused;
+				pEncComp->inputFormat.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+				pEncComp->inputFormat.nPortIndex= 0;
+				//	Set Output Fomrmat
+				pEncComp->outputFormat.eCompressionFormat = OMX_VIDEO_CodingH263;
+				pEncComp->outputFormat.eColorFormat = OMX_COLOR_FormatUnused;
+				pEncComp->outputFormat.nPortIndex= 1;
+				pEncComp->vpuCodecId = NX_H263_ENC;
 			}
 			else{
 				//	Error
@@ -1245,7 +1257,7 @@ static OMX_S32 EncoderOpen(NX_VIDENC_COMP_TYPE *pEncComp)
 	TRACE( "  encBitRate     = %d\n", pEncComp->encBitRate     );
 	TRACE( "==============================================\n" );
 
-	pEncComp->hVpuCodec = NX_VidEncOpen( NX_AVC_ENC, NULL );
+	pEncComp->hVpuCodec = NX_VidEncOpen( pEncComp->vpuCodecId, NULL );
 	if( NULL == pEncComp->hVpuCodec  )
 	{
 		ErrMsg("NX_VidEncOpen() failed\n");
