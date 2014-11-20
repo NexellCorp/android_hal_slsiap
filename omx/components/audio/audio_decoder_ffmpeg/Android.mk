@@ -8,9 +8,9 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_PRELINK_MODULE := false
 
-NX_HW_TOP 		:= $(TOP)/hardware/nexell/pyrope
+NX_HW_TOP 		:= $(TOP)/hardware/samsung_slsi/slsiap
 NX_HW_INCLUDE	:= $(NX_HW_TOP)/include
-OMX_TOP			:= $(TOP)/hardware/nexell/pyrope/omx
+OMX_TOP			:= $(NX_HW_TOP)/omx
 FFMPEG_PATH		:= $(OMX_TOP)/codec/ffmpeg
 
 LOCAL_SRC_FILES:= \
@@ -19,7 +19,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_C_INCLUDES += \
 	$(TOP)/system/core/include \
 	$(TOP)/hardware/libhardware/include \
-	$(TOP)/hardware/nexell/pyrope/include \
+	$(NX_HW_INCLUDE) \
 	$(OMX_TOP)/include \
 	$(OMX_TOP)/core/inc \
 	$(OMX_TOP)/components/base \

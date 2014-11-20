@@ -6,13 +6,13 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_PRELINK_MODULE := false
 
-NX_HW_TOP := $(TOP)/hardware/nexell/pyrope/
+NX_HW_TOP := $(TOP)/hardware/samsung_slsi/slsiap
 NX_HW_INCLUDE := $(NX_HW_TOP)/include
-NX_LINUX_INCLUDE := $(TOP)/linux/pyrope/library/include
+NX_LINUX_TOP := $(TOP)/linux/platform/$(TARGET_CPU_VARIANT2)
+NX_LINUX_INCLUDE := $(NX_LINUX_TOP)/library/include
 
-OMX_TOP := $(TOP)/hardware/nexell/pyrope/omx
-OMX_TOP := $(TOP)/hardware/nexell/pyrope/omx
-RATECONTROL_PATH := $(TOP)/linux/pyrope/library/lib/ratecontrol
+OMX_TOP := $(NX_HW_TOP)/omx
+RATECONTROL_PATH := $(NX_LINUX_TOP)/library/lib/ratecontrol
 
 LOCAL_SRC_FILES:= \
 	NX_AVCDecoder.c \
@@ -29,7 +29,7 @@ LOCAL_SRC_FILES:= \
 LOCAL_C_INCLUDES += \
 	$(TOP)/system/core/include \
 	$(TOP)/hardware/libhardware/include \
-	$(TOP)/hardware/nexell/pyrope/include
+	$(NX_HW_INCLUDE)
 
 LOCAL_C_INCLUDES += \
 	$(OMX_TOP)/include \

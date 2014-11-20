@@ -6,9 +6,9 @@ OMX_DEBUG := 0
 
 NX_OMX_CFLAGS := -Wall -fpic -pipe -O2
 
-NX_HW_TOP := $(TOP)/hardware/nexell/pyrope/
+NX_HW_TOP := $(TOP)/hardware/samsung_slsi/slsiap/
 NX_HW_INCLUDE := $(NX_HW_TOP)/include
-NX_LINUX_INCLUDE := $(TOP)/linux/pyrope/library/include
+NX_LINUX_INCLUDE := $(TOP)/linux/platform/$(TARGET_CPU_VARIANT2)/library/include
 
 NX_OMX_TOP := $(NX_HW_TOP)/omx
 NX_OMX_COMM := $(NX_OMX_TOP)/common

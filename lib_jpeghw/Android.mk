@@ -5,8 +5,9 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
-	$(LOCAL_PATH)/../include \
-	$(TOP)/linux/pyrope/library/include
+	$(LOCAL_PATH)/../include
+
+LOCAL_C_INCLUDES += $(TOP)/linux/platform/$(TARGET_CPU_VARIANT2)/library/include
 
 LOCAL_SRC_FILES := NXJpegHWEnc.cpp
 

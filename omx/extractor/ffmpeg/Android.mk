@@ -4,7 +4,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-NX_HW_TOP 		:= $(TOP)/hardware/nexell/pyrope
+NX_HW_TOP 		:= $(TOP)/hardware/samsung_slsi/slsiap
 OMX_TOP			:= $(NX_HW_TOP)/omx
 FFMPEG_PATH		:= $(OMX_TOP)/codec/ffmpeg
 
