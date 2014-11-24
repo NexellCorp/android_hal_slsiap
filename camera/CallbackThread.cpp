@@ -114,11 +114,12 @@ bool CallbackThread::threadLoop()
         ERROR_EXIT();
     }
 
+    ALOGV("src format: 0x%x, dst format: 0x%x", srcHandle->format, dstHandle->format);
     nxCsc(srcHandle, dstHandle, Width, Height);
     CHECK_AND_EXIT();
 
     ret = stream->enqueueBuffer(systemTime(SYSTEM_TIME_MONOTONIC));
-    ALOGD("enqueueBuffer end");
+    ALOGV("enqueueBuffer end");
 
     if (ret != NO_ERROR) {
         ALOGE("failed to enqueue_buffer");
