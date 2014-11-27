@@ -279,6 +279,7 @@ int V4l2Video::setCrop(int l, int t, int w, int h, int index)
     struct v4l2_crop crop;
     bzero(&crop, sizeof(crop));
     crop.type = static_cast<enum v4l2_buf_type>(BufType);
+    crop.pad = index;
     crop.c.left = l;
     crop.c.top = t;
     crop.c.width = w;
