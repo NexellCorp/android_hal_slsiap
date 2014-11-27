@@ -29,7 +29,13 @@ namespace android {
 
 const int32_t ResolutionSP2518[] = {
     1600, 1200,
+    1280, 720,
     800, 600,
+    704, 480,
+    640, 480,
+    352, 288,
+    320, 240,
+    176, 144
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h
