@@ -30,6 +30,12 @@ enum {
 const int32_t ResolutionSP0838[] = {
     // 648, 480,
     608, 479,
+    // 352, 288,
+    320, 287,
+    // 320, 240,
+    288, 239,
+    // 176, 144,
+    144, 143
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h
@@ -270,6 +276,7 @@ status_t SP0838::setZoomCrop(uint32_t left, uint32_t top, uint32_t width, uint32
 int SP0838::setFormat(int width, int height, int format)
 {
     int sensorWidth, sensorHeight;
+#if 0
     if (width == 608)
         sensorWidth = 640;
     else {
@@ -282,5 +289,9 @@ int SP0838::setFormat(int width, int height, int format)
         ALOGE("%s: invalid height %d", __func__, height);
         return -EINVAL;
     }
+#else
+    sensorWidth = width + 32;
+    sensorHeight = height + 1;
+#endif
     return v4l2_set_format(V4l2ID, sensorWidth, sensorHeight, format);
 }
