@@ -238,7 +238,6 @@ int NX_DecodeVC1Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 					buf[16],buf[17],buf[18],buf[19],buf[20],buf[21],buf[22],buf[23] );
 			}
 
-
 			goto Exit;
 		}
 	}
@@ -284,6 +283,11 @@ int NX_DecodeVC1Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 	else
 	{
 		rcSize = MakeVC1PacketData( pDecComp, pDecComp->codecType.wmvType.eFormat, inData, inSize, pDecComp->tmpInputBuffer, key, (int)(pInBuf->nTimeStamp/1000ll) );
+		if ( rcSize < 0 )
+		{
+			ErrMsg("VPU shall be Re-initialized!!!!\n");
+			goto Exit;
+		}
 		decIn.strmBuf = pDecComp->tmpInputBuffer;
 		decIn.strmSize = rcSize;
 		decIn.timeStamp = pInBuf->nTimeStamp;
