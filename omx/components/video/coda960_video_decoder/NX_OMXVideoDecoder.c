@@ -1844,7 +1844,14 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 			seqIn.numBuffers = pDecComp->outUsableBuffers;
 			seqIn.pMemHandle = &pDecComp->hVidFrameBuf[0];
 		}
-		ret = NX_VidDecInit( pDecComp->hVpuCodec, &seqIn, &seqOut );
+
+		if ( VID_ERR_NONE == (ret = NX_VidDecParseVideoCfg( pDecComp->hVpuCodec, &seqIn, &seqOut )) )
+		{
+			seqIn.width = seqOut.width;
+			seqIn.height = seqOut.height;
+			ret = NX_VidDecInit( pDecComp->hVpuCodec, &seqIn );
+		}
+
 		pDecComp->minRequiredFrameBuffer = seqOut.minBuffers;
 		pDecComp->outBufferable = seqOut.numBuffers - seqOut.minBuffers;
 		DbgMsg("[%ld] <<<<<<<<<< InitializeCodaVpu(Min=%ld, %dx%d) >>>>>>>>>>\n",

@@ -46,7 +46,7 @@ struct _NX_VINPUT_INFO{
 
 //	Define Video Decoder Component Type
 typedef struct tNX_VIDENC_COMP_TYPE{
-	NX_BASECOMPONENTTYPE		//	Nexell Base Component Type	
+	NX_BASECOMPONENTTYPE		//	Nexell Base Component Type
 	/*					Buffer Thread							*/
 	pthread_t				hBufThread;
 	pthread_mutex_t			hBufMutex;
@@ -69,7 +69,8 @@ typedef struct tNX_VIDENC_COMP_TYPE{
 	//
 	OMX_BOOL					bSendCodecSpecificInfo;
 	OMX_VIDEO_PARAM_MPEG4TYPE	omxMp4EncParam;
-	OMX_VIDEO_PARAM_AVCTYPE		omxAVCEncParam;
+	OMX_VIDEO_PARAM_AVCTYPE   omxAVCEncParam;
+	OMX_VIDEO_PARAM_H263TYPE	omxH263EncParam;
 
 	//	Android Native Buffer Flasg
 	OMX_BOOL					bUseNativeBuffer;
