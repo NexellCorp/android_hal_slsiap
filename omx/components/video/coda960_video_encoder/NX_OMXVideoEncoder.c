@@ -90,55 +90,69 @@ static void SetDefaultMp4EncParam( OMX_VIDEO_PARAM_MPEG4TYPE *mp4Type, int portI
 	mp4Type->nSize = sizeof(OMX_VIDEO_PARAM_MPEG4TYPE);
 	NX_OMXSetVersion( &mp4Type->nVersion );
 	mp4Type->nPortIndex = portIndex;
-	mp4Type->nSliceHeaderSpacing = 0;						//	nSliceHeaderSpacing is the number of macroblocks in a slice (H263+ Annex K). This value shall be zero if not used.
-	mp4Type->bSVH = OMX_FALSE;								//	bSVH is a Boolean value that enables or disables short header mode.
-	mp4Type->bGov = OMX_TRUE;								//	bGov is a Boolean value that enables or disables group of VOP (GOV), where VOP is the abbreviation for video object planes.
-	mp4Type->nPFrames = 29;									//	nPFrames is the number of P frames between I frames.
-	mp4Type->nBFrames = 0;									//	nPFrames is the number of B frames between I frames.
-	mp4Type->nIDCVLCThreshold = 0;							//	nIDCVLCThreshold is the value of the intra-DC variable-length coding (VLC) threshold.
-	mp4Type->bACPred = OMX_FALSE;							//	bACPred is the Boolean value that enables or disables AC prediction.
-	mp4Type->nMaxPacketSize = 256*1024;						//	nMaxPacketSize is the maximum size of the packet in bytes.
-	mp4Type->nTimeIncRes = 1000;							//	nTimeIncRes is the VOP time increment resolution for MPEG-4. This value is interpreted as described in the MPEG-4 standard.
-	mp4Type->eProfile = OMX_VIDEO_MPEG4ProfileSimple;		//	eProfile is the profile used for MPEG-4 encoding or decoding.
-	mp4Type->eLevel = OMX_VIDEO_MPEG4Level2;				//	eLevel is the maximum processing level that an encoder or decoder supports for a particular MPEG-4 profile.
-	mp4Type->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP;	//	nAllowedPictureTypes identifies the picture types allowed in the bit stream.
-															//	For more information on picture types, see Table 4-44: Supported Video Picture Types.
-	mp4Type->nHeaderExtension = 0;							//	nHeaderExtension specifies the number of consecutive video packets between header extension codes.
-	mp4Type->bReversibleVLC = OMX_FALSE;					//	bReversibleVLC is a Boolean value that enables or disables the use of reversible variable-length coding.
+	mp4Type->nSliceHeaderSpacing = 0;                       //	nSliceHeaderSpacing is the number of macroblocks in a slice (H263+ Annex K). This value shall be zero if not used.
+	mp4Type->bSVH = OMX_FALSE;                              //	bSVH is a Boolean value that enables or disables short header mode.
+	mp4Type->bGov = OMX_TRUE;                               //	bGov is a Boolean value that enables or disables group of VOP (GOV), where VOP is the abbreviation for video object planes.
+	mp4Type->nPFrames = 29;                                 //	nPFrames is the number of P frames between I frames.
+	mp4Type->nBFrames = 0;                                  //	nPFrames is the number of B frames between I frames.
+	mp4Type->nIDCVLCThreshold = 0;                          //	nIDCVLCThreshold is the value of the intra-DC variable-length coding (VLC) threshold.
+	mp4Type->bACPred = OMX_FALSE;                           //	bACPred is the Boolean value that enables or disables AC prediction.
+	mp4Type->nMaxPacketSize = 256*1024;                     //	nMaxPacketSize is the maximum size of the packet in bytes.
+	mp4Type->nTimeIncRes = 1000;                            //	nTimeIncRes is the VOP time increment resolution for MPEG-4. This value is interpreted as described in the MPEG-4 standard.
+	mp4Type->eProfile = OMX_VIDEO_MPEG4ProfileSimple;       //	eProfile is the profile used for MPEG-4 encoding or decoding.
+	mp4Type->eLevel = OMX_VIDEO_MPEG4Level2;                //	eLevel is the maximum processing level that an encoder or decoder supports for a particular MPEG-4 profile.
+	mp4Type->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP; //	nAllowedPictureTypes identifies the picture types allowed in the bit stream.
+	                                                        //	For more information on picture types, see Table 4-44: Supported Video Picture Types.
+	mp4Type->nHeaderExtension = 0;                          //	nHeaderExtension specifies the number of consecutive video packets between header extension codes.
+	mp4Type->bReversibleVLC = OMX_FALSE;                    //	bReversibleVLC is a Boolean value that enables or disables the use of reversible variable-length coding.
 }
 
-
-
+static void SetDefaultH263EncParam( OMX_VIDEO_PARAM_H263TYPE *h263Type, int portIndex )
+{
+	h263Type->nSize = sizeof(OMX_VIDEO_PARAM_H263TYPE);
+	NX_OMXSetVersion( &h263Type->nVersion );
+	h263Type->nPortIndex = portIndex;
+	h263Type->nPFrames = 29;                                //	nPFrames is the number of P frames between each I frame.
+	h263Type->nBFrames = 0;                                 //	nBFrames is the number of B frames between each I frame
+	h263Type->eProfile = OMX_VIDEO_H263ProfileH320Coding;   //	eProfile is the profile used for H.263 encoding or decoding.
+	h263Type->eLevel = OMX_VIDEO_H263Level10;               //	eLevel is the maximum processing level that an encoder or decoder supports for a H.263
+	h263Type->bPLUSPTYPEAllowed = OMX_FALSE;                //	bPLUSPTYPEAllowed is Indicating that it is allowed to use PLUSPTYPE (specified in the 1998 version of H.263) to indicate custom picture sizes or clock frequencies
+	h263Type->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP;//	nAllowedPictureTypes sepcifies the picture types allowed in the bitstream.
+	h263Type->bForceRoundingTypeToZero = OMX_FALSE;         //	bForceRoundingTypeToZero is the value of the RTYPE bit (bit 6 of MPPTYPE) is not constrained.
+	                                                        //	It is recommended to change the value of the RTYPE bit for each reference picture in error-free communication.
+	h263Type->nPictureHeaderRepetition = OMX_TRUE;          //	nPictureHeaderRepetition specifies the frequency of picture header repetition.
+	h263Type->nGOBHeaderInterval = OMX_TRUE;                //	nGOBHeaderInterval sepcifies the interval of non-empty GOB headers in units of GOBs
+}
 
 static void SetDefaultAvcEncParam( OMX_VIDEO_PARAM_AVCTYPE *avcType, int portIndex )
 {
-    avcType->nSize = sizeof(OMX_VIDEO_PARAM_AVCTYPE);
-    NX_OMXSetVersion(&avcType->nVersion);
-    avcType->nPortIndex = portIndex;
-    avcType->nSliceHeaderSpacing = 0;						//	Number of macroblocks between slice header, put zero if not used
-    avcType->nPFrames = 29;									//	Number of P frames between each I frame
-    avcType->nBFrames = 0;									//	Number of B frames between each I frame
-    avcType->bUseHadamard = OMX_FALSE;						//	Enable/disable Hadamard transform
-    avcType->nRefFrames = 1;								//	Max number of reference frames to use for inter motion search (1-16)
-	avcType->nRefIdx10ActiveMinus1 = 0;						//	Pic param set ref frame index (index into ref frame buffer of trailing frames list), B frame support
-	avcType->nRefIdx11ActiveMinus1 = 0;						//	Pic param set ref frame index (index into ref frame buffer of forward frames list), B frame support
-    avcType->bEnableUEP = OMX_FALSE;						//	Enable/disable unequal error protection. This is only valid of data partitioning is enabled.
-    avcType->bEnableFMO = OMX_FALSE;						//	Enable/disable flexible macroblock ordering
-    avcType->bEnableASO = OMX_FALSE;						//	Enable/disable arbitrary slice ordering
-    avcType->bEnableRS = OMX_FALSE;							//	Enable/disable sending of redundant slices
-    avcType->eProfile = OMX_VIDEO_AVCProfileBaseline;		//	AVC profile(s) to use
-	avcType->eLevel = OMX_VIDEO_AVCLevel41;					//	AVC level(s) to use
-    avcType->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP;	//	Specifies the picture types allowed in the bitstream
-	avcType->bFrameMBsOnly = OMX_FALSE;						//	specifies that every coded picture of the coded video sequence is a coded frame containing only frame macroblocks
-    avcType->bMBAFF = OMX_FALSE;							//	Enable/disable switching between frame and field macroblocks within a picture
-    avcType->bEntropyCodingCABAC = OMX_FALSE;				//	Entropy decoding method to be applied for the syntax elements for which two descriptors appear in the syntax tables
-    avcType->bWeightedPPrediction = OMX_FALSE;				//	Enable/disable weighted prediction shall not be applied to P and SP slices
-    avcType->nWeightedBipredicitonMode = 0;					//	Default weighted prediction is applied to B slices
-    avcType->bconstIpred = OMX_TRUE;						//	Enable/disable intra prediction
-    avcType->bDirect8x8Inference = OMX_FALSE;				//	Specifies the method used in the derivation process for luma motion vectors for B_Skip, B_Direct_16x16 and B_Direct_8x8 as specified in subclause 8.4.1.2 of the AVC spec
-	avcType->bDirectSpatialTemporal = OMX_FALSE;			//	Flag indicating spatial or temporal direct mode used in B slice coding (related to bDirect8x8Inference) . Spatial direct mode is more common and should be the default.
-	avcType->nCabacInitIdc = 0;								//	Index used to init CABAC contexts
-	avcType->eLoopFilterMode = OMX_FALSE;					//	Enable/disable loop filter
+	avcType->nSize = sizeof(OMX_VIDEO_PARAM_AVCTYPE);
+	NX_OMXSetVersion(&avcType->nVersion);
+	avcType->nPortIndex = portIndex;
+	avcType->nSliceHeaderSpacing = 0;                       //	Number of macroblocks between slice header, put zero if not used
+	avcType->nPFrames = 29;                                 //	Number of P frames between each I frame
+	avcType->nBFrames = 0;                                  //	Number of B frames between each I frame
+	avcType->bUseHadamard = OMX_FALSE;                      //	Enable/disable Hadamard transform
+	avcType->nRefFrames = 1;                                //	Max number of reference frames to use for inter motion search (1-16)
+	avcType->nRefIdx10ActiveMinus1 = 0;                     //	Pic param set ref frame index (index into ref frame buffer of trailing frames list), B frame support
+	avcType->nRefIdx11ActiveMinus1 = 0;                     //	Pic param set ref frame index (index into ref frame buffer of forward frames list), B frame support
+	avcType->bEnableUEP = OMX_FALSE;                        //	Enable/disable unequal error protection. This is only valid of data partitioning is enabled.
+	avcType->bEnableFMO = OMX_FALSE;                        //	Enable/disable flexible macroblock ordering
+	avcType->bEnableASO = OMX_FALSE;                        //	Enable/disable arbitrary slice ordering
+	avcType->bEnableRS = OMX_FALSE;                         //	Enable/disable sending of redundant slices
+	avcType->eProfile = OMX_VIDEO_AVCProfileBaseline;       //	AVC profile(s) to use
+	avcType->eLevel = OMX_VIDEO_AVCLevel41;                 //	AVC level(s) to use
+	avcType->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP; //	Specifies the picture types allowed in the bitstream
+	avcType->bFrameMBsOnly = OMX_FALSE;                     //	specifies that every coded picture of the coded video sequence is a coded frame containing only frame macroblocks
+	avcType->bMBAFF = OMX_FALSE;                            //	Enable/disable switching between frame and field macroblocks within a picture
+	avcType->bEntropyCodingCABAC = OMX_FALSE;               //	Entropy decoding method to be applied for the syntax elements for which two descriptors appear in the syntax tables
+	avcType->bWeightedPPrediction = OMX_FALSE;              //	Enable/disable weighted prediction shall not be applied to P and SP slices
+	avcType->nWeightedBipredicitonMode = 0;                 //	Default weighted prediction is applied to B slices
+	avcType->bconstIpred = OMX_TRUE;                        //	Enable/disable intra prediction
+	avcType->bDirect8x8Inference = OMX_FALSE;               //	Specifies the method used in the derivation process for luma motion vectors for B_Skip, B_Direct_16x16 and B_Direct_8x8 as specified in subclause 8.4.1.2 of the AVC spec
+	avcType->bDirectSpatialTemporal = OMX_FALSE;            //	Flag indicating spatial or temporal direct mode used in B slice coding (related to bDirect8x8Inference) . Spatial direct mode is more common and should be the default.
+	avcType->nCabacInitIdc = 0;                             //	Index used to init CABAC contexts
+	avcType->eLoopFilterMode = OMX_FALSE;                   //	Enable/disable loop filter
 }
 
 
@@ -270,6 +284,7 @@ OMX_ERRORTYPE NX_VidEncComponentInit (OMX_HANDLETYPE hComponent)
 
 	SetDefaultMp4EncParam( &pEncComp->omxMp4EncParam, 1 );
 	SetDefaultAvcEncParam( &pEncComp->omxAVCEncParam, 1 );
+	SetDefaultH263EncParam( &pEncComp->omxH263EncParam, 1 );
 
 	pEncComp->pPrevInputBuffer = NULL;
 
@@ -352,6 +367,32 @@ const OMX_VIDEO_AVCLEVELTYPE gstSuportedAVCLevels[MAX_SUPPORTED_AVC_LEVELS] =
     OMX_VIDEO_AVCLevel42,	/**< Level 4.2 */
 };
 
+#define MAX_SUPPORTED_MP4_LEVELS	8
+const OMX_VIDEO_MPEG4LEVELTYPE gstSuportedMP4Levels[MAX_SUPPORTED_MP4_LEVELS] =
+{
+    OMX_VIDEO_MPEG4Level0 ,   /**< Level 0 */
+    OMX_VIDEO_MPEG4Level0b,   /**< Level 0b */
+    OMX_VIDEO_MPEG4Level1 ,   /**< Level 1 */
+    OMX_VIDEO_MPEG4Level2 ,   /**< Level 2 */
+    OMX_VIDEO_MPEG4Level3 ,   /**< Level 3 */
+    OMX_VIDEO_MPEG4Level4 ,   /**< Level 4 */
+    OMX_VIDEO_MPEG4Level4a,   /**< Level 4a */
+    OMX_VIDEO_MPEG4Level5 ,   /**< Level 5 */
+};
+
+#define MAX_SUPPORTED_H263_LEVELS	8
+const OMX_VIDEO_H263LEVELTYPE gstSuportedH263Levels[MAX_SUPPORTED_H263_LEVELS] =
+{
+    OMX_VIDEO_H263Level10,
+    OMX_VIDEO_H263Level20,
+    OMX_VIDEO_H263Level30,
+    OMX_VIDEO_H263Level40,
+    OMX_VIDEO_H263Level45,
+    OMX_VIDEO_H263Level50,
+    OMX_VIDEO_H263Level60,
+    OMX_VIDEO_H263Level70,
+};
+
 static OMX_ERRORTYPE NX_VidEncGetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE nParamIndex,OMX_PTR ComponentParamStruct)
 {
 	OMX_COMPONENTTYPE *pStdComp = (OMX_COMPONENTTYPE *)hComp;
@@ -408,19 +449,54 @@ static OMX_ERRORTYPE NX_VidEncGetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE 
 			pAvcType->nPortIndex = 1;
 			break;
 		}
+		case OMX_IndexParamVideoH263:
+		{
+			OMX_VIDEO_PARAM_H263TYPE *pH263Type = (OMX_VIDEO_PARAM_H263TYPE *)ComponentParamStruct;
+			TRACE("%s() : OMX_VIDEO_PARAM_H263TYPE : port Index = %ld\n", __FUNCTION__, pH263Type->nPortIndex );
+			if( pH263Type->nPortIndex != 1 )
+				return OMX_ErrorBadPortIndex;
+			memcpy( pH263Type, &pEncComp->omxH263EncParam, sizeof(OMX_VIDEO_PARAM_H263TYPE) );
+			break;
+		}
 		case OMX_IndexParamVideoProfileLevelQuerySupported:
 		{
 			OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevel = (OMX_VIDEO_PARAM_PROFILELEVELTYPE *)ComponentParamStruct;
-			if( profileLevel->nProfileIndex >= MAX_SUPPORTED_AVC_LEVELS )
-			{
-				return OMX_ErrorNoMore;
-			}
 			if( profileLevel->nPortIndex > 1 )
 			{
 				return OMX_ErrorBadPortIndex;
 			}
-			profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
-			profileLevel->eLevel = gstSuportedAVCLevels[profileLevel->nProfileIndex];
+
+			if ( pEncComp->vpuCodecId == NX_AVC_ENC )
+			{
+				if( profileLevel->nProfileIndex >= MAX_SUPPORTED_AVC_LEVELS )
+				{
+					return OMX_ErrorNoMore;
+				}
+				profileLevel->eProfile = OMX_VIDEO_AVCProfileBaseline;
+				profileLevel->eLevel = gstSuportedAVCLevels[profileLevel->nProfileIndex];
+			}
+			else if ( pEncComp->vpuCodecId == NX_MP4_ENC )
+			{
+				if ( profileLevel->nProfileIndex >= MAX_SUPPORTED_MP4_LEVELS )
+				{
+					return OMX_ErrorNoMore;
+				}
+				profileLevel->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
+				profileLevel->eLevel = gstSuportedMP4Levels[profileLevel->nProfileIndex];
+			}
+			else if ( pEncComp->vpuCodecId == NX_H263_ENC )
+			{
+				if ( profileLevel->nProfileIndex >= MAX_SUPPORTED_H263_LEVELS )
+				{
+					return OMX_ErrorNoMore;
+				}
+				profileLevel->eProfile = OMX_VIDEO_H263ProfileH320Coding;
+				profileLevel->eLevel = gstSuportedH263Levels[profileLevel->nProfileIndex];
+			}
+			else
+			{
+				return OMX_ErrorNoMore;
+			}
 			break;
 		}
 		case OMX_IndexParamVideoBitrate:
@@ -547,6 +623,16 @@ static OMX_ERRORTYPE NX_VidEncSetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE 
 			memcpy( &pEncComp->omxMp4EncParam, pAvcType, sizeof(OMX_VIDEO_PARAM_AVCTYPE) );
 			break;
 		}
+		case OMX_IndexParamVideoH263:
+		{
+			OMX_VIDEO_PARAM_H263TYPE *pH263Type = (OMX_VIDEO_PARAM_H263TYPE *)ComponentParamStruct;
+			TRACE("%s() : OMX_IndexParamVideoH263 : port Index = %ld\n", __FUNCTION__, pH263Type->nPortIndex );
+			if( pH263Type->nPortIndex != 1 )
+				return OMX_ErrorBadPortIndex;
+			memcpy( &pEncComp->omxH263EncParam, pH263Type, sizeof(OMX_VIDEO_PARAM_H263TYPE) );
+			break;
+		}
+
 		case OMX_IndexParamVideoBitrate:
 		{
 			OMX_VIDEO_PARAM_BITRATETYPE *pBitRate = (OMX_VIDEO_PARAM_BITRATETYPE *)ComponentParamStruct;
