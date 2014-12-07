@@ -20,6 +20,10 @@ LOCAL_SRC_FILES := \
 	GC0308.cpp \
 	HM2057.cpp	
 
+ifeq ($(TARGET_CPU_VARIANT2),s5p4418)
+LOCAL_CFLAGS += -DS5P4418
+endif
+
 LOCAL_SHARED_LIBRARIES := liblog libv4l2-nexell
 LOCAL_MODULE := libcamerasensor
 LOCAL_MODULE_TAGS := optional

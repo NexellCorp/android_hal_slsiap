@@ -139,8 +139,10 @@ void NXStreamThread::release()
 
 void NXStreamThread::onZoomChanged(int left, int top, int width, int height, int baseWidth, int baseHeight)
 {
-    ZoomController->setBase(baseWidth, baseHeight);
-    ZoomController->setCrop(left, top, width, height);
+    if (ZoomController.get()) {
+        ZoomController->setBase(baseWidth, baseHeight);
+        ZoomController->setCrop(left, top, width, height);
+    }
 }
 
 status_t NXStreamThread::readyToRun()

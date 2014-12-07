@@ -107,7 +107,7 @@ status_t PreviewThread::readyToRun()
     ret = v4l2_set_crop_with_pad(Id, 2, 0, 0, Width, Height);
     if (ret < 0) {
         ALOGE("failed to v4l2_set_crop_with_pad for %d, pad %d", Id, 2);
-        return NO_INIT;
+        //return NO_INIT;
     }
 
     ret = Sensor->setFormat(Width, Height, V4L2_MBUS_FMT_YUYV8_2X8);

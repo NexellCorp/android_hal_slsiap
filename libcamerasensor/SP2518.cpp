@@ -112,6 +112,9 @@ static const uint8_t AvailableAwbModesSP2518[] = {
 
 static const int32_t AvailableFpsRangesSP2518[] = {
     8, 15
+    //8, 15, 30
+    //15, 30
+    //8, 8, 15, 15, 24, 24, 15, 30
 };
 
 void SP2518::init()

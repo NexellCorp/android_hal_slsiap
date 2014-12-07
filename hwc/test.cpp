@@ -2,7 +2,7 @@
 #include <ui/GraphicBuffer.h>
 #include <ui/GraphicBufferMapper.h>
 #include <gui/Surface.h>
-#include <gui/ISurface.h>
+//#include <gui/ISurface.h>
 #include <gui/ISurfaceComposer.h>
 #include <gui/SurfaceComposerClient.h>
 
@@ -34,6 +34,8 @@ using namespace android;
 #define HEIGHT          768
 #endif
 
+#define ALIGN(x, a)       (((x) + (a) - 1) & ~((a) - 1))
+
 #define RED_COLOR       (0x1f << 11)
 #define GREEN_COLOR     (0x3f << 5)
 #define BLUE_COLOR      (0x1f << 0)
@@ -42,8 +44,10 @@ using namespace android;
 #define BPP             2
 #define NUMBER_OF_BUFFER    32
 
-#define YUV_WIDTH       800
-#define YUV_HEIGHT      600
+//#define YUV_WIDTH       800
+//#define YUV_HEIGHT      600
+#define YUV_WIDTH       1920
+#define YUV_HEIGHT      1080
 #define YUV_BUFFER_COUNT    6
 
 #define CHECK_COMMAND(command) do { \
@@ -54,6 +58,10 @@ using namespace android;
         } \
     } while (0)
 
+#define SENSOR_ID nxp_v4l2_sensor1
+#define CLIPPER_ID  nxp_v4l2_clipper1
+#define USE_MIPI
+
 static int camera_init(void)
 {
     if (false == android_nxp_v4l2_init()) {
@@ -61,11 +69,13 @@ static int camera_init(void)
     }
     int width = YUV_WIDTH;
     int height = YUV_HEIGHT;
-    // CHECK_COMMAND(v4l2_set_format(nxp_v4l2_clipper0, width, height, V4L2_PIX_FMT_YUYV));
-    CHECK_COMMAND(v4l2_set_format(nxp_v4l2_clipper0, width, height, V4L2_PIX_FMT_YUV420M));
-    CHECK_COMMAND(v4l2_set_crop(nxp_v4l2_clipper0, 0, 0, width, height));
-    CHECK_COMMAND(v4l2_set_format(nxp_v4l2_sensor0, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
-    CHECK_COMMAND(v4l2_reqbuf(nxp_v4l2_clipper0, YUV_BUFFER_COUNT));
+    CHECK_COMMAND(v4l2_set_format(CLIPPER_ID, width, height, V4L2_PIX_FMT_YUV420));
+    CHECK_COMMAND(v4l2_set_crop(CLIPPER_ID, 0, 0, width, height));
+    CHECK_COMMAND(v4l2_set_format(SENSOR_ID, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
+#ifdef USE_MIPI
+    CHECK_COMMAND(v4l2_set_format(nxp_v4l2_mipicsi, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
+#endif
+    CHECK_COMMAND(v4l2_reqbuf(CLIPPER_ID, YUV_BUFFER_COUNT));
     return 0;
 }
 
@@ -104,11 +114,10 @@ int main(int argc, char *argv[])
     }
 
     unsigned short *pBufferAddr;
+    unsigned char *pYUVBufferAddr;
     ANativeWindowBuffer *ANBuffer;
 
     // YUV Surface
-    // sp<SurfaceControl> yuvSurfaceControl = client->createSurface(String8("YUV Surface"),
-    //         YUV_WIDTH, YUV_HEIGHT, HAL_PIXEL_FORMAT_YCbCr_422_I, ISurfaceComposerClient::eFXSurfaceNormal);
     sp<SurfaceControl> yuvSurfaceControl = client->createSurface(String8("YUV Surface"),
             YUV_WIDTH, YUV_HEIGHT, HAL_PIXEL_FORMAT_YV12, ISurfaceComposerClient::eFXSurfaceNormal);
     if (yuvSurfaceControl == NULL) {
@@ -164,21 +173,23 @@ int main(int argc, char *argv[])
             return -1;
         }
         yuvHandle[i] = reinterpret_cast<private_handle_t const *>(yuvANBuffer[i]->handle);
-        // CHECK_COMMAND(v4l2_qbuf(nxp_v4l2_clipper0, 1, i, yuvHandle[i], -1, NULL));
-        CHECK_COMMAND(v4l2_qbuf(nxp_v4l2_clipper0, 3, i, yuvHandle[i], -1, NULL));
+        CHECK_COMMAND(v4l2_qbuf(CLIPPER_ID, 1, i, yuvHandle[i], -1, NULL));
     }
 
-    CHECK_COMMAND(v4l2_streamon(nxp_v4l2_clipper0));
+    CHECK_COMMAND(v4l2_streamon(CLIPPER_ID));
 
     GraphicBufferMapper &mapper = GraphicBufferMapper::get();
-    Rect bounds(WIDTH, HEIGHT);
+    //Rect bounds(WIDTH, HEIGHT);
+    Rect bounds(YUV_WIDTH, YUV_HEIGHT);
 
     int count = 0;
     int capture_index = 0;
     ANativeWindowBuffer *yuvTempBuffer;
 
-    while (1) {
+    count = 1000;
+    while (count--) {
         //ALOGD("display %d", count);
+#if 0
         err = native_window_dequeue_buffer_and_wait(window.get(), &ANBuffer);
         if (err) {
             ALOGE("failed to dequeue buffer!!!");
@@ -206,8 +217,9 @@ int main(int argc, char *argv[])
 
         //usleep(100000);
         count++;
+#endif
 
-        CHECK_COMMAND(v4l2_dqbuf(nxp_v4l2_clipper0, 3, &capture_index, NULL));
+        CHECK_COMMAND(v4l2_dqbuf(CLIPPER_ID, 1, &capture_index, NULL));
         private_handle_t const *handle = yuvHandle[capture_index];
         yuvWindow->queueBuffer(yuvWindow.get(), yuvANBuffer[capture_index], -1);
         err = native_window_dequeue_buffer_and_wait(yuvWindow.get(), &yuvTempBuffer);
@@ -215,12 +227,24 @@ int main(int argc, char *argv[])
             ALOGE("failed to yuv temp dequeue!!!");
             return -1;
         }
-        //yuvANBuffer[capture_index] = yuvTempBuffer;
-        //yuvHandle[capture_index] = reinterpret_cast<private_handle_t const *>(yuvTempBuffer->handle);
-        // CHECK_COMMAND(v4l2_qbuf(nxp_v4l2_clipper0, 1, capture_index, yuvHandle[capture_index], -1, NULL));
-        CHECK_COMMAND(v4l2_qbuf(nxp_v4l2_clipper0, 3, capture_index, yuvHandle[capture_index], -1, NULL));
+
+        // get yuv address
+#if 1
+        err = mapper.lock(yuvTempBuffer->handle, GRALLOC_USAGE_SW_READ_OFTEN, bounds, (void **)&pYUVBufferAddr);
+        if (err) {
+            ALOGE("failed to lock!!!");
+            return -1;
+        }
+        unsigned char *y = pYUVBufferAddr;
+        unsigned char *u = y + (handle->stride * ALIGN(handle->height, 16));
+        unsigned char *v = u + (ALIGN(handle->stride >> 1, 16) * ALIGN(handle->height >> 1, 16));
+        mapper.unlock(yuvTempBuffer->handle);
+#endif
+
+
+        CHECK_COMMAND(v4l2_qbuf(CLIPPER_ID, 1, capture_index, yuvHandle[capture_index], -1, NULL));
     }
-    CHECK_COMMAND(v4l2_streamoff(nxp_v4l2_clipper0));
+    CHECK_COMMAND(v4l2_streamoff(CLIPPER_ID));
 
     IPCThreadState::self()->joinThreadPool();
     return 0;

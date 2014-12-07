@@ -28,7 +28,8 @@ enum {
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
 const int32_t ResolutionSP0838[] = {
-    // 648, 480,
+#ifdef S5P4418
+    // 640, 480,
     608, 479,
     // 352, 288,
     320, 287,
@@ -36,6 +37,12 @@ const int32_t ResolutionSP0838[] = {
     288, 239,
     // 176, 144,
     144, 143
+#else
+    640, 480,
+    352, 288,
+    320, 240,
+    176, 144,
+#endif
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h
@@ -91,7 +98,10 @@ static const uint8_t AvailableSceneModesSP0838[] = {
 };
 
 static const int32_t AvailableFpsRangesSP0838[] = {
-    8, 15
+    15, 30
+    //8, 15, 30
+    //15, 30
+    //8, 8, 15, 15, 24, 24, 15, 30
 };
 
 static const uint32_t ExposureCompensationRangeSP0838[] = {
@@ -276,22 +286,12 @@ status_t SP0838::setZoomCrop(uint32_t left, uint32_t top, uint32_t width, uint32
 int SP0838::setFormat(int width, int height, int format)
 {
     int sensorWidth, sensorHeight;
-#if 0
-    if (width == 608)
-        sensorWidth = 640;
-    else {
-        ALOGE("%s: invalid width %d", __func__, width);
-        return -EINVAL;
-    }
-    if (height == 479)
-        sensorHeight = 480;
-    else {
-        ALOGE("%s: invalid height %d", __func__, height);
-        return -EINVAL;
-    }
-#else
+#ifdef S5P4418
     sensorWidth = width + 32;
     sensorHeight = height + 1;
+#else
+    sensorWidth = width;
+    sensorHeight = height;
 #endif
     return v4l2_set_format(V4l2ID, sensorWidth, sensorHeight, format);
 }

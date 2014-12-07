@@ -31,7 +31,11 @@ enum {
 namespace android {
 
 const int32_t ResolutionSP0A19[] = {
+#ifdef S5P4418
     608, 479,
+#else
+    640, 480
+#endif
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h
@@ -295,18 +299,13 @@ status_t SP0A19::setZoomCrop(uint32_t left, uint32_t top, uint32_t width, uint32
 int SP0A19::setFormat(int width, int height, int format)
 {
     int sensorWidth, sensorHeight;
-    if (width == 608)
-        sensorWidth = 640;
-    else {
-        ALOGE("%s: invalid width %d", __func__, width);
-        return -EINVAL;
-    }
-    if (height == 479)
-        sensorHeight = 480;
-    else {
-        ALOGE("%s: invalid height %d", __func__, height);
-        return -EINVAL;
-    }
+#ifdef S5P4418
+    sensorWidth = width + 32;
+    sensorHeight = height + 1;
+#else
+    sensorWidth = width;
+    sensorHeight = height;
+#endif
     return v4l2_set_format(V4l2ID, sensorWidth, sensorHeight, format);
 }
 
