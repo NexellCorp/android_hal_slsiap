@@ -34,9 +34,11 @@ import android.widget.ArrayAdapter;
 import android.widget.Toast;
 import android.view.View;
 
-import android.provider.MediaStore;
-import android.database.Cursor;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.text.Collator;
 
 import android.content.Intent;
 import android.content.Context;
@@ -50,7 +52,7 @@ import android.os.AsyncTask;
 import android.widget.ImageView;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import java.io.File;
+
 import android.graphics.drawable.Drawable;
 import android.widget.RelativeLayout;
 
@@ -62,12 +64,33 @@ public class MainActivity extends ListActivity {
 		
 	private static final int 	THUMBNAIL_WIDTH	= 160 * 3 / 4;
 	private static final int 	THUMBNAIL_HEIGHT=  90 * 3 / 4;
+
+	private static final String[] VIDEO_EXTENSION = { 
+		".avi",		".wmv",		".wmp",		".wm",		".asf",
+		".mpg",		".mpeg",	".mpe",		".m1v",		".m2v",
+		".mpv2",	".mp2v",	".dat",		".ts",		".tp",
+		".tpr",		".trp", 	".vob", 	".ifo", 	".ogm",
+		".ogv",		".mp4",		".m4v",		".m4p",		".m4b",
+		".3gp",		".3gpp",	".3g2",		".3gp2",	".mkv",
+		".rm",		".ram",		".rmvb",	".rpm",		".flv",
+		".swf",		".mov",		".qt",		".amr",		".nsv",
+		".dpg",		".m2ts",	".m2t",		".mts",		".dvr-ms",
+		".k3g",		".skm",		".evo",		".nsr",		".amv",
+		".divx",	".webm",	".wtv",		".f4v",	
+	};
+	
+	private static final String[] AUDIO_EXTENSION = {
+		"wav",		"wma",		"mpa",		"mp2",		"m1a",
+		"m2a",		"mp3",		"ogg",		"m4a",		"aac",
+		"mka",		"ra",		"flac",		"ape",		"mpc",
+		"mod",		"ac3",		"eac3",		"dts",		"dtshd",
+		"wv",		"tak", 
+	};
 	
 	public static Context mContext;
 	
 	ArrayList<MediaInfo> mMediaInfo;
-	Cursor 	mVidCursor, mAudCursor;
-	int		mItemPos, mItemNum;
+	static int	mItemPos;
 	
 	String 	mNetworkStreamName;
 	boolean mNetworkStream;
@@ -78,86 +101,38 @@ public class MainActivity extends ListActivity {
 	//
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		Log.v(DBG_TAG, "onCreate()++");
+		//Log.v(DBG_TAG, "onCreate()++");
 		super.onCreate(savedInstanceState);
 		setContentView( R.layout.activity_main );
 		
 	    // TODO Auto-generated method stub
 		mContext = this;
-		mItemNum = 0;
-		
-		String[] vidProj = {
-			MediaStore.Video.Media._ID,
-			MediaStore.Video.Media.DATA,
-			MediaStore.Video.Media.DISPLAY_NAME,
-			MediaStore.Video.Media.SIZE
-		};
-
-		String[] audProj = {
-			MediaStore.Audio.Media._ID,
-			MediaStore.Audio.Media.DATA,
-			MediaStore.Audio.Media.DISPLAY_NAME,
-			MediaStore.Audio.Media.SIZE
-		};
-		
-		String mediaId, mediaData, mediaName, mediaSize;
-		int mediaIdCol, mediaDataCol, mediaNameCol, mediaSizeCol;
-		
 		mMediaInfo = new ArrayList<MediaInfo>();
 		
-		if( mVidCursor == null ) {
-			mVidCursor = getContentResolver().query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, vidProj, null, null, null);
-			if( mVidCursor != null && mVidCursor.moveToFirst() != false ) {
-				mediaIdCol		= mVidCursor.getColumnIndex(MediaStore.Video.Media._ID);
-				mediaDataCol	= mVidCursor.getColumnIndex(MediaStore.Video.Media.DATA);  
-				mediaNameCol	= mVidCursor.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME);  
-				mediaSizeCol	= mVidCursor.getColumnIndex(MediaStore.Video.Media.SIZE);
-
-				do {
-					mediaId		= mVidCursor.getString(mediaIdCol);
-					mediaData	= mVidCursor.getString(mediaDataCol);
-					mediaName	= mVidCursor.getString(mediaNameCol); 
-					mediaSize	= mVidCursor.getString(mediaSizeCol);
-
-					if( mediaId != null ){
-						mItemNum++;
-						MediaInfo info = new MediaInfo(mediaId, mediaData, mediaName, mediaSize, MEDIA_TAG.VIDEO);
-						mMediaInfo.add( info );
-						//Log.v(DBG_TAG, "vidId(" + mediaId + "), vidData(" + mediaData + "), vidName(" + mediaName + "), vidSize(" + mediaSize + ")");
-					}
-				} while( mVidCursor.moveToNext() );
-			}
-		}
+		UpdateFileList( "/storage/sdcard0" );
+		UpdateFileList( "/storage/sdcard1" );
 		
-		if( mAudCursor == null ) {
-			mAudCursor = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, audProj, null, null, null);
-			if( mAudCursor != null && mAudCursor.moveToFirst() != false ) {
-				mediaIdCol		= mAudCursor.getColumnIndex(MediaStore.Audio.Media._ID);
-				mediaDataCol	= mAudCursor.getColumnIndex(MediaStore.Audio.Media.DATA);  
-				mediaNameCol	= mAudCursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME);  
-				mediaSizeCol	= mAudCursor.getColumnIndex(MediaStore.Audio.Media.SIZE);
-
-				do {
-					mediaId		= mAudCursor.getString(mediaIdCol);
-					mediaData	= mAudCursor.getString(mediaDataCol);
-					mediaName	= mAudCursor.getString(mediaNameCol); 
-					mediaSize	= mAudCursor.getString(mediaSizeCol);
-
-					if( mediaId != null ){
-						mItemNum++;
-						MediaInfo info = new MediaInfo(mediaId, mediaData, mediaName, mediaSize, MEDIA_TAG.AUDIO);
-						mMediaInfo.add( info );
-						//Log.v(DBG_TAG, "audId(" + mediaId + "), audData(" + mediaData + "), audName(" + mediaName + "), audSize(" + mediaSize + ")");
-					}
-				} while( mAudCursor.moveToNext() );
-			}
-		}
+		Collections.sort( mMediaInfo , mComparator );
 		
 		MediaInfoAdapter adapter = new MediaInfoAdapter( this, R.layout.listview_row, mMediaInfo );
-		setListAdapter(adapter);
+		setListAdapter( adapter );
+		setSelection( mItemPos );
 		
-		Log.v(DBG_TAG, "onCreate()--");
+		//Log.v(DBG_TAG, "onCreate()--");
 	}
+
+	private final static Comparator<MediaInfo> mComparator = new Comparator<MediaInfo>() {
+		private final Collator collator = Collator.getInstance();
+		
+		@Override
+		public int compare(MediaInfo object1, MediaInfo object2) {
+			// Sorting File Name 
+			//return collator.compare(object1.GetFileName(), object2.GetFileName());
+			
+			// Sorting Full path
+			return collator.compare(object1.GetFilePath(), object2.GetFilePath());
+		}
+	};
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -220,13 +195,12 @@ public class MainActivity extends ListActivity {
 		mItemPos = position;
 		mNetworkStream = false;
 
-		Toast.makeText(MainActivity.this, mMediaInfo.get(position).GetData(), Toast.LENGTH_SHORT).show();
+		Toast.makeText(MainActivity.this, mMediaInfo.get(position).GetFilePath(), Toast.LENGTH_SHORT).show();
 		
 		Intent intent = new Intent( MainActivity.this, PlayerActivity.class);
 		startActivity(intent);
 		finish();
 		//Log.v(DBG_TAG, "OnItemClickListener()--");
-		
 	}
 	
 	@Override
@@ -236,17 +210,87 @@ public class MainActivity extends ListActivity {
 		// TODO Auto-generated method stub
 		super.onDestroy();
 		
-		if( mVidCursor != null ) {
-			mVidCursor.close();
-			mVidCursor = null;
-		}
-		
-		if( mAudCursor != null ) {
-			mAudCursor.close();
-			mAudCursor = null;
-		}
-		
 		//Log.v(DBG_TAG, "onDestroy()--");
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	//	FileList
+	//
+	private void UpdateFileList( String rootPath )
+	{
+		File rootFile = new File( rootPath );
+		
+		if( !rootFile.exists() ) {
+			Log.w(DBG_TAG, "Invalid Directory Path. (" + rootPath + ")" );
+			return;
+		}
+		
+		if( rootFile.isDirectory() ) {
+			String[] rootList = rootFile.list();
+			for( int i = 0; i < rootList.length; i++ )
+			{
+				String subPath = rootPath + "/" + rootList[i];
+				File subFile = new File( subPath );
+				String[] subList = subFile.list();
+				
+				if( subFile.isDirectory() )
+				{
+					for( int j = 0; j < subList.length; j++ )
+					{
+						UpdateFileList( subPath + "/" + subList[j] );
+					}
+				}
+				else {
+					if( isVideo(subPath) ) {
+						//Log.v(DBG_TAG, "[VIDEO] " + subPath);
+						MediaInfo info = new MediaInfo( subPath, subFile.getName(), null, MEDIA_TAG.VIDEO );
+						mMediaInfo.add(info);
+					}
+					else if( isAudio(subPath) ) {
+						//Log.v(DBG_TAG, "[AUDIO] " + subPath);
+						MediaInfo info = new MediaInfo( subPath, subFile.getName(), null, MEDIA_TAG.AUDIO );
+						mMediaInfo.add(info);
+					}
+				}
+			}
+		}
+		else {
+			if( isVideo(rootPath) ) {
+				//Log.v(DBG_TAG, "[VIDEO] " + rootPath);
+				MediaInfo info = new MediaInfo( rootPath, rootFile.getName(), null, MEDIA_TAG.VIDEO );
+				mMediaInfo.add(info);
+			}
+			else if( isAudio(rootPath) ) {
+				//Log.v(DBG_TAG, "[AUDIO] " + rootPath);
+				MediaInfo info = new MediaInfo( rootPath, rootFile.getName(), null, MEDIA_TAG.AUDIO );
+				mMediaInfo.add(info);
+			}
+		}
+	}
+	
+	public boolean isVideo( String fileName )
+	{
+		String strTemp = fileName.toLowerCase();
+		
+		for( int i = 0; i < VIDEO_EXTENSION.length; i++ ) {
+			if( strTemp.endsWith(VIDEO_EXTENSION[i]) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public boolean isAudio( String fileName )
+	{
+		String strTemp = fileName.toLowerCase();
+		
+		for( int i = 0; i < AUDIO_EXTENSION.length; i++ ) {
+			if( strTemp.endsWith(AUDIO_EXTENSION[i]) ) {
+				return true;
+			}
+		}
+		return false;	
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -257,21 +301,21 @@ public class MainActivity extends ListActivity {
 		if( mNetworkStream )
 			return mNetworkStreamName;
 		else
-			return mMediaInfo.get( mItemPos ).GetData();
+			return mMediaInfo.get( mItemPos ).GetFilePath();
 	}
 
 	public String GetNextFileName() {
 		mItemPos++;
-		if( mItemPos >= mItemNum ) mItemPos = 0;
+		if( mItemPos >= mMediaInfo.size() ) mItemPos = 0;
 		
-		return mMediaInfo.get( mItemPos ).GetData();
+		return mMediaInfo.get( mItemPos ).GetFilePath();
 	}
 	
 	public String GetPrevFileName() {
 		mItemPos--;
-		if( mItemPos < 0 ) mItemPos = mItemNum - 1;
+		if( mItemPos < 0 ) mItemPos = mMediaInfo.size() - 1;
 
-		return mMediaInfo.get( mItemPos ).GetData();
+		return mMediaInfo.get( mItemPos ).GetFilePath();
 	}
 	
 	public boolean IsNetworkStream()
@@ -326,7 +370,7 @@ else {
 				}
 
 				if( textView1 != null ) {
-					textView1.setText(mediaInfo.GetName());
+					textView1.setText(mediaInfo.GetFileName());
 				}
 			}
 
@@ -350,10 +394,10 @@ else {
 			Bitmap dstBitmap = null;
 
 			// a. video case
-			if( mMediaInfo.GetTag() == MEDIA_TAG.VIDEO ) {
+			if( mMediaInfo.GetFileTag() == MEDIA_TAG.VIDEO ) {
 				//Log.v(DBG_TAG, "VIDEO: " + mMediaInfo.GetName());
 
-				String uriPath = THUMBNAIL_PATH + mMediaInfo.GetName() + ".jpg";
+				String uriPath = THUMBNAIL_PATH + mMediaInfo.GetFileName() + ".jpg";
 				File file = new File( uriPath );
 				if( file.exists() == true ) {
 					srcBitmap = BitmapFactory.decodeFile( uriPath );
@@ -395,35 +439,28 @@ else {
 	enum MEDIA_TAG 			{ VIDEO, AUDIO }
 
 	class MediaInfo {
-		private String 		mId;
-		private String 		mData;
-		private String		mName;
-		private String		mSize;
-		private MEDIA_TAG	mTag;
+		private String 		mFilePath;
+		private String		mFileName;
+		private String		mFileSize;
+		private MEDIA_TAG	mFileTag;
 		
-		public MediaInfo( String id, String data, String name, String size, MEDIA_TAG tag ) {
-			this.mId	= id;
-			this.mData	= data;
-			this.mName	= name;
-			this.mSize	= size;
-			this.mTag	= tag;
+		public MediaInfo( String path, String name, String size, MEDIA_TAG tag ) {
+			this.mFilePath	= path;
+			this.mFileName	= name;
+			this.mFileSize	= size;
+			this.mFileTag	= tag;
 		}
-		public String GetId() {
-			return mId;
+		public String GetFilePath() {
+			return mFilePath;
 		}
-		public String GetData() {
-			return mData;
+		public String GetFileName() {
+			return mFileName;
 		}
-		public String GetName() {
-			return mName;
+		public String GetFileSize() {
+			return mFileSize;
 		}
-		public String GetSize() {
-			return mSize;
-		}
-		public MEDIA_TAG GetTag() {
-			return mTag;
+		public MEDIA_TAG GetFileTag() {
+			return mFileTag;
 		}
 	}	
 }
-
-

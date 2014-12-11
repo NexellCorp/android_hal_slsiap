@@ -118,12 +118,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 	
 	private Handler	mHandler;
 	
-//	Runnable 		mTestRunnable;
-//	int				mTestCnt 				= 0;
-//	boolean			mTestBackwardFlag 		= false;
-//	int				mTestSeekInterval 		= 30000;
-//	int 			mTestSeekIntervalMargin = 15000;
-
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	//
 	// Activity Override Function
@@ -161,7 +155,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		// Get Display Information
 		Display display	= ((WindowManager)mContext.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
 		Point point = new Point();
-		display.getSize( point );
+		display.getRealSize( point );
 		
 		mScreenWidth	= point.x;
 		mScreenHeight	= point.y;
@@ -185,41 +179,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		// Static function call ( DUMMY )
 		// Do not delete! (Calling in JNI)
 		EventHandler( 0xFFFF, 0x0000 );
-
-		// Test SeekCode
-//		mTestRunnable = new Runnable() {
-//			@Override
-//			public void run() {
-//				int nDuration = mMoviePlayer.GetDuration();
-//				int nCurPos = mMoviePlayer.GetCurPosition(); 
-//				
-//				Log.v(DBG_TAG, "Duration: " + String.valueOf(nDuration) + ", curPos: " + String.valueOf(nCurPos) );
-//				
-//				if( mTestBackwardFlag == false ) {
-//					if( nDuration < (nCurPos + mTestSeekInterval + mTestSeekIntervalMargin) ) {
-//						mTestBackwardFlag = true;
-//						nCurPos -= mTestSeekInterval;
-//						mMoviePlayer.Seek(nCurPos);
-//					}
-//					else {
-//						nCurPos += mTestSeekInterval;
-//						mMoviePlayer.Seek(nCurPos);
-//					}
-//				}
-//				else {
-//					if( 0 > (nCurPos - mTestSeekInterval - mTestSeekIntervalMargin) ) {
-//						mTestBackwardFlag = false;
-//						nCurPos += mTestSeekInterval;
-//						mMoviePlayer.Seek(nCurPos);
-//					}
-//					else {
-//						nCurPos -= mTestSeekInterval;
-//						mMoviePlayer.Seek(nCurPos);
-//					}
-//				}
-//			}
-//		};
-
 
 		//Log.v(DBG_TAG, "onCreate()--");
 	}
@@ -316,7 +275,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 	
 	@Override
 	protected void onDestroy() {
-		Log.v(DBG_TAG, "onDestroy()++");
+		//Log.v(DBG_TAG, "onDestroy()++");
 		
 		// TODO Auto-generated method stub
 		super.onDestroy();
@@ -326,7 +285,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 			mMoviePlayer = null;
 		}
 
-		Log.v(DBG_TAG, "onDestroy()--");
+		//Log.v(DBG_TAG, "onDestroy()--");
 	}
 	
 	@Override
@@ -373,7 +332,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 	
 	@Override
 	protected void onPause() {
-		Log.v(DBG_TAG, "onPause()++");
+		//Log.v(DBG_TAG, "onPause()++");
 		
 		// TODO Auto-generated method stub
 		super.onPause();
@@ -390,7 +349,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		mPauseFlag = true;
 		getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		
-		Log.v(DBG_TAG, "onPause()--");
+		//Log.v(DBG_TAG, "onPause()--");
 	}
 	
 	@Override
@@ -519,9 +478,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 			if( mActionBar.isShowing() )		mActionBar.show();
 			if( mContextView.isShowing() )		mContextView.Show();
 
-			//mMediaController.show(mVisibleTime);
-			//mActionBar.show();
-			//mContextView.Show();
 			return;
 		}
 		
@@ -553,10 +509,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 				if( mMediaController.isShowing() ) 	mMediaController.show(mVisibleTime);
 				if( mActionBar.isShowing() )		mActionBar.show();
 				if( mContextView.isShowing() )		mContextView.Show();
-
-				//mMediaController.show(mVisibleTime);
-				//mActionBar.show();
-				//mContextView.Show();
 			}
 		}
 		else if( mDisplayMode == 1 ){
@@ -698,11 +650,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		if( mMoviePlayer != null )
 			bPlay = (mMoviePlayer.IsPlay() == 1) ? true : false;
 		
-		// TestSeekCode
-//		if( (++mTestCnt % 2 ) == 0 ) {
-//			mHandler.post(mTestRunnable);
-//		}
-		
 		//Log.v(DBG_TAG, "isPlaying()--");
 		return bPlay;
 	}
@@ -752,7 +699,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		@Override
 		public void onClick(View v) {
 			// TODO Auto-generated method stub
-			//Log.v(DBG_TAG, "Push Previous Button.");
+			//Log.v(DBG_TAG, "Pressed Previous Button.");
 			PlayerActivity.this.PlayerPrevFile();
 		}
 	};
@@ -761,7 +708,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		@Override
 		public void onClick(View v) {
 			// TODO Auto-generated method stub
-			//Log.v(DBG_TAG, "Push Next Button.");
+			//Log.v(DBG_TAG, "Pressed Next Button.");
 			PlayerActivity.this.PlayerNextFile();
 		}
 	};
@@ -782,10 +729,12 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		RelativeLayout.LayoutParams lpAlign1 = (RelativeLayout.LayoutParams)mSurfaceView1.getLayoutParams();
 		RelativeLayout.LayoutParams lpAlign2 = (RelativeLayout.LayoutParams)mSurfaceView2.getLayoutParams();
 		
+		// Multi-view Case
 		//int dspWidth	= (mDisplayMode == 2) ? mScreenWidth / 2 : mScreenWidth;
+		
 		int dspWidth	= mScreenWidth;
 		int dspHeight	= mScreenHeight;
-			
+
 		double xRatio = (double)dspWidth / (double)ASPECT_RATIO_WIDTH;
 		double yRatio = (double)dspHeight / (double)ASPECT_RATIO_HEIGHT;
 
@@ -844,7 +793,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		
 		mSurfaceHolder1 = mSurfaceView1.getHolder();
 		mSurfaceHolder1.addCallback( this );
-		
 
 		mSurfaceHolder2 = mSurfaceView2.getHolder();
 		mSurfaceHolder2.addCallback( this );
@@ -961,7 +909,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		@Override
 		public void onSystemUiVisibilityChange(int visibility) {
 			// TODO Auto-generated method stub
-			//Log.v(DBG_TAG, "onSystemUiVisibilityChange()++");
 			int diff = mLastSystemUiVis ^ visibility;
 			mLastSystemUiVis = visibility;
 
@@ -980,8 +927,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 				msg.setData(bundle);
 				((PlayerActivity)PlayerActivity.mContext).mHandler.sendMessage(msg);
 			}
-			
-			//Log.v(DBG_TAG, "onSystemUiVisibilityChange()--");
 		}
 
 		public void Show()
