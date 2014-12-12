@@ -9,6 +9,8 @@
 #include <nx_video_api.h>
 #include <libnxjpeghw.h>
 
+#include "gralloc_priv.h"
+
 /**
  * return jpeg Size
  */
@@ -34,13 +36,16 @@ int NX_JpegHWEncoding(void *dstVirt, int dstSize,
     memInfo.imgHeight = height;
     memInfo.luPhyAddr = yPhy;
     memInfo.luVirAddr = yVirt;
-    memInfo.luStride = yStride;
+    //memInfo.luStride = yStride;
+    memInfo.luStride = YUV_YSTRIDE(width);
     memInfo.cbPhyAddr = cbPhy;
     memInfo.cbVirAddr = cbVirt;
-    memInfo.cbStride = cbStride;
+    //memInfo.cbStride = cbStride;
+    memInfo.cbStride = YUV_STRIDE(width/2);
     memInfo.crPhyAddr = crPhy;
     memInfo.crVirAddr = crVirt;
-    memInfo.crStride = crStride;
+    //memInfo.crStride = crStride;
+    memInfo.crStride = YUV_STRIDE(width/2);
 
     memset( &encInitParam, 0, sizeof(encInitParam) );
     encInitParam.width = width;
