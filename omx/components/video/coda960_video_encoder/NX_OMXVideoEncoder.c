@@ -129,30 +129,30 @@ static void SetDefaultAvcEncParam( OMX_VIDEO_PARAM_AVCTYPE *avcType, int portInd
 	avcType->nSize = sizeof(OMX_VIDEO_PARAM_AVCTYPE);
 	NX_OMXSetVersion(&avcType->nVersion);
 	avcType->nPortIndex = portIndex;
-	avcType->nSliceHeaderSpacing = 0;                       //	Number of macroblocks between slice header, put zero if not used
-	avcType->nPFrames = 29;                                 //	Number of P frames between each I frame
-	avcType->nBFrames = 0;                                  //	Number of B frames between each I frame
-	avcType->bUseHadamard = OMX_FALSE;                      //	Enable/disable Hadamard transform
-	avcType->nRefFrames = 1;                                //	Max number of reference frames to use for inter motion search (1-16)
-	avcType->nRefIdx10ActiveMinus1 = 0;                     //	Pic param set ref frame index (index into ref frame buffer of trailing frames list), B frame support
-	avcType->nRefIdx11ActiveMinus1 = 0;                     //	Pic param set ref frame index (index into ref frame buffer of forward frames list), B frame support
-	avcType->bEnableUEP = OMX_FALSE;                        //	Enable/disable unequal error protection. This is only valid of data partitioning is enabled.
-	avcType->bEnableFMO = OMX_FALSE;                        //	Enable/disable flexible macroblock ordering
-	avcType->bEnableASO = OMX_FALSE;                        //	Enable/disable arbitrary slice ordering
-	avcType->bEnableRS = OMX_FALSE;                         //	Enable/disable sending of redundant slices
-	avcType->eProfile = OMX_VIDEO_AVCProfileBaseline;       //	AVC profile(s) to use
-	avcType->eLevel = OMX_VIDEO_AVCLevel41;                 //	AVC level(s) to use
-	avcType->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP; //	Specifies the picture types allowed in the bitstream
-	avcType->bFrameMBsOnly = OMX_FALSE;                     //	specifies that every coded picture of the coded video sequence is a coded frame containing only frame macroblocks
-	avcType->bMBAFF = OMX_FALSE;                            //	Enable/disable switching between frame and field macroblocks within a picture
-	avcType->bEntropyCodingCABAC = OMX_FALSE;               //	Entropy decoding method to be applied for the syntax elements for which two descriptors appear in the syntax tables
-	avcType->bWeightedPPrediction = OMX_FALSE;              //	Enable/disable weighted prediction shall not be applied to P and SP slices
-	avcType->nWeightedBipredicitonMode = 0;                 //	Default weighted prediction is applied to B slices
-	avcType->bconstIpred = OMX_TRUE;                        //	Enable/disable intra prediction
-	avcType->bDirect8x8Inference = OMX_FALSE;               //	Specifies the method used in the derivation process for luma motion vectors for B_Skip, B_Direct_16x16 and B_Direct_8x8 as specified in subclause 8.4.1.2 of the AVC spec
-	avcType->bDirectSpatialTemporal = OMX_FALSE;            //	Flag indicating spatial or temporal direct mode used in B slice coding (related to bDirect8x8Inference) . Spatial direct mode is more common and should be the default.
-	avcType->nCabacInitIdc = 0;                             //	Index used to init CABAC contexts
-	avcType->eLoopFilterMode = OMX_FALSE;                   //	Enable/disable loop filter
+	avcType->nSliceHeaderSpacing = 0;                          //	Number of macroblocks between slice header, put zero if not used
+	avcType->nPFrames = 29;                                    //	Number of P frames between each I frame
+	avcType->nBFrames = 0;                                     //	Number of B frames between each I frame
+	avcType->bUseHadamard = OMX_FALSE;                         //	Enable/disable Hadamard transform
+	avcType->nRefFrames = 1;                                   //	Max number of reference frames to use for inter motion search (1-16)
+	avcType->nRefIdx10ActiveMinus1 = 0;                        //	Pic param set ref frame index (index into ref frame buffer of trailing frames list), B frame support
+	avcType->nRefIdx11ActiveMinus1 = 0;                        //	Pic param set ref frame index (index into ref frame buffer of forward frames list), B frame support
+	avcType->bEnableUEP = OMX_FALSE;                           //	Enable/disable unequal error protection. This is only valid of data partitioning is enabled.
+	avcType->bEnableFMO = OMX_FALSE;                           //	Enable/disable flexible macroblock ordering
+	avcType->bEnableASO = OMX_FALSE;                           //	Enable/disable arbitrary slice ordering
+	avcType->bEnableRS = OMX_FALSE;                            //	Enable/disable sending of redundant slices
+	avcType->eProfile = OMX_VIDEO_AVCProfileBaseline;          //	AVC profile(s) to use
+	avcType->eLevel = OMX_VIDEO_AVCLevel41;                    //	AVC level(s) to use
+	avcType->nAllowedPictureTypes = OMX_VIDEO_PictureTypeP;    //	Specifies the picture types allowed in the bitstream
+	avcType->bFrameMBsOnly = OMX_FALSE;                        //	specifies that every coded picture of the coded video sequence is a coded frame containing only frame macroblocks
+	avcType->bMBAFF = OMX_FALSE;                               //	Enable/disable switching between frame and field macroblocks within a picture
+	avcType->bEntropyCodingCABAC = OMX_FALSE;                  //	Entropy decoding method to be applied for the syntax elements for which two descriptors appear in the syntax tables
+	avcType->bWeightedPPrediction = OMX_FALSE;                 //	Enable/disable weighted prediction shall not be applied to P and SP slices
+	avcType->nWeightedBipredicitonMode = 0;                    //	Default weighted prediction is applied to B slices
+	avcType->bconstIpred = OMX_TRUE;                           //	Enable/disable intra prediction
+	avcType->bDirect8x8Inference = OMX_FALSE;                  //	Specifies the method used in the derivation process for luma motion vectors for B_Skip, B_Direct_16x16 and B_Direct_8x8 as specified in subclause 8.4.1.2 of the AVC spec
+	avcType->bDirectSpatialTemporal = OMX_FALSE;               //	Flag indicating spatial or temporal direct mode used in B slice coding (related to bDirect8x8Inference) . Spatial direct mode is more common and should be the default.
+	avcType->nCabacInitIdc = 0;                                //	Index used to init CABAC contexts
+	avcType->eLoopFilterMode = OMX_VIDEO_AVCLoopFilterEnable;  //	Enable/disable loop filter
 }
 
 
@@ -252,7 +252,6 @@ OMX_ERRORTYPE NX_VidEncComponentInit (OMX_HANDLETYPE hComponent)
 	pEncComp->eCmdThreadCmd = NX_THREAD_CMD_RUN;
 	pthread_create( &pEncComp->hCmdThread, NULL, (void*)&NX_VidEncCommandThread , pEncComp ) ;
 	NX_PendSem( pEncComp->hSemCmdWait );
-
 
 	//	Set Component Name & Role
 	pEncComp->compName = strdup("OMX.NX.VIDEO_ENCODER");
@@ -1424,10 +1423,14 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 	struct private_handle_t const *hPrivate;
 	NX_VID_ENC_IN encIn;
 	NX_VID_ENC_OUT encOut;
+	VID_ERROR_E ret;
 	NX_VID_MEMORY_INFO inputMem;
 	OMX_S32 *recodingBuffer;
+	gralloc_module_t const *mAllocMod;
+	hw_module_t const *module;
 
 	FUNC_IN;
+
 	if( NX_PopQueue( pInQueue, (void**)&pInBuf ) || pInBuf == NULL )
 	{
 		return 0;
@@ -1458,8 +1461,12 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 		ErrMsg("Encoding Mode : NativeBuffer(%d), MetaDataInBuffers(%d), InputFormat(0x%08x) !!!\n", pEncComp->bUseNativeBuffer, pEncComp->bMetaDataInBuffers, pEncComp->inputFormat.eColorFormat);
 		return -1;
 	}
-
 	TRACE("Encoding Mode : NativeBuffer(%ld), MetaDataInBuffers(%ld), InputFormat(0x%08x) !!!\n", pEncComp->bUseNativeBuffer, pEncComp->bMetaDataInBuffers, pEncComp->inputFormat.eColorFormat);
+
+	if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module) == 0)
+	{
+		mAllocMod = (gralloc_module_t const *)module;
+	}
 
 	//
 	//	Data Format :
@@ -1492,7 +1499,9 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 		{
 			//struct timeval start, end;
 			//gettimeofday( &start, NULL );
+			mAllocMod->lock(mAllocMod, hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, hPrivate->stride, hPrivate->height, inData);	
 			cscARGBToNV21( (char*)inData, (char*)pEncComp->hCSCMem->luVirAddr, (char*)pEncComp->hCSCMem->cbVirAddr, pEncComp->encWidth, pEncComp->encHeight, 1);
+			mAllocMod->unlock(mAllocMod, hPrivate);
 			//gettimeofday( &end, NULL );
 			//uint32_t value = (end.tv_sec - start.tv_sec)*1000 + (end.tv_usec - start.tv_usec)/1000;
 			//DbgMsg("~~~~TimeStamp = %d msec\n", value);
@@ -1558,11 +1567,13 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 			char *srcY = (char*)pInBuf->pBuffer;
 			char *srcU = srcY + pEncComp->encWidth * pEncComp->encHeight;
 			char *srcV = srcU + pEncComp->encWidth * pEncComp->encHeight / 4;
+			mAllocMod->lock(mAllocMod, hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, pEncComp->encWidth, pEncComp->encHeight * 3 / 2, srcY);
 			cscYV12ToYV12(  srcY, srcU, srcV,
 							(char*)pEncComp->hCSCMem->luVirAddr, (char*)pEncComp->hCSCMem->cbVirAddr, (char*)pEncComp->hCSCMem->crVirAddr,
 							pEncComp->encWidth, pEncComp->hCSCMem->luStride, pEncComp->hCSCMem->cbStride,
 							pEncComp->encWidth, pEncComp->encHeight );
 			memcpy(&inputMem, pEncComp->hCSCMem, sizeof(inputMem) );
+			mAllocMod->unlock(mAllocMod, hPrivate);
 		}
 	}
 
@@ -1591,7 +1602,10 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 	encIn.quantParam = 0;
 
 	//	Encode Image
-	if( VID_ERR_NONE != NX_VidEncEncodeFrame( pEncComp->hVpuCodec, &encIn, &encOut ) )
+	//mAllocMod->lock(mAllocMod, hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, encIn.pImage->luStride, encIn.pImage->imgHeight * 3 / 2, encIn.pImage->luVirAddr);
+	ret = NX_VidEncEncodeFrame( pEncComp->hVpuCodec, &encIn, &encOut );
+	//mAllocMod->unlock(mAllocMod, hPrivate);
+	if( ret != VID_ERR_NONE )
 	{
 		ErrMsg("NX_VidEncEncodeFrame() failed !!!\n");
 		return -1;

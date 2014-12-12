@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">NxPlayerBasedFilter</string>
+    <string name="player_mediainfo">Media Information</string>
+    <string name="player_displaysetting">Display Setting</string>
+    <string name="main_networkstream">Network Stream</string>
+    <string name="main_noimage">No Image</string>
+
+</resources>
