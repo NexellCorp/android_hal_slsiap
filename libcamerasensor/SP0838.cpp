@@ -99,9 +99,6 @@ static const uint8_t AvailableSceneModesSP0838[] = {
 
 static const int32_t AvailableFpsRangesSP0838[] = {
     15, 30
-    //8, 15, 30
-    //15, 30
-    //8, 8, 15, 15, 24, 24, 15, 30
 };
 
 static const uint32_t ExposureCompensationRangeSP0838[] = {

@@ -5,18 +5,24 @@
 #include <utils/Log.h>
 
 #include <nexell_format.h>
+#include "gralloc_priv.h"
 #include "NXAllocator.h"
 
-static bool allocPlane(int ionFD, size_t size, int &outFD, unsigned long &outVirt, unsigned long &outPhys)
+
+static bool allocPlane(int ionFD, size_t size, int &outFD, unsigned long &outVirt, unsigned long &outPhys, bool isSystem = false)
 {
     int ret;
     int fd;
     char *virt;
     unsigned long phys;
 
-    // psw0523 for alloc from system
-    ret = ion_alloc_fd(ionFD, size, 0, ION_HEAP_NXP_CONTIG_MASK, 0, &fd);
-    // ret = ion_alloc_fd(ionFD, size, 0, ION_HEAP_SYSTEM_MASK, 0, &fd);
+    int heapMask;
+    if (isSystem)
+        heapMask = ION_HEAP_SYSTEM_MASK;
+    else
+        heapMask = ION_HEAP_NXP_CONTIG_MASK;
+
+    ret = ion_alloc_fd(ionFD, size, 0, heapMask, 0, &fd);
     if (ret < 0) {
         ALOGE("failed to ion_alloc_fd()");
         return false;
@@ -45,46 +51,31 @@ bool allocateBuffer(struct nxp_vid_buffer *buf, int bufSize, int width, int heig
 {
     int planeNum;
     size_t ySize, cSize;
-    unsigned long yStride = ALIGN(width, 16);
-    unsigned long vStride = ALIGN(height, 16);
-    unsigned long cStride;
 
     switch (format) {
     case PIXFORMAT_YUV422_PACKED:
         planeNum = 1;
-        ySize = ALIGN(width, 16) * ALIGN(height,16) * 2;
+        ySize = YUV_STRIDE(width * 2) * YUV_VSTRIDE(height);
         cSize = 0;
-        cStride = 0;
         break;
     case PIXFORMAT_YUV420_PLANAR:
         planeNum = 3;
-#if 0
-        ySize = yStride * vStride;
-        cStride = ALIGN(yStride >> 1, 16);
-        cSize = cStride * ALIGN(vStride >> 1, 16);
-#else
-        ySize = width * height;
-        cSize = ySize >> 2;
-        cStride = width >> 1;
-#endif
+        ySize = YUV_YSTRIDE(width) * YUV_VSTRIDE(height);
+        cSize = YUV_STRIDE(width/2) * YUV_VSTRIDE(height/2);
         break;
     case PIXFORMAT_YUV422_PLANAR:
         planeNum = 3;
-        ySize = width * height;
-        cSize = ySize >> 1;
-        cStride = width >> 1;
+        ySize = YUV_STRIDE(width) * YUV_VSTRIDE(height);
+        cSize = YUV_STRIDE(width) * YUV_VSTRIDE(height/2);
         break;
     case PIXFORMAT_YUV444_PLANAR:
         planeNum = 3;
-        ySize = width * height;
-        cSize = ySize;
-        cStride = width;
+        ySize = cSize = YUV_STRIDE(width) * YUV_VSTRIDE(height);
         break;
     case PIXFORMAT_RGB32:
         planeNum = 1;
         ySize = width * height * 4;
         cSize = 0;
-        cStride = 0;
         break;
     default:
         ALOGE("%s: invalid format 0x%x", __func__, format);
@@ -112,7 +103,7 @@ bool allocateBuffer(struct nxp_vid_buffer *buf, int bufSize, int width, int heig
         buf[i].fds[0]       = fd;
         buf[i].virt[0]      = reinterpret_cast<char *>(virt);
         buf[i].phys[0]      = phys;
-        buf[i].stride[0]    = width;
+        buf[i].stride[0]    = YUV_YSTRIDE(width);
 
         if (cSize > 0) {
             /* alloc CB */
@@ -123,7 +114,7 @@ bool allocateBuffer(struct nxp_vid_buffer *buf, int bufSize, int width, int heig
             buf[i].fds[1]       = fd;
             buf[i].virt[1]      = reinterpret_cast<char *>(virt);
             buf[i].phys[1]      = phys;
-            buf[i].stride[1]    = cStride;
+            buf[i].stride[1]    = YUV_STRIDE(width/2);
 
             /* alloc CR */
             ret = allocPlane(ionFD, cSize, fd, virt, phys);
@@ -133,7 +124,7 @@ bool allocateBuffer(struct nxp_vid_buffer *buf, int bufSize, int width, int heig
             buf[i].fds[2]       = fd;
             buf[i].virt[2]      = reinterpret_cast<char *>(virt);
             buf[i].phys[2]      = phys;
-            buf[i].stride[2]    = cStride;
+            buf[i].stride[2]    = YUV_STRIDE(width/2);
         }
     }
 

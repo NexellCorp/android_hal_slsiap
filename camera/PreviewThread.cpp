@@ -32,6 +32,7 @@ PreviewThread::PreviewThread(nxp_v4l2_id id,
 {
     init(id);
     UseZoom = ZoomController->useZoom();
+
     if (UseZoom) {
         PlaneNum = 3;
         Format = V4L2_PIX_FMT_YUV420M;
@@ -39,6 +40,20 @@ PreviewThread::PreviewThread(nxp_v4l2_id id,
         PlaneNum = 1;
         Format = V4L2_PIX_FMT_YUV420;
     }
+#ifdef WORKAROUND_128BYTE_ALIGN
+    if (Width % 128)
+        CropWidth = ALIGN(Width - 128, 128);
+    else
+        CropWidth = Width;
+
+    int baseWidth, baseHeight;
+    ZoomController->getBase(baseWidth, baseHeight);
+    ALOGD("%s: baseWidth %d, cropWidth %d", __func__, baseWidth, CropWidth);
+    if (baseWidth > Width)
+        ZoomController->setCrop(0, 0, CropWidth*2, Height);
+    else
+        ZoomController->setCrop(0, 0, CropWidth, Height);
+#endif
 }
 
 PreviewThread::~PreviewThread()
@@ -64,6 +79,18 @@ void PreviewThread::onCommand(int32_t streamId, camera_metadata_t *metadata)
     }
 }
 
+#ifdef WORKAROUND_128BYTE_ALIGN
+void PreviewThread::onZoomChanged(int left, int top, int width, int height, int baseWidth, int baseHeight)
+{
+    if (ZoomController.get()) {
+        ALOGD("PreviewThread::onZoomChanged: %dx%d-%dx%d/%dx%d", left, top, width, height, baseWidth, baseHeight);
+        if (width == baseWidth)
+            width = CropWidth;
+        ZoomController->setCrop(left, top, width, height);
+    }
+}
+#endif
+
 status_t PreviewThread::readyToRun()
 {
     ALOGD("preview readyToRun entered: wxd(%dx%d)", Width, Height);
@@ -73,6 +100,20 @@ status_t PreviewThread::readyToRun()
         ALOGE("No ActiveStream!!!");
         return NO_INIT;
     }
+
+#ifdef WORKAROUND_128BYTE_ALIGN
+    if (Width % 128)
+        CropWidth = ALIGN(Width - 128, 128);
+    else
+        CropWidth = Width;
+    int baseWidth, baseHeight;
+    ZoomController->getBase(baseWidth, baseHeight);
+    ALOGD("%s: baseWidth %d, cropWidth %d", __func__, baseWidth, CropWidth);
+    if (baseWidth > Width)
+        ZoomController->setCrop(0, 0, CropWidth*2, Height);
+    else
+        ZoomController->setCrop(0, 0, CropWidth, Height);
+#endif
 
     if (stream->getWidth() != Width || stream->getHeight() != Height) {
         ALOGD("Context Changed!!!(%dx%d --> %dx%d)", Width, Height, stream->getWidth(), stream->getHeight());
@@ -98,6 +139,21 @@ status_t PreviewThread::readyToRun()
     if (UseZoom)
         ZoomController->setFormat(PIXINDEX2PIXCODE(PixelIndex), PIXINDEX2PIXCODE(PixelIndex));
 
+#ifdef WORKAROUND_128BYTE_ALIGN
+    //ret = v4l2_set_crop_with_pad(Id, 2, 0, 0, CropWidth, Height);
+    ret = v4l2_set_crop_with_pad(Id, 2, 0, 0, Width, Height);
+    if (ret < 0) {
+        ALOGE("failed to v4l2_set_crop_with_pad for %d, pad %d", Id, 2);
+        //return NO_INIT;
+    }
+
+    ret = v4l2_set_crop(Id, 0, 0, CropWidth, Height);
+    if (ret < 0) {
+        ALOGE("failed to v4l2_set_crop for %d", Id);
+        return NO_INIT;
+    }
+
+#else
     ret = v4l2_set_crop(Id, 0, 0, Width, Height);
     if (ret < 0) {
         ALOGE("failed to v4l2_set_crop for %d", Id);
@@ -109,6 +165,7 @@ status_t PreviewThread::readyToRun()
         ALOGE("failed to v4l2_set_crop_with_pad for %d, pad %d", Id, 2);
         //return NO_INIT;
     }
+#endif
 
     ret = Sensor->setFormat(Width, Height, V4L2_MBUS_FMT_YUYV8_2X8);
     if (ret < 0) {
@@ -128,10 +185,17 @@ status_t PreviewThread::readyToRun()
         uint32_t zoomFormat;
         zoomFormat = PIXINDEX2PIXFORMAT(PixelIndex);
 
+#ifdef WORKAROUND_128BYTE_ALIGN
+        if (false == ZoomController->allocBuffer(MAX_PREVIEW_ZOOM_BUFFER, CropWidth, Height, zoomFormat)) {
+            ALOGE("failed to allocate preview zoom buffer");
+            return NO_MEMORY;
+        }
+#else
         if (false == ZoomController->allocBuffer(MAX_PREVIEW_ZOOM_BUFFER, Width, Height, zoomFormat)) {
             ALOGE("failed to allocate preview zoom buffer");
             return NO_MEMORY;
         }
+#endif
         ret = v4l2_reqbuf(Id, ZoomController->getBufferCount());
         if (ret < 0) {
             ALOGE("failed to v4l2_reqbuf for preview");
