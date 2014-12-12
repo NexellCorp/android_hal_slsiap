@@ -79,6 +79,12 @@ status_t RecordThread::readyToRun()
         return NO_INIT;
     }
 
+    ret = Sensor->setFormat(Width, Height, V4L2_MBUS_FMT_YUYV8_2X8);
+    if (ret < 0) {
+        ALOGE("failed to v4l2_set_format for %d", SensorId);
+        return NO_INIT;
+    }
+
     if (UseZoom) {
         if (false == ZoomController->allocBuffer(MAX_RECORD_ZOOM_BUFFER, Width, Height, PIXINDEX2PIXFORMAT(PixelIndex))) {
             ALOGE("failed to allocate record zoom buffer");

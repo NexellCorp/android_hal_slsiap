@@ -16,6 +16,8 @@ public:
     virtual ~NXZoomController();
 
     virtual void setBase(int baseWidth, int baseHeight) = 0;
+    virtual void getBase(int &baseWidth, int &baseHeight) {
+    }
     virtual void setSource(int width, int height) {
     }
     virtual void setDest(int width, int height) {
