@@ -6,7 +6,7 @@
 //	Module     : 
 //	File       : 
 //	Description:
-//	Author     : RayPark
+//	Author     : 
 //	History    :
 //------------------------------------------------------------------------------
 #ifndef __NX_MoviePlay_FFMPEG_H__
@@ -23,13 +23,11 @@ enum{
 };
 
 //	disply port
-#if 1
 enum{
 	DISPLAY_LCD,
 	DISPLAY_HDMI,
 	DISPLAY_DUAL
 };
-#endif
 
 //	disply module
 enum{
@@ -81,24 +79,18 @@ typedef struct _Media_Info{
 extern "C" {
 #endif	//	__cplusplus
 
+	//NX_MPSetFileName Error Code
+	// -1: Error
+	// -2: Audio Codec Mot Support
+	// -3: Video Codec Mot Support
+	// -4: Audio,Video Codec Mot Support
 	MP_RESULT NX_MPSetFileName(MP_HANDLE *phandle, const char *uri, Media_Info *media_info);
 #ifdef ANDROID
-//MP_RESULT NX_MPOpen(MP_HANDLE handle, int32_t select_audio_track_num, int32_t select_video_track_num, int32_t pip,
-//					void *pSurface_1, void *pSurface_2,
-//					void(*cbEvent)(void *Obj, uint32_t EventType, uint32_t EventData, uint32_t parm), void *cbPrivate
-//					);
-
 MP_RESULT NX_MPOpen(MP_HANDLE handle, int32_t select_audio_track_num, int32_t select_video_track_num, int32_t pip,
 					void *pSurface_1, void *pSurface_2, void *pNull,
 					void(*cbEvent)(void *Obj, uint32_t EventType, uint32_t EventData, uint32_t parm), void *cbPrivate
 					);
-//MP_RESULT NX_MPOpen(MP_HANDLE handle, int32_t audio_track_num, int32_t video_track_num, int32_t display,
-//					void *volumem, void *dspModule, void *dspPort,
-//					void(*cbEvent)(void *Obj, uint32_t EventType, uint32_t EventData, uint32_t parm), void *cbPrivate);
-
 #else
-//	MP_RESULT NX_MPOpen(MP_HANDLE handle, int32_t volumem, int32_t dspModule, int32_t dspPort, int32_t audio_track_num, int32_t video_track_num, int32_t display,
-//					void(*cbEvent)(void *Obj, uint32_t EventType, uint32_t EventData, uint32_t parm), void *cbPrivate);
 	MP_RESULT NX_MPOpen(MP_HANDLE handle, int32_t audio_track_num, int32_t video_track_num, int32_t display,
 						void *volumem, void *dspModule, void *dspPort,
 						void(*cbEvent)(void *Obj, uint32_t EventType, uint32_t EventData, uint32_t parm), void *cbPrivate);
