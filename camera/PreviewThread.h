@@ -15,8 +15,6 @@
 
 namespace android {
 
-#define WORKAROUND_128BYTE_ALIGN
-
 class PreviewThread: public NXStreamThread
 {
 public:
