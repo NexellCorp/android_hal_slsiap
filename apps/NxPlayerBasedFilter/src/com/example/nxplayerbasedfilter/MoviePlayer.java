@@ -20,6 +20,7 @@
 package com.example.nxplayerbasedfilter;
 
 import android.view.Surface;
+import android.util.Log;
 
 public class MoviePlayer {
 	private static final String DBG_TAG = "NxPlayerBasedFilter.MoviePlayer";
@@ -45,6 +46,7 @@ public class MoviePlayer {
 	
 	public synchronized int SetFileName( String uri )
 	{
+		Log.i(DBG_TAG, "SetFileName : " + uri);
 		return Mp_SetFileName( uri );
 	}
 	
