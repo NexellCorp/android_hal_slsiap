@@ -79,10 +79,11 @@ status_t RecordThread::readyToRun()
         return NO_INIT;
     }
 
-    ret = Sensor->setFormat(Width, Height, V4L2_MBUS_FMT_YUYV8_2X8);
-    if (ret < 0) {
-        ALOGE("failed to v4l2_set_format for %d", SensorId);
-        return NO_INIT;
+    sp<NXStreamThread> previewThread = StreamManager->getStreamThread(STREAM_ID_PREVIEW);
+    if (previewThread == NULL || !previewThread->isRunning()) {
+        ALOGD("Preview thread is not running... wait");
+        usleep(100*1000);
+        return true;
     }
 
     if (UseZoom) {
