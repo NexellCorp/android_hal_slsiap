@@ -83,7 +83,7 @@ void PreviewThread::onCommand(int32_t streamId, camera_metadata_t *metadata)
 void PreviewThread::onZoomChanged(int left, int top, int width, int height, int baseWidth, int baseHeight)
 {
     if (ZoomController.get()) {
-        ALOGD("PreviewThread::onZoomChanged: %dx%d-%dx%d/%dx%d", left, top, width, height, baseWidth, baseHeight);
+        ALOGV("PreviewThread::onZoomChanged: %dx%d-%dx%d/%dx%d", left, top, width, height, baseWidth, baseHeight);
         if (width == baseWidth)
             width = CropWidth;
         ZoomController->setCrop(left, top, width, height);
