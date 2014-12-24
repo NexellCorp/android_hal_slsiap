@@ -79,6 +79,13 @@ status_t RecordThread::readyToRun()
         return NO_INIT;
     }
 
+    sp<NXStreamThread> previewThread = StreamManager->getStreamThread(STREAM_ID_PREVIEW);
+    if (previewThread == NULL || !previewThread->isRunning()) {
+        ALOGD("Preview thread is not running... wait");
+        usleep(100*1000);
+        return true;
+    }
+
     if (UseZoom) {
         if (false == ZoomController->allocBuffer(MAX_RECORD_ZOOM_BUFFER, Width, Height, PIXINDEX2PIXFORMAT(PixelIndex))) {
             ALOGE("failed to allocate record zoom buffer");

@@ -29,14 +29,11 @@ enum {
 
 const int32_t ResolutionSP0838[] = {
 #ifdef S5P4418
-    // 640, 480,
     608, 479,
-    // 352, 288,
-    320, 287,
-    // 320, 240,
-    288, 239,
-    // 176, 144,
-    144, 143
+    //real: 384, 289,
+    352, 288,
+    //real: 208, 145,
+    176, 144,
 #else
     640, 480,
     352, 288,
@@ -99,9 +96,6 @@ static const uint8_t AvailableSceneModesSP0838[] = {
 
 static const int32_t AvailableFpsRangesSP0838[] = {
     15, 30
-    //8, 15, 30
-    //15, 30
-    //8, 8, 15, 15, 24, 24, 15, 30
 };
 
 static const uint32_t ExposureCompensationRangeSP0838[] = {

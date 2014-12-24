@@ -28,6 +28,10 @@ public:
     virtual status_t readyToRun();
     virtual void onCommand(int32_t streamId, camera_metadata_t *metadata);
 
+#ifdef WORKAROUND_128BYTE_ALIGN
+    virtual void onZoomChanged(int left, int top, int width, int height, int baseWidth, int baseHeight);
+#endif
+
 protected:
     virtual void init(nxp_v4l2_id id);
 
@@ -38,6 +42,9 @@ private:
     bool UseZoom;
     uint32_t PlaneNum;
     uint32_t Format;
+#ifdef WORKAROUND_128BYTE_ALIGN
+    uint32_t CropWidth;
+#endif
 };
 
 }; // namespace

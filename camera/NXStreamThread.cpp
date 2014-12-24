@@ -139,6 +139,10 @@ void NXStreamThread::release()
 
 void NXStreamThread::onZoomChanged(int left, int top, int width, int height, int baseWidth, int baseHeight)
 {
+#ifdef WORKAROUND_128BYTE_ALIGN
+    if (!isRunning())
+        return;
+#endif
     if (ZoomController.get()) {
         ZoomController->setBase(baseWidth, baseHeight);
         ZoomController->setCrop(left, top, width, height);

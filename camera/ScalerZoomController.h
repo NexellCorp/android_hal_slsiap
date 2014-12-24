@@ -18,6 +18,11 @@ public:
     virtual void setBase(int baseWidth, int baseHeight) {
         BaseWidth  = baseWidth;
         BaseHeight = baseHeight;
+        ALOGV("base: %d%d", BaseWidth, BaseHeight);
+    }
+    virtual void getBase(int &baseWidth, int &baseHeight) {
+        baseWidth = BaseWidth;
+        baseHeight = BaseHeight;
     }
     virtual void setSource(int width, int height) {
         SrcWidth = width;
