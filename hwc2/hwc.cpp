@@ -203,7 +203,6 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
     uint32_t refreshRate = 60;
     if (base != 0) {
         refreshRate = 1000000000000LLU / base;
-        refreshRate /= 1000;
         if (refreshRate <= 0 || refreshRate > 60) {
             ALOGE("invalid refresh rate(%d), assuming 60Hz", refreshRate);
             ALOGE("upper_margin(%d), lower_margin(%d), yres(%d),left_margin(%d), right_margin(%d), xres(%d),pixclock(%d)",
