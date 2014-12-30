@@ -148,6 +148,9 @@ public:
     Mutex mSyncLock;
     Condition mSyncSignal;
     bool mPrepared;
+#ifdef LOLLIPOP
+    bool mBlank[2];
+#endif
 #endif
 
     Mutex mChangeImplLock;
@@ -968,9 +971,15 @@ static int hwc_wait_commit(struct hwc_composer_device_1 *dev)
 {
 #ifdef USE_PREPARE_SET_SERIALIZING_SYNC
     struct NXHWC *me = (struct NXHWC *)dev;
-    Mutex::Autolock l(me->mSyncLock);
-    while (me->mPrepared)
-        me->mSyncSignal.wait(me->mSyncLock);
+#ifdef LOLLIPOP
+    if (me->mBlank[0] == 0) {
+#endif
+        Mutex::Autolock l(me->mSyncLock);
+        while (me->mPrepared)
+            me->mSyncSignal.wait(me->mSyncLock);
+#ifdef LOLLIPOP
+    }
+#endif
 #endif
     return 0;
 }
@@ -1113,7 +1122,7 @@ static int hwc_eventControl(struct hwc_composer_device_1 *dev, int dpy,
     switch (event) {
     case HWC_EVENT_VSYNC:
         __u32 val = !!enabled;
-        ALOGD("HWC_EVENT_VSYNC: val %d", val);
+        ALOGV("HWC_EVENT_VSYNC: val %d", val);
         int err;
         if (val)
             err = write(me->mVsyncCtlFd, VSYNC_ON, sizeof(VSYNC_ON));
@@ -1133,6 +1142,9 @@ static int hwc_blank(struct hwc_composer_device_1 *dev, int disp, int blank)
     struct NXHWC *me = (struct NXHWC *)dev;
 
     ALOGD("hwc_blank: disp %d, blank %d", disp, blank);
+#ifdef LOLLIPOP
+    me->mBlank[disp] = blank;
+#endif
     switch (disp) {
     case HWC_DISPLAY_PRIMARY:
         if (blank)

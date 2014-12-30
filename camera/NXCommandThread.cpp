@@ -426,11 +426,13 @@ status_t NXCommandThread::handleRequest(camera_metadata_t *request)
                     ALOGV("shading mode: %d", curEntry.data.u8[0]);
                 break;
 
+#ifndef LOLLIPOP
             case ANDROID_GEOMETRIC_MODE:
                 ret = checkEntry(curEntry, TYPE_BYTE, 1);
                 if (ret == NO_ERROR)
                     ALOGV("geometric mode: %d", curEntry.data.u8[0]);
                 break;
+#endif
 
             case ANDROID_COLOR_CORRECTION_MODE:
                 ret = checkEntry(curEntry, TYPE_BYTE, 1);

@@ -72,6 +72,14 @@ LOCAL_SRC_FILES := hwc.cpp \
 	impl/HDMIUseRescCommonImpl.cpp \
 	HWCreator.cpp
 
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+#@echo This is LOLLIPOP!!!
+LOCAL_C_INCLUDES += system/core/libion/include
+LOCAL_CFLAGS += -DLOLLIPOP
+endif
+
 LOCAL_MODULE := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 

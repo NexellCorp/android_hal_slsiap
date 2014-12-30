@@ -43,6 +43,14 @@ ifeq ($(TARGET_CPU_VARIANT2),s5p4418)
 LOCAL_CFLAGS += -DWORKAROUND_128BYTE_ALIGN
 endif
 
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+#@echo This is LOLLIPOP!!!
+LOCAL_C_INCLUDES += system/core/libion/include
+LOCAL_CFLAGS += -DLOLLIPOP
+endif
+
 # use scaler zoom
 # LOCAL_CFLAGS += -DUSE_SCALER_ZOOM
 
@@ -61,6 +69,14 @@ LOCAL_C_INCLUDES := frameworks/native/include \
 	$(LOCAL_PATH)/../include
 LOCAL_CFLAGS += -DLOG_TAG=\"camera_verify\"
 
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+#@echo This is LOLLIPOP!!!
+LOCAL_C_INCLUDES += system/core/libion/include
+LOCAL_CFLAGS += -DLOLLIPOP
+endif
+
 LOCAL_MODULE := camera_verify
 LOCAL_MODULE_TAGS := optional
 
@@ -75,6 +91,14 @@ LOCAL_C_INCLUDES := frameworks/native/include \
 	$(LOCAL_PATH)/../include
 LOCAL_CFLAGS += -DLOG_TAG=\"test-decimator\"
 
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+#@echo This is LOLLIPOP!!!
+LOCAL_C_INCLUDES += system/core/libion/include
+LOCAL_CFLAGS += -DLOLLIPOP
+endif
+
 LOCAL_MODULE := test_decimator
 LOCAL_MODULE_TAGS := optional
 
@@ -88,6 +112,14 @@ LOCAL_C_INCLUDES := frameworks/native/include \
 	system/core/include \
 	$(LOCAL_PATH)/../include
 LOCAL_CFLAGS += -DLOG_TAG=\"test-decimator\"
+
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+#@echo This is LOLLIPOP!!!
+LOCAL_C_INCLUDES += system/core/libion/include
+LOCAL_CFLAGS += -DLOLLIPOP
+endif
 
 LOCAL_MODULE := test_decimator_render
 LOCAL_MODULE_TAGS := optional
