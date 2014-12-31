@@ -56,6 +56,10 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.widget.RelativeLayout;
 
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+
 public class MainActivity extends ListActivity {
 	private static final boolean SUPPORT_THUMBNAIL = false;
 	
@@ -65,6 +69,11 @@ public class MainActivity extends ListActivity {
 	private static final int 	THUMBNAIL_WIDTH	= 160 * 3 / 4;
 	private static final int 	THUMBNAIL_HEIGHT=  90 * 3 / 4;
 
+	private static final String[] STORAGE_PATH = {
+		"/storage/sdcard0",
+		"/storage/sdcard1",
+	};
+	
 	private static final String[] VIDEO_EXTENSION = { 
 		".avi",		".wmv",		".wmp",		".wm",		".asf",
 		".mpg",		".mpeg",	".mpe",		".m1v",		".m2v",
@@ -95,6 +104,8 @@ public class MainActivity extends ListActivity {
 	String 	mNetworkStreamName;
 	boolean mNetworkStream;
 	
+	static boolean bVisibleVersion = false;
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 
 	// Overriding Function
@@ -106,12 +117,31 @@ public class MainActivity extends ListActivity {
 		setContentView( R.layout.activity_main );
 		
 	    // TODO Auto-generated method stub
+		if( !bVisibleVersion ) {
+			try {
+				String packageVersion;
+				PackageInfo info = this.getPackageManager().getPackageInfo( this.getPackageName(), 0 );
+				packageVersion = info.versionName;
+				
+				Toast.makeText(MainActivity.this, "Application Version : " + packageVersion, Toast.LENGTH_LONG).show();
+				Log.i(DBG_TAG, "Application Version : " + packageVersion);
+			} catch( NameNotFoundException e ) {
+				Toast.makeText(MainActivity.this, "Invalid Package name", Toast.LENGTH_LONG).show();
+			}
+			
+			bVisibleVersion = true;
+		}
+		
 		mContext = this;
 		mMediaInfo = new ArrayList<MediaInfo>();
-		
-		UpdateFileList( "/storage/sdcard0" );
-		UpdateFileList( "/storage/sdcard1" );
-		
+
+		File dir;
+		for( int i = 0; i < STORAGE_PATH.length; i++ ) {
+			dir = new File( STORAGE_PATH[i] );
+			if( dir.isDirectory() )
+				UpdateFileList( STORAGE_PATH[i] );
+		}
+			
 		Collections.sort( mMediaInfo , mComparator );
 		
 		MediaInfoAdapter adapter = new MediaInfoAdapter( this, R.layout.listview_row, mMediaInfo );

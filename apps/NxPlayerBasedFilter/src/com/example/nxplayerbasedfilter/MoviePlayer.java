@@ -26,6 +26,7 @@ public class MoviePlayer {
 	private static final String DBG_TAG = "NxPlayerBasedFilter.MoviePlayer";
 	
 	private static MoviePlayer mInstance;
+	private static int mWorkingCount;
 
 	private MoviePlayer() {
 		Mp_JniInit();
@@ -46,7 +47,7 @@ public class MoviePlayer {
 	
 	public synchronized int SetFileName( String uri )
 	{
-		Log.i(DBG_TAG, "SetFileName : " + uri);
+		Log.i(DBG_TAG, "[" + String.valueOf(++mWorkingCount) + "]" + "SetFileName : " + uri);
 		return Mp_SetFileName( uri );
 	}
 	
