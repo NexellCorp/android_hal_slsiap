@@ -229,9 +229,11 @@ void S5K5CAGX::setSceneMode(uint8_t sceneMode)
         uint32_t val = 0;
 
         switch (sceneMode) {
+#ifndef LOLLIPOP
         case ANDROID_CONTROL_SCENE_MODE_UNSUPPORTED:
             val = SCENE_OFF;
             break;
+#endif
         case ANDROID_CONTROL_SCENE_MODE_PORTRAIT:
             val = SCENE_PORTRAIT;
             break;

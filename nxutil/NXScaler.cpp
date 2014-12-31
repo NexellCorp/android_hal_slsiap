@@ -48,7 +48,7 @@ static void recalcSourceBuffer(const unsigned long srcPhys, unsigned long &calcP
             break;
         }
     }
-    ALOGV("left %d, top %d, srcPhys 0x%x, calcPhys 0x%x", left, top, srcPhys, calcPhys);
+    //ALOGV("left %d, top %d, srcPhys 0x%x, calcPhys 0x%x", left, top, srcPhys, calcPhys);
 }
 
 static inline int baseCheck()
@@ -325,9 +325,9 @@ int nxScalerRun(private_handle_t const *srcHandle, const struct nxp_vid_buffer *
     data.dst_height = ctx->dst_height;
     data.dst_code = ctx->dst_code;
 
-    ALOGV("%s: src_stride(%lu,%lu,%lu), src_width(%d), src_height(%d), dst_stride(%lu,%lu,%lu), dst_width(%d), dst_height(%d)",
-            __func__, data.src_stride[0], data.src_stride[1], data.src_stride[2], data.src_width, data.src_height,
-            data.dst_stride[0], data.dst_stride[1], data.dst_stride[2], data.dst_width, data.dst_height);
+    //ALOGV("%s: src_stride(%lu,%lu,%lu), src_width(%d), src_height(%d), dst_stride(%lu,%lu,%lu), dst_width(%d), dst_height(%d)",
+            //__func__, data.src_stride[0], data.src_stride[1], data.src_stride[2], data.src_width, data.src_height,
+            //data.dst_stride[0], data.dst_stride[1], data.dst_stride[2], data.dst_width, data.dst_height);
 
 
     return ioctl(scaler_fd, IOCTL_SCALER_SET_AND_RUN, &data);

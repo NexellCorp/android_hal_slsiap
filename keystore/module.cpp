@@ -26,7 +26,11 @@
 
 #include <openssl/err.h>
 
+#ifdef LOLLIPOP
+#include <UniquePtr.h>
+#else
 #include <utils/UniquePtr.h>
+#endif
 
 // For debugging
 //#define LOG_NDEBUG 0

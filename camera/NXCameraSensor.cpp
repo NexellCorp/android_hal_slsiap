@@ -240,8 +240,13 @@ status_t NXCameraSensor::constructStaticInfo(camera_metadata_t **info,
 
     ADD_OR_SIZE(ANDROID_CONTROL_AVAILABLE_EFFECTS, RawSensor->AvailableEffects, RawSensor->NumAvailEffects);
 
+#ifdef LOLLIPOP
+    static const int32_t max3aRegions[3] = {1, 2, 3};
+    ADD_OR_SIZE(ANDROID_CONTROL_MAX_REGIONS, max3aRegions, sizeof(max3aRegions)/sizeof(int32_t));
+#else
     int32_t max3aRegions = 1;
     ADD_OR_SIZE(ANDROID_CONTROL_MAX_REGIONS, &max3aRegions, 1);
+#endif
 
     ADD_OR_SIZE(ANDROID_CONTROL_AE_AVAILABLE_MODES, RawSensor->AvailableAeModes, RawSensor->NumAvailableAeModes);
 
@@ -365,7 +370,9 @@ status_t NXCameraSensor::constructDefaultRequest(int requestTemplate,
     uint8_t demosaicMode = 0;
     uint8_t noiseMode = 0;
     uint8_t shadingMode = 0;
+#ifndef LOLLIPOP
     uint8_t geometricMode = 0;
+#endif
     uint8_t colorMode = 0;
     uint8_t tonemapMode = 0;
     uint8_t edgeMode = 0;
@@ -380,7 +387,9 @@ status_t NXCameraSensor::constructDefaultRequest(int requestTemplate,
         demosaicMode = ANDROID_DEMOSAIC_MODE_HIGH_QUALITY;
         noiseMode = ANDROID_NOISE_REDUCTION_MODE_HIGH_QUALITY;
         shadingMode = ANDROID_SHADING_MODE_HIGH_QUALITY;
+#ifndef LOLLIPOP
         geometricMode = ANDROID_GEOMETRIC_MODE_HIGH_QUALITY;
+#endif
         colorMode = ANDROID_COLOR_CORRECTION_MODE_HIGH_QUALITY;
         tonemapMode = ANDROID_TONEMAP_MODE_HIGH_QUALITY;
         edgeMode = ANDROID_EDGE_MODE_HIGH_QUALITY;
@@ -393,7 +402,9 @@ status_t NXCameraSensor::constructDefaultRequest(int requestTemplate,
         demosaicMode = ANDROID_DEMOSAIC_MODE_FAST;
         noiseMode = ANDROID_NOISE_REDUCTION_MODE_FAST;
         shadingMode = ANDROID_SHADING_MODE_FAST;
+#ifndef LOLLIPOP
         geometricMode = ANDROID_GEOMETRIC_MODE_FAST;
+#endif
         colorMode = ANDROID_COLOR_CORRECTION_MODE_FAST;
         tonemapMode = ANDROID_TONEMAP_MODE_FAST;
         edgeMode = ANDROID_EDGE_MODE_FAST;
@@ -403,7 +414,9 @@ status_t NXCameraSensor::constructDefaultRequest(int requestTemplate,
     ADD_OR_SIZE(ANDROID_DEMOSAIC_MODE, &demosaicMode, 1);
     ADD_OR_SIZE(ANDROID_NOISE_REDUCTION_MODE, &noiseMode, 1);
     ADD_OR_SIZE(ANDROID_SHADING_MODE, &shadingMode, 1);
+#ifndef LOLLIPOP
     ADD_OR_SIZE(ANDROID_GEOMETRIC_MODE, &geometricMode, 1);
+#endif
     ADD_OR_SIZE(ANDROID_COLOR_CORRECTION_MODE, &colorMode, 1);
     ADD_OR_SIZE(ANDROID_TONEMAP_MODE, &tonemapMode, 1);
     ADD_OR_SIZE(ANDROID_EDGE_MODE, &edgeMode, 1);
@@ -506,8 +519,10 @@ status_t NXCameraSensor::constructDefaultRequest(int requestTemplate,
     static const uint8_t effectMode = ANDROID_CONTROL_EFFECT_MODE_OFF;
     ADD_OR_SIZE(ANDROID_CONTROL_EFFECT_MODE, &effectMode, 1);
 
+#ifndef LOLLIPOP
     static const uint8_t sceneMode = ANDROID_CONTROL_SCENE_MODE_UNSUPPORTED;
     ADD_OR_SIZE(ANDROID_CONTROL_SCENE_MODE, &sceneMode, 1);
+#endif
 
     static const uint8_t aeMode = ANDROID_CONTROL_AE_MODE_ON;
     ADD_OR_SIZE(ANDROID_CONTROL_AE_MODE, &aeMode, 1);

@@ -83,7 +83,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 64.0f,     // -2G ~ +2G, 6 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "bma220", // stringType
+          "" // requiredPermission
+#else
           { (void*)"bma220" }    // reserved[0] --> input device name
+#endif
         },
         {
           "BMA222 3-axis Accelerometer",
@@ -93,7 +98,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 256.0f,     // -2G ~ +2G, 8 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "bma222",
+          ""
+#else
           { (void*)"bma222" }    // reserved[0] --> input device name
+#endif
         },
         {
           "BMA250 3-axis Accelerometer",
@@ -103,17 +113,27 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 1024.0f,     // -2G ~ +2G, 10 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "bma250",
+          ""
+#else
           { (void*)"bma250" }    // reserved[0] --> input device name
+#endif
         },
-        { 
+        {
           "BMA255 3-axis Accelerometer",
           "Bosch Sensortec",
           1, SENSORS_ACCELERATION_HANDLE,
-          SENSOR_TYPE_ACCELEROMETER, 
-          (4.0f * GRAVITY_EARTH), 
+          SENSOR_TYPE_ACCELEROMETER,
+          (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 4096.0f,     // -2G ~ +2G, 12 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "bma2x2",
+          ""
+#else
           { (void*)"bma2x2" }    // reserved[0] --> input device name
+#endif
         },
         {
           "MMA7660 3-axis Accelerometer",
@@ -123,7 +143,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (3.0f * GRAVITY_EARTH),
           (3.0f * GRAVITY_EARTH) / 64.0f,     // -1.5G ~ +1.5G, 6 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mma7660",
+          ""
+#else
           { (void*)"mma7660" }    // reserved[0] --> input device name
+#endif
         },
 	{
           "MMA8653 3-axis Accelerometer",
@@ -133,7 +158,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 1024.0f,     // -2G ~ +2G, 10 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mma8653",
+          ""
+#else
           { (void*)"mma8653" }    // reserved[0] --> input device name
+#endif
         },
         {
           "MMA8452 3-axis Accelerometer",
@@ -143,7 +173,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 4096.0f,     // -2G ~ +2G, 12 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mma8452",
+          ""
+#else
           { (void*)"mma8452" }    // reserved[0] --> input device name
+#endif
         },
         {
           "LIS3DH 3-axis Accelerometer",
@@ -153,7 +188,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 4096.0f,     // -2G ~ +2G, 12 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "lis3dh_acc",
+          ""
+#else
           { (void*)"lis3dh_acc" }    // reserved[0] --> input device name
+#endif
         },
         {
           "KIONIX 3-axis Accelerometer",
@@ -163,7 +203,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4.0f * GRAVITY_EARTH),
           (4.0f * GRAVITY_EARTH) / 4096.0f,     // -2G ~ +2G, 12 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "kionix_accel",
+          ""
+#else
           { (void*)"kionix_accel" }    // reserved[0] --> input device name
+#endif
         },
         {
           "DMARD10 3-axis Accelerometer",
@@ -173,7 +218,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (8.0f * GRAVITY_EARTH),
           (8.0f * GRAVITY_EARTH) / 1024.0f,     // -4G ~ +4G, 10 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "dmard10",
+          ""
+#else
           { (void*)"dmard10" }    // reserved[0] --> input device name
+#endif
         },
         {
           "MC3230 3-axis Accelerometer",
@@ -183,7 +233,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (3.0f * GRAVITY_EARTH),
           (3.0f * GRAVITY_EARTH) / 256.0f,    // -1.5G ~ +1.5G, 8 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mc3230",
+          ""
+#else
           { (void*)"mc3230" }    // reserved[0] --> input device name
+#endif
         },
         {
           "MC3210 3-axis Accelerometer",
@@ -193,7 +248,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (16.0f * GRAVITY_EARTH),
           (16.0f * GRAVITY_EARTH) / 16384.0f,    // -8G ~ +8G, 14 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mc3210",
+          ""
+#else
           { (void*)"mc3210" }    // reserved[0] --> input device name
+#endif
 
         },
         {
@@ -204,7 +264,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (6.0f * GRAVITY_EARTH),
           (1.0f * GRAVITY_EARTH) / 21.34f,    // -1.5G ~ +1.5G, 8 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "stk8312",
+          ""
+#else
           { (void*)"stk8312" }    // reserved[0] --> input device name
+#endif
         },
         {
           "STK8313 3-axis Accelerometer",
@@ -214,7 +279,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (8.0f * GRAVITY_EARTH),
           (1.0f * GRAVITY_EARTH) / 256.0f,    // -8G ~ +8G, 14 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "stk8313",
+          ""
+#else
           { (void*)"stk8313" }    // reserved[0] --> input device name
+#endif
         },
         {
           "LTR-301 Light sensor",
@@ -224,7 +294,12 @@ static const struct sensor_t sSensorSupportList[] = {
           64000.0f,     // 2 ~ 64k
           1.0f,
           0.20f, 500, 0, 0,
+#ifdef LOLLIPOP
+          "ltr301",
+          ""
+#else
           { (void*)"ltr301" }    // reserved[0] --> input device name
+#endif
         },
         {
           "MC6420 3-axis Magnetic field sensor",
@@ -234,7 +309,12 @@ static const struct sensor_t sSensorSupportList[] = {
           400.0f,           // -200uT ~ +200uT
           1.0f / 80.0f,    // 80 LSB/uT
           0.5f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mc6420",
+          ""
+#else
           { (void*)"mc6420" }    // reserved[0] --> input device name
+#endif
         },
         {
           "L3G4200D Gyroscope sensor",
@@ -244,7 +324,12 @@ static const struct sensor_t sSensorSupportList[] = {
           (4000.0f*(float)M_PI/180.0f),         // -2000dps ~ +2000dps
           ((70.0f / 1000.0f) * ((float)M_PI / 180.0f)),    // 70 mdps/LSB
           6.1f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "l3g4200d",
+          ""
+#else
           { (void*)"l3g4200d" }    // reserved[0] --> input device name
+#endif
         },
         {
           "MPU3050C Gyroscope sensor",
@@ -254,18 +339,28 @@ static const struct sensor_t sSensorSupportList[] = {
           (4000.0f*(float)M_PI/180.0f),         // -2000dps ~ +2000dps
           ((1.0f / 16.4f) * ((float)M_PI / 180.0f)),    // 1/16.4 dps/LSB
           6.1f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "mpu3050c",
+          ""
+#else
           { (void*)"mpu3050c" }    // reserved[0] --> input device name
+#endif
         },
-        { 
+        {
           "BMG160 Gyroscope sensor",
           "Bosch Sensortec",
           1, SENSORS_GYROSCOPE_HANDLE,
-          SENSOR_TYPE_GYROSCOPE, 
+          SENSOR_TYPE_GYROSCOPE,
           (4000.0f*(float)M_PI/180.0f),         // -2000dps ~ +2000dps
 //          ((1.0f / 16.4f) * ((float)M_PI / 180.0f)),    // 1/16.4 dps/LSB
           ((4.0f / 16.4f) * ((float)M_PI / 180.0f)),    // 1/16.4 dps/LSB
           6.1f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "bmg160",
+          ""
+#else
           { (void*)"bmg160" }    // reserved[0] --> input device name
+#endif
         },
         {
           "BMA250 Thermometer",
@@ -275,7 +370,12 @@ static const struct sensor_t sSensorSupportList[] = {
           128.0f,        // -40 ~ +87.5 centigrade
           0.5f,     // 0.5 centigrade/LSB, 8 bit
           0.20f, 10, 0, 0,
+#ifdef LOLLIPOP
+          "bma250t",
+          ""
+#else
           { (void*)"bma250t" }    // reserved[0] --> input device name
+#endif
         },
 };
 
@@ -322,7 +422,11 @@ static int sensors_detect_devices(const struct sensor_t* slist, int ssize,
                     name[0] = '\0';
                 }
                 for (idx = 0; idx < ssize; idx++) {
+#ifdef LOLLIPOP
+                    if (!strcmp(name, slist[idx].stringType)) {
+#else
                     if (!strcmp(name, (char*)(slist[idx].reserved[0]))) {
+#endif
                         memcpy(&clist[count], &slist[idx], sizeof(struct sensor_t));
                         count ++;
                         break;
@@ -459,7 +563,11 @@ sensors_poll_context_t::sensors_poll_context_t()
         switch(ss->type) {
             case SENSOR_TYPE_ACCELEROMETER:
                 if( mSensors[accel] == NULL) {
+#ifdef LOLLIPOP
+                    mSensors[accel] = new AccelerationSensor(const_cast<char *>(ss->stringType),
+#else
                     mSensors[accel] = new AccelerationSensor((char*)ss->reserved[0],
+#endif
                                                 ss->resolution, ss->minDelay);
                     mPollFds[accel].fd = mSensors[accel]->getFd();
                     mPollFds[accel].events = POLLIN;
@@ -469,7 +577,11 @@ sensors_poll_context_t::sensors_poll_context_t()
 
             case SENSOR_TYPE_MAGNETIC_FIELD:
                 if( mSensors[magnetic] == NULL) {
+#ifdef LOLLIPOP
+                    mSensors[magnetic] = new CompassSensor(const_cast<char *>(ss->stringType),
+#else
                     mSensors[magnetic] = new CompassSensor((char*)ss->reserved[0],
+#endif
                                                 ss->resolution, ss->minDelay);
                     mPollFds[magnetic].fd = mSensors[magnetic]->getFd();
                     mPollFds[magnetic].events = POLLIN;
@@ -490,7 +602,11 @@ sensors_poll_context_t::sensors_poll_context_t()
 
             case SENSOR_TYPE_LIGHT:
                 if( mSensors[light] == NULL) {
+#ifdef LOLLIPOP
+                    mSensors[light] = new LightSensor(const_cast<char *>(ss->stringType),
+#else
                     mSensors[light] = new LightSensor((char*)ss->reserved[0],
+#endif
                                                 ss->resolution, ss->minDelay);
                     mPollFds[light].fd = mSensors[light]->getFd();
                     mPollFds[light].events = POLLIN;
@@ -511,7 +627,11 @@ sensors_poll_context_t::sensors_poll_context_t()
 
             case SENSOR_TYPE_GYROSCOPE:
                 if( mSensors[gyroscope] == NULL) {
+#ifdef LOLLIPOP
+                    mSensors[gyroscope] = new GyroSensor(const_cast<char *>(ss->stringType),
+#else
                     mSensors[gyroscope] = new GyroSensor((char*)ss->reserved[0],
+#endif
                                                 ss->resolution, ss->minDelay);
                     mPollFds[gyroscope].fd = mSensors[gyroscope]->getFd();
                     mPollFds[gyroscope].events = POLLIN;
@@ -521,7 +641,11 @@ sensors_poll_context_t::sensors_poll_context_t()
 
             case SENSOR_TYPE_TEMPERATURE:
                 if( mSensors[temperature] == NULL) {
+#ifdef LOLLIPOP
+                    mSensors[temperature] = new TemperatureSensor(const_cast<char *>(ss->stringType),
+#else
                     mSensors[temperature] = new TemperatureSensor((char*)ss->reserved[0],
+#endif
                                                 ss->resolution, ss->minDelay);
                     mPollFds[temperature].fd = mSensors[temperature]->getFd();
                     mPollFds[temperature].events = POLLIN;

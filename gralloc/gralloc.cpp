@@ -1,5 +1,7 @@
 #include <string.h>
+#ifndef LOLLIPOP
 #include <asm/page.h>
+#endif
 #include <limits.h>
 #include <unistd.h>
 #include <fcntl.h>
