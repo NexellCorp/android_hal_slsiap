@@ -6,6 +6,9 @@
 #include "NXZoomController.h"
 #include "NullZoomController.h"
 #include "ScalerZoomController.h"
+#ifdef WORKAROUND_128BYTE_ALIGN
+#include "W128BAScalerZoomController.h"
+#endif
 #include "NXStreamThread.h"
 #include "PreviewThread.h"
 #include "CallbackThread.h"
@@ -85,6 +88,13 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *usage = GRALLOC_USAGE_HW_CAMERA_WRITE;
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = DEFAULT_PIXEL_FORMAT;
+#ifdef WORKAROUND_128BYTE_ALIGN
+        uint32_t cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight;
+        cropLeft = cropTop = cropWidth = cropHeight = baseWidth = baseHeight = 0;
+        Parent->getCrop(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight);
+        spZoomController = new W128BAScalerZoomController(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight, width, height);
+        //free(zoomController);
+#endif
         streamThread = new PreviewThread((nxp_v4l2_id)get_board_preview_v4l2_id(Parent->getCameraId()),
                 width,
                 height,
