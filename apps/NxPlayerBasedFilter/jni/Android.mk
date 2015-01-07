@@ -5,8 +5,8 @@ LOCAL_PATH := $(call my-dir)
 #	Add Prebuilt Library
 #
 include $(CLEAR_VARS)
-LOCAL_MODULE := libtheoraparser
-LOCAL_SRC_FILES := libs/libtheoraparser.so
+LOCAL_MODULE := libtheoraparser_and
+LOCAL_SRC_FILES := libs/libtheoraparser_and.so
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -68,7 +68,7 @@ LOCAL_C_INCLUDES		:=	\
 
 LOCAL_LDFLAGS	+= \
 	-L$(LOCAL_PATH)/libs	\
-	-ltheoraparser			\
+	-ltheoraparser_and		\
 	-lavcodec-2.1.4			\
 	-lavdevice-2.1.4		\
 	-lavfilter-2.1.4		\
