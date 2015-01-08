@@ -46,13 +46,7 @@ PreviewThread::PreviewThread(nxp_v4l2_id id,
     else
         CropWidth = Width;
 
-    int baseWidth, baseHeight;
-    ZoomController->getBase(baseWidth, baseHeight);
-    ALOGD("%s: baseWidth %d, cropWidth %d", __func__, baseWidth, CropWidth);
-    if (baseWidth > Width)
-        ZoomController->setCrop(0, 0, CropWidth*2, Height);
-    else
-        ZoomController->setCrop(0, 0, CropWidth, Height);
+    ZoomController->setSource(CropWidth, Height);
 #endif
 }
 
@@ -84,8 +78,6 @@ void PreviewThread::onZoomChanged(int left, int top, int width, int height, int 
 {
     if (ZoomController.get()) {
         ALOGV("PreviewThread::onZoomChanged: %dx%d-%dx%d/%dx%d", left, top, width, height, baseWidth, baseHeight);
-        if (width == baseWidth)
-            width = CropWidth;
         ZoomController->setCrop(left, top, width, height);
     }
 }
@@ -101,26 +93,16 @@ status_t PreviewThread::readyToRun()
         return NO_INIT;
     }
 
-#ifdef WORKAROUND_128BYTE_ALIGN
-    if (Width % 128)
-        CropWidth = ALIGN(Width - 128, 128);
-    else
-        CropWidth = Width;
-    int baseWidth, baseHeight;
-    ZoomController->getBase(baseWidth, baseHeight);
-    ALOGD("%s: baseWidth %d, cropWidth %d", __func__, baseWidth, CropWidth);
-    if (baseWidth > Width)
-        ZoomController->setCrop(0, 0, CropWidth*2, Height);
-    else
-        ZoomController->setCrop(0, 0, CropWidth, Height);
-#endif
-
     if (stream->getWidth() != Width || stream->getHeight() != Height) {
         ALOGD("Context Changed!!!(%dx%d --> %dx%d)", Width, Height, stream->getWidth(), stream->getHeight());
         Width = stream->getWidth();
         Height = stream->getHeight();
         ZoomController->freeBuffer();
+#ifdef WORKAROUND_128BYTE_ALIGN
+        ZoomController->setSource(CropWidth, Height);
+#else
         ZoomController->setSource(Width, Height);
+#endif
         ZoomController->setDest(Width, Height);
     }
 
@@ -140,7 +122,6 @@ status_t PreviewThread::readyToRun()
         ZoomController->setFormat(PIXINDEX2PIXCODE(PixelIndex), PIXINDEX2PIXCODE(PixelIndex));
 
 #ifdef WORKAROUND_128BYTE_ALIGN
-    //ret = v4l2_set_crop_with_pad(Id, 2, 0, 0, CropWidth, Height);
     ret = v4l2_set_crop_with_pad(Id, 2, 0, 0, Width, Height);
     if (ret < 0) {
         ALOGE("failed to v4l2_set_crop_with_pad for %d, pad %d", Id, 2);

@@ -18,7 +18,7 @@ LOCAL_RESOURCE_DIR :=	\
 $(shell cp $(wildcard $(LOCAL_PATH)/jni/libs/*.so) $(TARGET_OUT_INTERMEDIATE_LIBRARIES))
 
 LOCAL_JNI_SHARED_LIBRARIES :=	\
-	libtheoraparser			\
+	libtheoraparser_and		\
 	libavcodec-2.1.4		\
 	libavdevice-2.1.4		\
 	libavfilter-2.1.4		\
