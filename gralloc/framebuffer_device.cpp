@@ -8,7 +8,9 @@
 #include <hardware/gralloc.h>
 
 #include <gralloc_priv.h>
+#include <NXUtil.h>
 
+#if 0
 static int get_screen_res(const char *fbname, int32_t &xres, int32_t &yres, int32_t &refreshRate)
 {
     int ret = 0;
@@ -62,6 +64,7 @@ err_open:
 
     return ret;
 }
+#endif
 
 static int init_fb(struct private_module_t *module)
 {
@@ -84,10 +87,17 @@ static int init_fb(struct private_module_t *module)
      }
 
      int32_t refreshRate;
+#if 0
      if (get_screen_res("fb0", module->xres, module->yres, refreshRate)) {
           ALOGE("%s: failed to get_screen_res()", __func__);
           return -errno;
      }
+#else
+     if (getScreenAttribute("fb0", module->xres, module->yres, refreshRate)) {
+          ALOGE("%s: failed to getScreenAttribute()", __func__);
+          return -errno;
+     }
+#endif
 
      float xdpi = (module->xres * 25.4f) / info.width;
      float ydpi = (module->yres * 25.4f) / info.height;

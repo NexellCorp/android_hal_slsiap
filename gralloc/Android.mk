@@ -20,7 +20,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libcutils libion libutils libion-nexell
+LOCAL_SHARED_LIBRARIES := liblog libcutils libion libutils libion-nexell libnxutil
 
 LOCAL_C_INCLUDES := system/core/include $(LOCAL_PATH)/../include
 

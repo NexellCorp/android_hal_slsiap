@@ -13,6 +13,7 @@ LOCAL_SRC_FILES := \
 	NXAllocator.cpp \
 	NXScaler.cpp \
 	NXCpu.cpp \
+	NXUtil.cpp \
 	csc_ARGB8888_to_NV12_NEON.s \
 	csc_ARGB8888_to_NV21_NEON.s \
 	csc.cpp \

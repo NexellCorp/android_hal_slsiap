@@ -28,6 +28,7 @@
 #include <android-nxp-v4l2.h>
 #include <nxp-v4l2.h>
 #include <NXCpu.h>
+#include <NXUtil.h>
 
 #include <cutils/log.h>
 #include <cutils/atomic.h>
@@ -199,6 +200,7 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
 
     close(fd);
 
+#if 0
     uint64_t base =
          (uint64_t)((info.upper_margin + info.lower_margin + info.yres)
              * (info.left_margin + info.right_margin + info.xres)
@@ -215,13 +217,16 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
             refreshRate = 60;
         }
     }
+#else
+    int32_t xres, yres, refreshRate;
+    getScreenAttribute("fb0", xres, yres, refreshRate);
+    ALOGD("%s: refreshRate %d", __func__, refreshRate);
+#endif
 
     pInfo->xres = info.xres;
     pInfo->yres = info.yres;
     pInfo->xdpi = 1000 * (info.xres * 25.4f) / info.width;
     pInfo->ydpi = 1000 * (info.yres * 25.4f) / info.height;
-    // pInfo->width = info.width;
-    // pInfo->height = info.height;
     pInfo->width = info.xres;
     pInfo->height = info.yres;
     pInfo->vsync_period = 1000000000 / refreshRate;
@@ -1089,8 +1094,11 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
 #endif
     }
 
-    if (lcdContents)
+    if (lcdContents) {
+        // psw0523 debugging for miware
+        ALOGD("render");
         me->mLCDImpl->render();
+    }
 
 
     // handle scenario change
@@ -1122,7 +1130,7 @@ static int hwc_eventControl(struct hwc_composer_device_1 *dev, int dpy,
     switch (event) {
     case HWC_EVENT_VSYNC:
         __u32 val = !!enabled;
-        ALOGV("HWC_EVENT_VSYNC: val %d", val);
+        ALOGD("HWC_EVENT_VSYNC: val %d", val);
         int err;
         if (val)
             err = write(me->mVsyncCtlFd, VSYNC_ON, sizeof(VSYNC_ON));
