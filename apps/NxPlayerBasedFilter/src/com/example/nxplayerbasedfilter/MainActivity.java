@@ -57,7 +57,6 @@ import android.graphics.drawable.Drawable;
 import android.widget.RelativeLayout;
 
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 
 public class MainActivity extends ListActivity {
