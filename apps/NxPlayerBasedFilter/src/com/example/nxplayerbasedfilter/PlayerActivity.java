@@ -112,6 +112,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 	int				mMovePreviousPos;
 	
 	int				mDisplayMode = 0; 
+	
 	int				mDisplayModeChange;
 	int				mScreenWidth, mScreenHeight;
 	int				mScreenRotate;
@@ -162,8 +163,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		mScreenRotate	= display.getRotation();
 		//Log.v(DBG_TAG, "screen width(" + String.valueOf(mScreenWidth) +"), screen height(" + String.valueOf(mScreenHeight) + "), screen rotate(" + String.valueOf(mScreenRotate) +")");
 		
-		SetDisplayLayout();
-
 		mLayOut.setBackgroundColor( Color.rgb(0,0,0) );
 		mMoveEvent = false;
 		
@@ -474,7 +473,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 			mMoviePlayer.Open( null, null, mVideoTrackRequest, false );
 			mMoviePlayer.Play();
 			
-			if( mMediaController.isShowing() ) mMediaController.show(mVisibleTime);
+			if( mMediaController.isShowing() )	mMediaController.show(mVisibleTime);
 			if( mActionBar.isShowing() )		mActionBar.show();
 			if( mContextView.isShowing() )		mContextView.Show();
 
@@ -779,9 +778,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 			lpAlign1.addRule(RelativeLayout.CENTER_VERTICAL, R.id.playerLayOut);
 			lpAlign2.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, R.id.playerLayOut);
 			lpAlign2.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, R.id.playerLayOut);
-			
-			mSurfaceView1.setZOrderMediaOverlay( false );
-			mSurfaceView2.setZOrderMediaOverlay( true );
 			break;
 		}
 		
@@ -804,8 +800,14 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 		//mSurfaceHolder1.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 		//mSurfaceHolder2.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
-		mSurfaceView1.setVisibility( SurfaceView.VISIBLE );
-		mSurfaceView2.setVisibility( SurfaceView.VISIBLE );
+		if( mDisplayMode == 0 || mDisplayMode == 2 ) {
+			mSurfaceView1.setVisibility( SurfaceView.VISIBLE );
+			mSurfaceView1.setZOrderMediaOverlay( false );
+		}
+		if( mDisplayMode == 1 || mDisplayMode == 2 ) {
+			mSurfaceView2.setVisibility( SurfaceView.VISIBLE );
+			mSurfaceView2.setZOrderMediaOverlay( true );
+		}
 	}
 	
 	public void PlayerPrevFile()

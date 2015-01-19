@@ -56,6 +56,16 @@ public class MoviePlayer {
 		return Mp_GetVideoTrackNum();
 	}
 	
+//	public synchronized int GetVideoWidth( int vidRequest )
+//	{
+//		return Mp_GetVideoWidth( vidRequest );
+//	}
+//
+//	public synchronized int GetVideoHeight( int vidRequest )
+//	{
+//		return Mp_GetVideoHeight( vidRequest );
+//	}
+
 	public synchronized String GetMediaInfo()
 	{
 		return Mp_GetMediaInfo();
@@ -113,10 +123,10 @@ public class MoviePlayer {
 	public native void	Mp_JniInit();
 	public native void	Mp_JniDeinit();
 	public native int	Mp_SetFileName( String uri );
-	public native int 	Mp_GetVideoTrackNum();
 	public native String Mp_GetMediaInfo();
-	public native int 	Mp_GetVideoWidth( int vidRequest );
-	public native int	Mp_GetVideoHeight( int vidRequest );
+	public native int 	Mp_GetVideoTrackNum();
+//	public native int 	Mp_GetVideoWidth( int vidRequest );
+//	public native int	Mp_GetVideoHeight( int vidRequest );
 	public native int 	Mp_Open( Surface sf1, Surface sf2, int vidRequest, boolean pipOn );
 	public native int 	Mp_Close();
 	public native int 	Mp_Play();
@@ -127,4 +137,3 @@ public class MoviePlayer {
 	public native int 	Mp_GetCurDuration();
 	public native int 	Mp_GetCurPosition();
 }
-

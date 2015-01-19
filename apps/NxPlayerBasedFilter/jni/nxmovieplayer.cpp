@@ -240,55 +240,11 @@ JNIEXPORT jint JNICALL Mp_SetFileName( JNIEnv *env, jclass obj, jstring uri )
 	return mpResult;
 }
 
-JNIEXPORT jint JNICALL Mp_GetVideoTrackNum( JNIEnv *env, jclass obj )
+JNIEXPORT jstring JNICALL Mp_GetMediaInfo( JNIEnv *env, jclass obj )
 {
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_GetVideoNumber";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
-		return -1;
-	}
-
-	LOGV("%s()--", __FUNC__);
-	return gMediaInfo.VideoTrackTotNum;
-}
-
-JNIEXPORT jint JNICALL Mp_Open( JNIEnv *env, jclass obj, jobject jSurface1, jobject jSurface2, int vidRequest, jboolean pipOn )
-{
-	CNX_AutoLock lock( &hLock );
-
-	static char __FUNC__[32] = "Mp_Open";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
-		return -1;
-	}
-
-	if( jSurface1 != NULL )	pNativeWindow1 = ANativeWindow_fromSurface( env, jSurface1 );
-	if( jSurface2 != NULL ) pNativeWindow2 = ANativeWindow_fromSurface( env, jSurface2 );
-
-	LOGI("pNativeWindow1(%p), pNativeWindow(%p), videoChannel(%d), pipOn(%d)", pNativeWindow1, pNativeWindow2, vidRequest, pipOn);
-
-	MP_RESULT mpResult = NX_MPOpen( hMoviePlayer, gAudioRequestTrackNum, vidRequest, (int)pipOn, (void*)pNativeWindow1, (void*)pNativeWindow2, NULL, &EventCallback, (void*)hMoviePlayer );
-	if( ERROR_NONE != mpResult ) {
- 		LOGE("%s(): Error! NX_MPOpen() Failed! (ret = %d)", __FUNC__, mpResult);
-	}
-
-	LOGV("%s()--", __FUNC__);
-	return mpResult;
-}
-
-JNIEXPORT jstring JNICALL Mp_GetMediaInfo(JNIEnv *env, jclass obj)
-{
-	CNX_AutoLock lock( &hLock );
-
-	static char __FUNC__[32] = "Mp_Play";
+	static char __FUNC__[32] = "Mp_GetMediaInfo";
 	LOGV("%s()++", __FUNC__);
 
 	char destBuf[1024], tempBuf[128];
@@ -345,6 +301,96 @@ JNIEXPORT jstring JNICALL Mp_GetMediaInfo(JNIEnv *env, jclass obj)
 
 	LOGV("%s()--", __FUNC__);
 	return env->NewStringUTF(destBuf);
+}
+
+JNIEXPORT jint JNICALL Mp_GetVideoTrackNum( JNIEnv *env, jclass obj )
+{
+	CNX_AutoLock lock( &hLock );
+
+	static char __FUNC__[32] = "Mp_GetVideoNumber";
+	LOGV("%s()++", __FUNC__);
+
+	if( hMoviePlayer == NULL ) {
+		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
+		LOGV("%s()--", __FUNC__);
+		return -1;
+	}
+
+	LOGV("%s()--", __FUNC__);
+	return gMediaInfo.VideoTrackTotNum;
+}
+
+//JNIEXPORT jint JNICALL Mp_GetVideoWidth( JNIEnv *env, jclass obj, int vidRequest )
+//{
+//	CNX_AutoLock lock( &hLock );
+//
+//	static char __FUNC__[32] = "Mp_GetVideoWidth";
+//	LOGV("%s()++", __FUNC__);
+//
+//	if( hMoviePlayer == NULL ) {
+//		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
+//		LOGV("%s()--", __FUNC__);
+//		return -1;
+//	}
+//
+//	if( vidRequest <= 0 || vidRequest > gMediaInfo.VideoTrackTotNum ) {
+//		LOGE("%s(): Error! Illegal VideoRequestNumber(%d)!", __FUNC__, vidRequest);
+//		LOGV("%s()--", __FUNC__);
+//		return -1;
+//	}
+//
+//	LOGV("%s()--", __FUNC__);
+//	return gMediaInfo.VideoInfo[vidRequest-1].Width;
+//}
+//
+//JNIEXPORT jint JNICALL Mp_GetVideoHeight( JNIEnv *env, jclass obj, int vidRequest )
+//{
+//	CNX_AutoLock lock( &hLock );
+//
+//	static char __FUNC__[32] = "Mp_GetVideoHeight";
+//	LOGV("%s()++", __FUNC__);
+//
+//	if( hMoviePlayer == NULL ) {
+//		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
+//		LOGV("%s()--", __FUNC__);
+//		return -1;
+//	}
+//
+//	if( vidRequest <= 0 || vidRequest > gMediaInfo.VideoTrackTotNum ) {
+//		LOGE("%s(): Error! Illegal VideoRequestNumber(%d)!", __FUNC__, vidRequest);
+//		LOGV("%s()--", __FUNC__);
+//		return -1;
+//	}
+//
+//	LOGV("%s()--", __FUNC__);
+//	return gMediaInfo.VideoInfo[vidRequest-1].Height;
+//}
+
+JNIEXPORT jint JNICALL Mp_Open( JNIEnv *env, jclass obj, jobject jSurface1, jobject jSurface2, int vidRequest, jboolean pipOn )
+{
+	CNX_AutoLock lock( &hLock );
+
+	static char __FUNC__[32] = "Mp_Open";
+	LOGV("%s()++", __FUNC__);
+
+	if( hMoviePlayer == NULL ) {
+		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
+		LOGV("%s()--", __FUNC__);
+		return -1;
+	}
+
+	if( jSurface1 != NULL )	pNativeWindow1 = ANativeWindow_fromSurface( env, jSurface1 );
+	if( jSurface2 != NULL ) pNativeWindow2 = ANativeWindow_fromSurface( env, jSurface2 );
+
+	LOGI("pNativeWindow1(%p), pNativeWindow(%p), videoChannel(%d), pipOn(%d)", pNativeWindow1, pNativeWindow2, vidRequest, pipOn);
+
+	MP_RESULT mpResult = NX_MPOpen( hMoviePlayer, gAudioRequestTrackNum, vidRequest, (int)pipOn, (void*)pNativeWindow1, (void*)pNativeWindow2, NULL, &EventCallback, (void*)hMoviePlayer );
+	if( ERROR_NONE != mpResult ) {
+ 		LOGE("%s(): Error! NX_MPOpen() Failed! (ret = %d)", __FUNC__, mpResult);
+	}
+
+	LOGV("%s()--", __FUNC__);
+	return mpResult;
 }
 
 JNIEXPORT jint JNICALL Mp_Close(JNIEnv *env, jclass obj)
@@ -549,6 +595,8 @@ static JNINativeMethod sMethods[] = {
 	{ "Mp_SetFileName",			"(Ljava/lang/String;)I",	(void*)Mp_SetFileName },
 	{ "Mp_GetMediaInfo",		"()Ljava/lang/String;",		(void*)Mp_GetMediaInfo },
 	{ "Mp_GetVideoTrackNum",	"()I",						(void*)Mp_GetVideoTrackNum },
+//	{ "Mp_GetVideoWidth",		"(I)I",						(void*)Mp_GetVideoWidth },
+//	{ "Mp_GetVideoHeight",		"(I)I",						(void*)Mp_GetVideoHeight },
 	{ "Mp_Open", 				"(Landroid/view/Surface;Landroid/view/Surface;IZ)I",	(void*)Mp_Open },
 	{ "Mp_Close", 				"()I",						(void*)Mp_Close },
 	{ "Mp_Play", 				"()I",						(void*)Mp_Play },
