@@ -1095,8 +1095,6 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
     }
 
     if (lcdContents) {
-        // psw0523 debugging for miware
-        ALOGD("render");
         me->mLCDImpl->render();
     }
 
