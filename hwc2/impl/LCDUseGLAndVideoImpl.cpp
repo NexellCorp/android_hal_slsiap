@@ -156,12 +156,17 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
     mRGBLayerIndex = -1;
     mOverlayLayerIndex = -1;
 
+    // psw0523 test for miware
+    //ALOGD("prepare: numHwLayers %d", contents->numHwLayers);
+    int numRGBLayers = contents->numHwLayers;
+
     for (size_t i = 0; i < contents->numHwLayers; i++) {
         hwc_layer_1_t &layer = contents->hwLayers[i];
 
         if (layer.compositionType == HWC_FRAMEBUFFER_TARGET) {
             mRGBLayerIndex = i;
             ALOGV("prepare: rgb %d", i);
+            numRGBLayers--;
             continue;
         }
 
@@ -173,10 +178,29 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
             layer.hints |= HWC_HINT_CLEAR_FB;
             mOverlayLayerIndex = i;
             ALOGV("prepare: overlay %d", i);
+            numRGBLayers--;
             continue;
         }
 
         layer.compositionType = HWC_FRAMEBUFFER;
+    }
+
+    //if (numRGBLayers == 1) {
+    if (mOverlayLayerIndex >= 0) {
+        for (size_t i = 0; i < contents->numHwLayers; i++) {
+            hwc_layer_1_t &layer = contents->hwLayers[i];
+            if (layer.compositionType == HWC_FRAMEBUFFER) {
+                int width = layer.sourceCrop.right - layer.sourceCrop.left;
+                int height = layer.sourceCrop.bottom - layer.sourceCrop.top;
+                if (width == 1920 && height == 1080) {
+                    layer.compositionType = HWC_OVERLAY;
+                    ALOGV("Use RGB Layer!!");
+                    mRGBLayerIndex = i;
+                } else {
+                    layer.compositionType = HWC_OVERLAY;
+                }
+            }
+        }
     }
 
     return 0;
