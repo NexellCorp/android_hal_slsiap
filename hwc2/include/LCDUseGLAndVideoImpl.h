@@ -24,11 +24,15 @@ protected:
 
 private:
     HWCRenderer *mRGBRenderer;
+    HWCRenderer *mRGBRenderer2;
     HWCRenderer *mVideoRenderer;
     private_handle_t const *mRGBHandle;
+    private_handle_t const *mRGBHandle2;
     private_handle_t const *mVideoHandle;
+    bool mRGBLayer2Configured;
     bool mOverlayConfigured;
     int mRGBLayerIndex;
+    int mRGBLayerIndex2;
     int mOverlayLayerIndex;
 
     // crop
@@ -37,11 +41,21 @@ private:
     int mRight;
     int mBottom;
 
+    // RGB Crop
+    int mRGBLeft;
+    int mRGBTop;
+    int mRGBRight;
+    int mRGBBottom;
+
     int mVideoOffCount;
+    int mRGB2OffCount;
 
 private:
     int configOverlay(struct hwc_layer_1 &layer);
     int configCrop(struct hwc_layer_1 &layer);
+
+    int configRGBOverlay(struct hwc_layer_1 &layer);
+    int configRGBCrop(struct hwc_layer_1 &layer);
 };
 
 }; // namespace

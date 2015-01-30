@@ -41,11 +41,15 @@ using namespace android;
 LCDUseGLAndVideoImpl::LCDUseGLAndVideoImpl(int rgbID, int videoID)
     :LCDCommonImpl(rgbID, videoID),
     mRGBRenderer(NULL),
+    mRGBRenderer2(NULL),
     mVideoRenderer(NULL),
     mRGBHandle(NULL),
+    mRGBHandle2(NULL),
     mVideoHandle(NULL),
+    mRGBLayer2Configured(false),
     mOverlayConfigured(false),
     mRGBLayerIndex(-1),
+    mRGBLayerIndex2(-1),
     mOverlayLayerIndex(-1)
 {
     init();
@@ -54,11 +58,15 @@ LCDUseGLAndVideoImpl::LCDUseGLAndVideoImpl(int rgbID, int videoID)
 LCDUseGLAndVideoImpl::LCDUseGLAndVideoImpl(int rgbID, int videoID, int width, int height)
     :LCDCommonImpl(rgbID, videoID, width, height),
     mRGBRenderer(NULL),
+    mRGBRenderer2(NULL),
     mVideoRenderer(NULL),
     mRGBHandle(NULL),
+    mRGBHandle2(NULL),
     mVideoHandle(NULL),
+    mRGBLayer2Configured(false),
     mOverlayConfigured(false),
     mRGBLayerIndex(-1),
+    mRGBLayerIndex2(-1),
     mOverlayLayerIndex(-1)
 {
     init();
@@ -68,19 +76,23 @@ LCDUseGLAndVideoImpl::~LCDUseGLAndVideoImpl()
 {
     if (mRGBRenderer)
         delete mRGBRenderer;
+    if (mRGBRenderer2)
+        delete mRGBRenderer2;
     if (mVideoRenderer)
         delete mVideoRenderer;
 }
 
 void LCDUseGLAndVideoImpl::init()
 {
-    ALOGD("%s", __func__);
+    ALOGV("%s", __func__);
     mRGBRenderer = new LCDRGBRenderer(mRgbID);
     if (!mRGBRenderer)
         ALOGE("FATAL: can't create RGBRenderer");
 
-    // psw0523 fix for new gralloc
-    //mVideoRenderer = new HWCCommonRenderer(mVideoID, 4);
+    mRGBRenderer2 = new HWCCommonRenderer(mRgbID, 4, 1);
+    if (!mRGBRenderer2)
+        ALOGE("FATAL: can't create RGBRenderer2");
+
     mVideoRenderer = new HWCCommonRenderer(mVideoID, 4);
     if (!mVideoRenderer)
         ALOGE("FATAL: can't create VideoRenderer");
@@ -120,13 +132,50 @@ int LCDUseGLAndVideoImpl::configOverlay(struct hwc_layer_1 &layer)
         return ret;
     }
 
-    ret = v4l2_set_ctrl(mVideoID, V4L2_CID_MLC_VID_PRIORITY, 1);
+    //ret = v4l2_set_ctrl(mVideoID, V4L2_CID_MLC_VID_PRIORITY, 1);
+    ret = v4l2_set_ctrl(mVideoID, V4L2_CID_MLC_VID_PRIORITY, 2);
     if (ret < 0) {
         ALOGE("failed to v4l2_set_ctrl()");
         return ret;
     }
 
     mOverlayConfigured = true;
+    return 0;
+}
+
+int LCDUseGLAndVideoImpl::configRGBOverlay(struct hwc_layer_1 &layer)
+{
+    int ret;
+
+    ALOGD("configRGBOverlay");
+
+    ret = v4l2_set_format(mRgbID,
+            layer.sourceCrop.right - layer.sourceCrop.left,
+            layer.sourceCrop.bottom - layer.sourceCrop.top,
+            V4L2_PIX_FMT_RGB32);
+    if (ret < 0) {
+        ALOGE("failed to v4l2_set_format()");
+        return ret;
+    }
+
+    mRGBLeft = layer.displayFrame.left;
+    mRGBTop  = layer.displayFrame.top;
+    mRGBRight = layer.displayFrame.right;
+    mRGBBottom = layer.displayFrame.bottom;
+
+    ret = v4l2_set_crop(mRgbID, mRGBLeft, mRGBTop, mRGBRight - mRGBLeft, mRGBBottom - mRGBTop);
+    if (ret < 0) {
+        ALOGE("failed to v4l2_set_crop()");
+        return ret;
+    }
+
+    ret = v4l2_reqbuf(mRgbID, 4);
+    if (ret < 0) {
+        ALOGE("failed to v4l2_reqbuf()");
+        return ret;
+    }
+
+    mRGBLayer2Configured = true;
     return 0;
 }
 
@@ -151,14 +200,36 @@ int LCDUseGLAndVideoImpl::configCrop(struct hwc_layer_1 &layer)
     }
 }
 
+int LCDUseGLAndVideoImpl::configRGBCrop(struct hwc_layer_1 &layer)
+{
+    if (mRGBLeft != layer.displayFrame.left ||
+        mRGBTop != layer.displayFrame.top ||
+        mRGBRight != layer.displayFrame.right ||
+        mRGBBottom != layer.displayFrame.bottom) {
+        mRGBLeft = layer.displayFrame.left;
+        mRGBTop  = layer.displayFrame.top;
+        mRGBRight = layer.displayFrame.right;
+        mRGBBottom = layer.displayFrame.bottom;
+
+        int ret = v4l2_set_crop(mRgbID, mRGBLeft, mRGBTop, mRGBRight - mRGBLeft, mRGBBottom - mRGBTop);
+        if (ret < 0)
+            ALOGE("failed to v4l2_set_crop()");
+
+        return ret;
+    } else {
+        return 0;
+    }
+}
+
 int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
 {
     mRGBLayerIndex = -1;
+    mRGBLayerIndex2 = -1;
     mOverlayLayerIndex = -1;
 
     // psw0523 test for miware
     //ALOGD("prepare: numHwLayers %d", contents->numHwLayers);
-    int numRGBLayers = contents->numHwLayers;
+    //int numRGBLayers = contents->numHwLayers;
 
     for (size_t i = 0; i < contents->numHwLayers; i++) {
         hwc_layer_1_t &layer = contents->hwLayers[i];
@@ -166,7 +237,7 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
         if (layer.compositionType == HWC_FRAMEBUFFER_TARGET) {
             mRGBLayerIndex = i;
             ALOGV("prepare: rgb %d", i);
-            numRGBLayers--;
+            //numRGBLayers--;
             continue;
         }
 
@@ -178,7 +249,7 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
             layer.hints |= HWC_HINT_CLEAR_FB;
             mOverlayLayerIndex = i;
             ALOGV("prepare: overlay %d", i);
-            numRGBLayers--;
+            //numRGBLayers--;
             continue;
         }
 
@@ -197,6 +268,8 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
                     ALOGV("Use RGB Layer!!");
                     mRGBLayerIndex = i;
                 } else {
+                    ALOGV("other layer %dx%d --> %dx%d", layer.sourceCrop.left, layer.sourceCrop.top, width, height);
+                    mRGBLayerIndex2 = i;
                     layer.compositionType = HWC_OVERLAY;
                 }
             }
@@ -209,6 +282,7 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
 int LCDUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, void *unused)
 {
     mRGBHandle = NULL;
+    mRGBHandle2 = NULL;
     mVideoHandle = NULL;
 
 #if 0
@@ -242,6 +316,12 @@ int LCDUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, void *unused)
         ALOGV("Set RGB Handle: %p", mRGBHandle);
     }
 
+    if (mRGBLayerIndex2 >= 0) {
+        mRGBHandle2 = reinterpret_cast<private_handle_t const *>(contents->hwLayers[mRGBLayerIndex2].handle);
+        mRGBRenderer2->setHandle(mRGBHandle2);
+        ALOGV("Set RGB2 Handle: %p, format %d", mRGBHandle2, mRGBHandle2->format);
+    }
+
     if (!mOverlayConfigured && mVideoHandle) {
         configOverlay(contents->hwLayers[mOverlayLayerIndex]);
         mVideoOffCount = 0;
@@ -256,6 +336,22 @@ int LCDUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, void *unused)
         mVideoOffCount = 0;
         configCrop(contents->hwLayers[mOverlayLayerIndex]);
     }
+
+    if (!mRGBLayer2Configured && mRGBHandle2) {
+        configRGBOverlay(contents->hwLayers[mRGBLayerIndex2]);
+        mRGB2OffCount = 0;
+    } else if (mRGBLayer2Configured && !mRGBHandle2) {
+        mRGB2OffCount++;
+        if (mRGB2OffCount > 1) {
+            ALOGD("stop rgb2 layer");
+            mRGBRenderer2->stop();
+            mRGBLayer2Configured = false;
+        }
+    } else if (mRGBHandle2) {
+        mRGB2OffCount = 0;
+        configRGBCrop(contents->hwLayers[mRGBLayerIndex2]);
+    }
+
     return 0;
 }
 
@@ -276,6 +372,7 @@ int LCDUseGLAndVideoImpl::render()
         mVideoRenderer->render();
     if (mRGBHandle)
         mRGBRenderer->render();
-
+    if (mRGBHandle2)
+        mRGBRenderer2->render();
     return 0;
 }
