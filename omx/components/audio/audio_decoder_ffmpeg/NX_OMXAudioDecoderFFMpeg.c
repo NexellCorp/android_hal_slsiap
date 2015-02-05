@@ -361,6 +361,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
                 pDecComp->inCodingType = OMX_AUDIO_CodingAC3;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingAC3;
 			}
 			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.dts" ) )
 			{
@@ -368,6 +369,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingDTS;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingDTS;
 			}
 			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.mp2" ) )
 			{
@@ -375,6 +377,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingMP3;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingMP3;
 			}
 			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.mpeg" ) || !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.mp3" ) )
 			{
@@ -382,6 +385,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingMP3;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingMP3;
 			}
 			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.flac" ) )
 			{
@@ -389,6 +393,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingFLAC;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingFLAC;
 			}
 			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.ra" ) )
 			{
@@ -397,6 +402,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingRA;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingRA;
 			}
 			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.wma" ) || !strcmp((OMX_STRING)pInRole->cRole, "audio_decoder.x-ms-wma") )
 			{
@@ -405,6 +411,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 					free(pDecComp->compRole);
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingWMA;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingWMA;
 			}
 			else
 			{
@@ -417,6 +424,18 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 		case OMX_IndexParamAudioPortFormat:
 		{
 			//OMX_AUDIO_PARAM_PORTFORMATTYPE *pAudFormat = (OMX_AUDIO_PARAM_PORTFORMATTYPE*)ComponentParamStruct;
+			break;
+		}
+		case OMX_IndexParamAudioPcm:
+		{
+			OMX_AUDIO_PARAM_PCMMODETYPE *pPcmType = (OMX_AUDIO_PARAM_PCMMODETYPE *)ComponentParamStruct;
+
+			if( pPcmType->nPortIndex != FFDEC_AUD_OUTPORT_INDEX){
+				NX_ErrMsg("%s Bad port index.(%d)\n", __FUNCTION__, nParamIndex);
+				return OMX_ErrorBadPortIndex;
+			}
+			pDecComp->outPortType.nChannels = FFMIN(2, pPcmType->nChannels);
+			pDecComp->outPortType.nSamplingRate = pPcmType->nSamplingRate;
 			break;
 		}
 		case OMX_IndexParamAudioAc3:
@@ -1008,37 +1027,49 @@ static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COM
 		case OMX_CommandFlush:       // Flush the data queue(s) of a component
 		{
 			OMX_BUFFERHEADERTYPE* pBuf = NULL;
-			TRACE("%s() : Flush( nParam1=%ld )\n", __FUNCTION__, nParam1 );
+			TRACE("%s() : Flush Start ( nParam1=%ld )\n", __FUNCTION__, nParam1 );
 
 			pthread_mutex_lock( &pDecComp->hBufMutex );
-			do{
-				if( pDecComp->pInputPortQueue->curElements > 0 ){
-					//	Flush buffer
-					NX_PopQueue( pDecComp->pInputPortQueue, (void**)&pBuf );
-					pBuf->nFilledLen = 0;
-					pDecComp->pCallbacks->EmptyBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
-				}else{
-					break;
-				}
-			}while(1);
-			do{
-				if( NX_GetQueueCnt(pDecComp->pOutputPortQueue) > 0 ){
-					//	Flush buffer
-					NX_PopQueue( pDecComp->pOutputPortQueue, (void**)&pBuf );
-					pBuf->nFilledLen = 0;
-					pDecComp->pCallbacks->FillBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
-				}else{
-					break;
-				}
-			}while(1);
 
+			if( nParam1 == FFDEC_AUD_INPORT_INDEX || nParam1 == OMX_ALL )
+			{
+				do{
+					if( pDecComp->pInputPortQueue->curElements > 0 ){
+						//	Flush buffer
+						NX_PopQueue( pDecComp->pInputPortQueue, (void**)&pBuf );
+						pBuf->nFilledLen = 0;
+						pDecComp->pCallbacks->EmptyBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
+					}else{
+						break;
+					}
+				}while(1);
+				pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, eEvent, OMX_CommandFlush, FFDEC_AUD_INPORT_INDEX, pCmdData );
+			}
+
+			if( nParam1 == FFDEC_AUD_OUTPORT_INDEX || nParam1 == OMX_ALL )
+			{
+				do{
+					if( NX_GetQueueCnt(pDecComp->pOutputPortQueue) > 0 ){
+						//	Flush buffer
+						NX_PopQueue( pDecComp->pOutputPortQueue, (void**)&pBuf );
+						pBuf->nFilledLen = 0;
+						pDecComp->pCallbacks->FillBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
+					}else{
+						break;
+					}
+				}while(1);
+				pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, eEvent, OMX_CommandFlush, FFDEC_AUD_OUTPORT_INDEX, pCmdData );
+			}
+
+			if( nParam1 == OMX_ALL )	//	Output Port Flushing
+			{
+				pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, OMX_EventCmdComplete, OMX_CommandFlush, OMX_ALL, pCmdData );
+			}
 			pDecComp->bFlush = OMX_TRUE;
 
 			pthread_mutex_unlock( &pDecComp->hBufMutex );
-
-			nData1 = OMX_CommandFlush;
-			nData2 = nParam1;
-			break;
+			TRACE("%s() : Flush End\n", __FUNCTION__ );
+			return ;
 		}
 		//	Openmax spec v1.1.2 : 3.4.4.3 Non-tunneled Port Disablement and Enablement.
 		case OMX_CommandPortDisable: // Disable a port on a component.
