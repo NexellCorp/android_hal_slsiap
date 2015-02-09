@@ -41,7 +41,11 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent);
 
 //	Default Native Buffer Mode's buffers & buffer size
 #define	VID_OUTPORT_MIN_BUF_CNT_THUMB	4
-#define	VID_OUTPORT_MIN_BUF_CNT		16					//	Max Avaiable Frames
+#define	VID_OUTPORT_MIN_BUF_CNT			10				//	Max Avaiable Frames
+
+#define	VID_OUTPORT_MIN_BUF_CNT_H264_UNDER720P	20			//	~720p
+#define	VID_OUTPORT_MIN_BUF_CNT_H264_1080P		12			//	1080p
+
 #define	VID_OUTPORT_MIN_BUF_SIZE	(4*1024)			//	Video Memory Structure Size
 
 #define	VID_TEMP_IN_BUF_SIZE		(4*1024*1024)
@@ -54,7 +58,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent);
 //	DEBUG FLAGS
 //
 #define	DEBUG_ANDROID	1
-#define	DEBUG_BUFFER	0
+#define	DEBUG_BUFFER	1
 #define	DEBUG_FUNC		0
 #define	TRACE_ON		0
 #define	DEBUG_FLUSH		0

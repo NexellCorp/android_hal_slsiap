@@ -1289,7 +1289,7 @@ static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp)
 			sampleRate = pDecComp->inPortType.wmaType.nSamplingRate;
 			bitRate = pDecComp->inPortType.wmaType.nBitRate;
 			blockAlign = pDecComp->inPortType.wmaType.nBlockAlign;
-			DbgMsg("Audio coding type WMA, channels=%d, samplingrate=%d, codecId = %d\n", channels, sampleRate, codecId);
+			DbgMsg("Audio coding type WMA, channels=%d, samplingrate=%d, blockAlign=%ld, codecId = %d\n", channels, sampleRate, blockAlign, codecId);
 			break;
 		case OMX_AUDIO_CodingMP3:
 			codecId = CODEC_ID_MP3;

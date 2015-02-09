@@ -53,6 +53,7 @@ extern "C"{
 //#define FFDEC_AUD_OUTPORT_MIN_BUF_SIZE	(16*1536*2*2)
 #define	FFDEC_AUD_OUTPORT_MIN_BUF_SIZE	(1024*1024)
 
+#ifdef LOLLIPOP
 #define OMX_IndexParamAudioAc3	(OMX_IndexVendorStartUnused + 0xE0000 + 0x00)
 #define	OMX_IndexParamAudioDTS	(OMX_IndexVendorStartUnused + 0xE0000 + 0x01)
 #define	OMX_IndexParamAudioFLAC	(OMX_IndexVendorStartUnused + 0xE0000 + 0x02)
@@ -60,6 +61,15 @@ extern "C"{
 #define OMX_AUDIO_CodingAC3		(OMX_AUDIO_CodingVendorStartUnused + 0xE0000 + 0x00)
 #define OMX_AUDIO_CodingDTS		(OMX_AUDIO_CodingVendorStartUnused + 0xE0000 + 0x01)
 #define OMX_AUDIO_CodingFLAC	(OMX_AUDIO_CodingVendorStartUnused + 0xE0000 + 0x02)
+#else
+#define OMX_IndexParamAudioAc3	(OMX_IndexVendorStartUnused + 0x00)
+#define	OMX_IndexParamAudioDTS	(OMX_IndexVendorStartUnused + 0x01)
+#define	OMX_IndexParamAudioFLAC	(OMX_IndexVendorStartUnused + 0x02)
+
+#define OMX_AUDIO_CodingAC3		(OMX_AUDIO_CodingVendorStartUnused + 0x00)
+#define OMX_AUDIO_CodingDTS		(OMX_AUDIO_CodingVendorStartUnused + 0x01)
+#define OMX_AUDIO_CodingFLAC	(OMX_AUDIO_CodingVendorStartUnused + 0x02)
+#endif
 
 /** AC3 params */
 typedef struct OMX_AUDIO_PARAM_AC3TYPE {
