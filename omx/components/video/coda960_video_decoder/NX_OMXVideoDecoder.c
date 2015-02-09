@@ -174,7 +174,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 	//	Set Video Output Port Information
 	pDecComp->outputFormat.eColorFormat = OMX_COLOR_FormatYUV420Planar;
 	pDecComp->bUseNativeBuffer = OMX_FALSE;
-	pDecComp->bEnableThumbNailMode = OMX_TRUE;
+	pDecComp->bEnableThumbNailMode = OMX_FALSE;
 	pDecComp->bMetaDataInBuffers = OMX_FALSE;
 
 	pDecComp->outBufferAllocSize = 0;
@@ -654,22 +654,36 @@ static OMX_ERRORTYPE NX_VidDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE
 				pDecComp->width = pPortDef->format.video.nFrameWidth;
 				pDecComp->height = pPortDef->format.video.nFrameHeight;
 
-				if( pDecComp->videoCodecId == NX_AVC_DEC )
-				{
-					int MBs;
-					MBs = ((pDecComp->width+15)>>4)*((pDecComp->height+15)>>4);
-					if(MBs <= 1620)
-					{
-						pDecComp->pOutputPort->stdPortDef.nBufferCountMin = 19;
-						pDecComp->pOutputPort->stdPortDef.nBufferCountActual = 19;
-					}
-				}
 				if( pDecComp->bEnableThumbNailMode )
 				{
+					pDecComp->pOutputPort->stdPortDef.nBufferCountActual = VID_OUTPORT_MIN_BUF_CNT_THUMB;
+					pDecComp->pOutputPort->stdPortDef.nBufferCountMin    = VID_OUTPORT_MIN_BUF_CNT_THUMB;
 					pDecComp->pOutputPort->stdPortDef.nBufferSize = pDecComp->width*pDecComp->height*3/2;
 				}
 				else
 				{
+					DbgMsg("CodecID(%d) NX_AVC_DEC(%d)\n", pDecComp->videoCodecId, NX_AVC_DEC);
+					if( pDecComp->videoCodecId == NX_AVC_DEC )
+					{
+						int32_t MBs = ((pDecComp->width+15)>>4)*((pDecComp->height+15)>>4);
+						//	Under 720p
+						if(MBs <= ((1280>>4)*(720>>4)))
+						{
+							pDecComp->pOutputPort->stdPortDef.nBufferCountMin    = VID_OUTPORT_MIN_BUF_CNT_H264_UNDER720P;
+							pDecComp->pOutputPort->stdPortDef.nBufferCountActual = VID_OUTPORT_MIN_BUF_CNT_H264_UNDER720P;
+						}
+						//	1080p
+						else
+						{
+							pDecComp->pOutputPort->stdPortDef.nBufferCountMin    = VID_OUTPORT_MIN_BUF_CNT_H264_1080P;
+							pDecComp->pOutputPort->stdPortDef.nBufferCountActual = VID_OUTPORT_MIN_BUF_CNT_H264_1080P;
+						}
+					}
+					else
+					{
+						pDecComp->pOutputPort->stdPortDef.nBufferCountMin    = VID_OUTPORT_MIN_BUF_CNT;
+						pDecComp->pOutputPort->stdPortDef.nBufferCountActual = VID_OUTPORT_MIN_BUF_CNT;
+					}
 					pDecComp->pOutputPort->stdPortDef.nBufferSize = VID_OUTPORT_MIN_BUF_SIZE;
 				}
 
