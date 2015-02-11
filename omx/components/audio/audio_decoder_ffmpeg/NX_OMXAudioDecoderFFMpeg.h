@@ -43,8 +43,6 @@ extern "C"{
 #define	FFDEC_AUD_INPORT_INDEX		0
 #define	FFDEC_AUD_OUTPORT_INDEX		1
 
-#define	NX_OMX_MAX_BUF				128
-
 #define FFDEC_AUD_INPORT_MIN_BUF_CNT	8
 //#define FFDEC_AUD_INPORT_MIN_BUF_SIZE	(64*1024)
 #define	FFDEC_AUD_INPORT_MIN_BUF_SIZE	(1024*32)
@@ -57,7 +55,6 @@ extern "C"{
 #define OMX_IndexParamAudioAc3	(OMX_IndexVendorStartUnused + 0xE0000 + 0x00)
 #define	OMX_IndexParamAudioDTS	(OMX_IndexVendorStartUnused + 0xE0000 + 0x01)
 #define	OMX_IndexParamAudioFLAC	(OMX_IndexVendorStartUnused + 0xE0000 + 0x02)
-
 #define OMX_AUDIO_CodingAC3		(OMX_AUDIO_CodingVendorStartUnused + 0xE0000 + 0x00)
 #define OMX_AUDIO_CodingDTS		(OMX_AUDIO_CodingVendorStartUnused + 0xE0000 + 0x01)
 #define OMX_AUDIO_CodingFLAC	(OMX_AUDIO_CodingVendorStartUnused + 0xE0000 + 0x02)
@@ -107,16 +104,6 @@ typedef struct NX_FFDEC_AUDIO_COMP_TYPE{
 	pthread_t					hBufThread;
 	pthread_mutex_t				hBufMutex;
 	NX_THREAD_CMD				eCmdBufThread;
-	NX_SEMAPHORE				*hBufAllocSem;						//	Buffer allocation semaphore ( Semaphore )
-	NX_SEMAPHORE				*hBufCtrlSem;						//	Buffer thread control semaphore ( Mutex )
-	NX_SEMAPHORE				*hBufChangeSem;						//	Buffer status change semaphore ( Event )
-	/*					Port Information						*/
-	NX_BASEPORTTYPE				*pInputPort;						//	Input Port
-	NX_BASEPORTTYPE				*pOutputPort;						//	Output Port
-	OMX_BUFFERHEADERTYPE		*pInputBuffers[NX_OMX_MAX_BUF];		//	Input Buffers
-	OMX_BUFFERHEADERTYPE		*pOutputBuffers[NX_OMX_MAX_BUF];	//	Output Buffers
-	NX_QUEUE					*pInputPortQueue;
-	NX_QUEUE					*pOutputPortQueue;
 
 	union{
 		OMX_AUDIO_PARAM_AC3TYPE ac3Type;

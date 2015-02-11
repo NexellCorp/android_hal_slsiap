@@ -52,7 +52,7 @@ static int AVCCheckPortReconfiguration( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX
 							}
 
 							//	Need Port Reconfiguration
-							SendEvent( pDecComp, OMX_EventPortSettingsChanged, OMX_DirOutput, 0, NULL );
+							SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventPortSettingsChanged, OMX_DirOutput, 0, NULL );
 							if( OMX_TRUE == pDecComp->bInitialized )
 							{
 								pDecComp->bInitialized = OMX_FALSE;
@@ -142,7 +142,7 @@ int NX_DecodeAvcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 					if( pDecComp->width != w || pDecComp->height != h )
 					{
 						//	Need Port Reconfiguration
-						SendEvent( pDecComp, OMX_EventPortSettingsChanged, OMX_DirOutput, 0, NULL );
+						SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventPortSettingsChanged, OMX_DirOutput, 0, NULL );
 
 						// Change Port Format
 						pDecComp->pOutputPort->stdPortDef.format.video.nFrameWidth = w;

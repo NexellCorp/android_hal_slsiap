@@ -26,7 +26,7 @@
 #include <csc.h>		//	NEON Color Space Converter
 
 #define	DEBUG_BUFFER	0
-#define	TRACE_ON		0
+#define	TRACE_ON		1
 #define	DEBUG_FUNC		0
 
 #ifdef	DbgMsg
@@ -68,13 +68,10 @@
 static OMX_ERRORTYPE NX_VidEncGetParameter			( OMX_HANDLETYPE hComp, OMX_INDEXTYPE nParamIndex,OMX_PTR ComponentParamStruct);
 static OMX_ERRORTYPE NX_VidEncSetParameter			( OMX_HANDLETYPE hComp, OMX_INDEXTYPE nParamIndex, OMX_PTR ComponentParamStruct);
 static OMX_ERRORTYPE NX_VidEncUseBuffer				( OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes, OMX_U8* pBuffer);
-static OMX_ERRORTYPE NX_VidEncAllocateBuffer		( OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes);
-static OMX_ERRORTYPE NX_VidEncFreeBuffer			( OMX_HANDLETYPE hComp, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer);
-static OMX_ERRORTYPE NX_VidEncEmptyThisBuffer		( OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
-static OMX_ERRORTYPE NX_VidEncFillThisBuffer		( OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
 static OMX_ERRORTYPE NX_VidEncComponentDeInit		( OMX_HANDLETYPE hComp);
-static void NX_VidEncCommandThread( void *arg );
 static void NX_VidEncBufferMgmtThread( void *arg );
+static void NX_VidEncCommandProc( NX_VIDENC_COMP_TYPE *pEncComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
+
 
 static OMX_S32		gstNumInstance = 0;
 static OMX_S32		gstMaxInstance = 2;
@@ -225,6 +222,11 @@ OMX_ERRORTYPE NX_VidEncComponentInit (OMX_HANDLETYPE hComponent)
 	//					End Port configurations
 	///////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////
+	//
+	//	Registration OMX Standard Functions
+	//
+	//	Base overrided functions
 	pComp->GetComponentVersion    = NX_BaseGetComponentVersion   ;
 	pComp->SendCommand            = NX_BaseSendCommand           ;
 	pComp->GetConfig              = NX_BaseGetConfig             ;
@@ -235,22 +237,28 @@ OMX_ERRORTYPE NX_VidEncComponentInit (OMX_HANDLETYPE hComponent)
 	pComp->UseEGLImage            = NX_BaseUseEGLImage           ;
 	pComp->ComponentRoleEnum      = NX_BaseComponentRoleEnum     ;
 	pComp->SetCallbacks           = NX_BaseSetCallbacks          ;
+	pComp->AllocateBuffer         = NX_BaseAllocateBuffer        ;
+	pComp->FreeBuffer             = NX_BaseFreeBuffer            ;
+	pComp->EmptyThisBuffer        = NX_BaseEmptyThisBuffer       ;
+	pComp->FillThisBuffer         = NX_BaseFillThisBuffer        ;
 
+	//	Specific implemented functions
 	pComp->GetParameter           = NX_VidEncGetParameter        ;
 	pComp->SetParameter           = NX_VidEncSetParameter        ;
 	pComp->UseBuffer              = NX_VidEncUseBuffer           ;
-	pComp->AllocateBuffer         = NX_VidEncAllocateBuffer      ;
-	pComp->FreeBuffer             = NX_VidEncFreeBuffer          ;
-	pComp->EmptyThisBuffer        = NX_VidEncEmptyThisBuffer     ;
-	pComp->FillThisBuffer         = NX_VidEncFillThisBuffer      ;
 	pComp->ComponentDeInit        = NX_VidEncComponentDeInit     ;
+	//
+	///////////////////////////////////////////////////////////////////
+
+	//	Registration Command Procedure
+	pEncComp->cbCmdProcedure = NX_VidEncCommandProc;			//	Command procedure
 
 	//	Create command thread
 	NX_InitQueue( &pEncComp->cmdQueue, NX_MAX_QUEUE_ELEMENT );
 	pEncComp->hSemCmd = NX_CreateSem( 0, NX_MAX_QUEUE_ELEMENT );
 	pEncComp->hSemCmdWait = NX_CreateSem( 0, 1 );
 	pEncComp->eCmdThreadCmd = NX_THREAD_CMD_RUN;
-	pthread_create( &pEncComp->hCmdThread, NULL, (void*)&NX_VidEncCommandThread , pEncComp ) ;
+	pthread_create( &pEncComp->hCmdThread, NULL, (void*)&NX_BaseCommandThread , pEncComp ) ;
 	NX_PendSem( pEncComp->hSemCmdWait );
 
 	//	Set Component Name & Role
@@ -584,6 +592,10 @@ static OMX_ERRORTYPE NX_VidEncSetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE 
 			if( pEnNativeBuf->nPortIndex != 1 )
 				return OMX_ErrorBadPortIndex;
 			pEncComp->bUseNativeBuffer = pEnNativeBuf->enable;
+			// FIXME : TODO : Should be delete fourced TRUE.
+#ifdef	LOLLIPOP
+			pEncComp->bUseNativeBuffer = OMX_TRUE;
+#endif
 			DbgMsg("Native buffer flag is %s!!", (pEncComp->bUseNativeBuffer==OMX_TRUE)?"Enabled":"Disabled");
 			break;
 		}
@@ -758,157 +770,6 @@ static OMX_ERRORTYPE NX_VidEncUseBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHE
 		}
 	}
 	return OMX_ErrorInsufficientResources;
-}
-
-static OMX_ERRORTYPE NX_VidEncAllocateBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes)
-{
-	OMX_COMPONENTTYPE *pStdComp = (OMX_COMPONENTTYPE *)hComponent;
-	NX_VIDENC_COMP_TYPE *pEncComp = (NX_VIDENC_COMP_TYPE *)pStdComp->pComponentPrivate;
-	NX_BASEPORTTYPE *pPort = NULL;
-	OMX_BUFFERHEADERTYPE         **pPortBuf = NULL;
-	OMX_U32 i=0;
-
-	if( nPortIndex >= pEncComp->nNumPort )
-		return OMX_ErrorBadPortIndex;
-
-	if( OMX_StateLoaded != pEncComp->eCurState || OMX_StateIdle != pEncComp->eNewState )
-		return OMX_ErrorIncorrectStateTransition;
-
-	if( 0 ==nPortIndex ){
-		pPort = pEncComp->pInputPort;
-		pPortBuf = pEncComp->pInputBuffers;
-	}else{
-		pPort = pEncComp->pOutputPort;
-		pPortBuf = pEncComp->pOutputBuffers;
-	}
-
-	if( pPort->stdPortDef.nBufferSize > nSizeBytes )
-		return OMX_ErrorBadParameter;
-
-	for( i=0 ; i<pPort->stdPortDef.nBufferCountActual ; i++ ){
-		if( NULL == pPortBuf[i] ){
-			//	Allocate Actual Data
-			pPortBuf[i] = NxMalloc( sizeof(OMX_BUFFERHEADERTYPE) );
-			if( NULL == pPortBuf[i] )
-				return OMX_ErrorInsufficientResources;
-			NxMemset( pPortBuf[i], 0, sizeof(OMX_BUFFERHEADERTYPE) );
-			pPortBuf[i]->nSize = sizeof(OMX_BUFFERHEADERTYPE);
-			NX_OMXSetVersion( &pPortBuf[i]->nVersion );
-			pPortBuf[i]->pBuffer = NxMalloc( nSizeBytes );
-			if( NULL == pPortBuf[i]->pBuffer )
-				return OMX_ErrorInsufficientResources;
-			pPortBuf[i]->nAllocLen = nSizeBytes;
-			pPortBuf[i]->pAppPrivate = pAppPrivate;
-			pPortBuf[i]->pPlatformPrivate = pStdComp;
-			if( OMX_DirInput == pPort->stdPortDef.eDir ){
-				pPortBuf[i]->nInputPortIndex = pPort->stdPortDef.nPortIndex;
-			}else{
-				pPortBuf[i]->nOutputPortIndex = pPort->stdPortDef.nPortIndex;
-			}
-			pPort->nAllocatedBuf ++;
-			if( pPort->nAllocatedBuf == pPort->stdPortDef.nBufferCountActual ){
-				pPort->stdPortDef.bPopulated = OMX_TRUE;
-				pPort->eBufferType = NX_BUFHEADER_TYPE_ALLOCATED;
-				NX_PostSem(pEncComp->hBufAllocSem);
-			}
-			*pBuffer = pPortBuf[i];
-			return OMX_ErrorNone;
-		}
-	}
-	pPort->stdPortDef.bPopulated = OMX_TRUE;
-	*pBuffer = pPortBuf[0];
-	return OMX_ErrorInsufficientResources;
-}
-static OMX_ERRORTYPE NX_VidEncFreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	OMX_COMPONENTTYPE *pStdComp = (OMX_COMPONENTTYPE *)hComponent;
-	NX_VIDENC_COMP_TYPE *pEncComp = (NX_VIDENC_COMP_TYPE *)pStdComp->pComponentPrivate;
-	NX_BASEPORTTYPE *pPort = NULL;
-	OMX_BUFFERHEADERTYPE **pPortBuf = NULL;
-	OMX_U32 i=0;
-
-	if( nPortIndex >= pEncComp->nNumPort )
-		return OMX_ErrorBadPortIndex;
-
-	if( OMX_StateLoaded != pEncComp->eNewState )
-		return OMX_ErrorIncorrectStateTransition;
-
-	if( 0 == nPortIndex ){
-		pPort = pEncComp->pInputPort;
-		pPortBuf = pEncComp->pInputBuffers;
-	}else{
-		pPort = pEncComp->pOutputPort;
-		pPortBuf = pEncComp->pOutputBuffers;
-	}
-
-	//	OMX_StateLoaded로 transition하는 경우 아닐 경우 ????
-	if( NULL == pBuffer ){
-		return OMX_ErrorBadParameter;
-	}
-
-	for( i=0 ; i<pPort->stdPortDef.nBufferCountActual ; i++ ){
-		if( NULL != pBuffer && pBuffer == pPortBuf[i] ){
-			if( pPort->eBufferType == NX_BUFHEADER_TYPE_ALLOCATED ){
-				NxFree(pPortBuf[i]->pBuffer);
-				pPortBuf[i]->pBuffer = NULL;
-			}
-			NxFree(pPortBuf[i]);
-			pPortBuf[i] = NULL;
-			pPort->nAllocatedBuf --;
-			if( 0 == pPort->nAllocatedBuf ){
-				pPort->stdPortDef.bPopulated = OMX_FALSE;
-				NX_PostSem(pEncComp->hBufAllocSem);
-			}
-			return OMX_ErrorNone;
-		}
-	}
-	return OMX_ErrorInsufficientResources;
-}
-
-static OMX_ERRORTYPE NX_VidEncEmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	NX_VIDENC_COMP_TYPE *pEncComp = (NX_VIDENC_COMP_TYPE *)((OMX_COMPONENTTYPE *)hComp)->pComponentPrivate;
-	//	Push data to command buffer
-	assert( NULL != pEncComp->pInputPort );
-	assert( NULL != pEncComp->pInputPortQueue );
-
-	if( pEncComp->eCurState == pEncComp->eNewState ){
-		if( !(OMX_StateIdle == pEncComp->eCurState || OMX_StatePause == pEncComp->eCurState || OMX_StateExecuting == pEncComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}else{
-		if( (OMX_StateIdle==pEncComp->eNewState) && (OMX_StateExecuting==pEncComp->eCurState || OMX_StatePause==pEncComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}
-	if( 0 != NX_PushQueue( pEncComp->pInputPortQueue, pBuffer ) ){
-		return OMX_ErrorUndefined;
-	}
-	NX_PostSem( pEncComp->hBufChangeSem );
-	return OMX_ErrorNone;
-}
-
-static OMX_ERRORTYPE NX_VidEncFillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	NX_VIDENC_COMP_TYPE *pEncComp = (NX_VIDENC_COMP_TYPE *)((OMX_COMPONENTTYPE *)hComp)->pComponentPrivate;
-	//	Push data to command buffer
-	assert( NULL != pEncComp->pInputPort );
-	assert( NULL != pEncComp->pInputPortQueue );
-	if( pEncComp->eCurState == pEncComp->eNewState ){
-		if( !(OMX_StateIdle == pEncComp->eCurState || OMX_StatePause == pEncComp->eCurState || OMX_StateExecuting == pEncComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}else{
-		if( (OMX_StateIdle==pEncComp->eNewState) && (OMX_StateExecuting==pEncComp->eCurState || OMX_StatePause==pEncComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}
-
-	if( 0 != NX_PushQueue( pEncComp->pOutputPortQueue, pBuffer ) ){
-		return OMX_ErrorUndefined;
-	}
-	NX_PostSem( pEncComp->hBufChangeSem );
-	return OMX_ErrorNone;
 }
 
 
@@ -1146,29 +1007,43 @@ static void NX_VidEncCommandProc( NX_VIDENC_COMP_TYPE *pEncComp, OMX_COMMANDTYPE
 			TRACE("%s : OMX_CommandFlush \n", __FUNCTION__);
 
 			pthread_mutex_lock( &pEncComp->hBufMutex );
-			do{
-				if( NX_GetQueueCnt(pEncComp->pInputPortQueue) > 0 ){
-					//	Flush buffer
-					NX_PopQueue( pEncComp->pInputPortQueue, (void**)&pBuf );
-					pEncComp->pCallbacks->EmptyBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
-				}else{
-					break;
-				}
-			}while(1);
-			do{
-				if( NX_GetQueueCnt(pEncComp->pOutputPortQueue) > 0 ){
-					//	Flush buffer
-					NX_PopQueue( pEncComp->pOutputPortQueue, (void**)&pBuf );
-					pEncComp->pCallbacks->FillBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
-				}else{
-					break;
-				}
-			}while(1);
+
+			if( nParam1 == VIDDEC_INPORT_INDEX || nParam1 == OMX_ALL )
+			{
+				do{
+					if( NX_GetQueueCnt(pEncComp->pInputPortQueue) > 0 ){
+						//	Flush buffer
+						NX_PopQueue( pEncComp->pInputPortQueue, (void**)&pBuf );
+						pEncComp->pCallbacks->EmptyBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
+					}else{
+						break;
+					}
+				}while(1);
+				SendEvent( (NX_BASE_COMPNENT*)pEncComp, eEvent, OMX_CommandFlush, VIDDEC_INPORT_INDEX, pCmdData );
+			}
+
+			if( nParam1 == VIDDEC_OUTPORT_INDEX || nParam1 == OMX_ALL )
+			{
+				do{
+					if( NX_GetQueueCnt(pEncComp->pOutputPortQueue) > 0 ){
+						//	Flush buffer
+						NX_PopQueue( pEncComp->pOutputPortQueue, (void**)&pBuf );
+						pEncComp->pCallbacks->FillBufferDone(pStdComp, pStdComp->pApplicationPrivate, pBuf);
+					}else{
+						break;
+					}
+				}while(1);
+				SendEvent( (NX_BASE_COMPNENT*)pEncComp, eEvent, OMX_CommandFlush, VIDDEC_OUTPORT_INDEX, pCmdData );
+			}
+
+			if( nParam1 == OMX_ALL )	//	Output Port Flushing
+			{
+				SendEvent( (NX_BASE_COMPNENT*)pEncComp, eEvent, OMX_CommandFlush, OMX_ALL, pCmdData );
+			}
 
 			pthread_mutex_unlock( &pEncComp->hBufMutex );
-			nData1 = OMX_CommandFlush;
-			nData2 = nParam1;
-			break;
+			//pEncComp->bFlush = OMX_TRUE;
+			return;
 		}
 		//	Openmax spec v1.1.2 : 3.4.4.3 Non-tunneled Port Disablement and Enablement.
 		case OMX_CommandPortDisable: // Disable a port on a component.
@@ -1213,39 +1088,7 @@ static void NX_VidEncCommandProc( NX_VIDENC_COMP_TYPE *pEncComp, OMX_COMMANDTYPE
 			break;
 		}
 	}
-	pEncComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pEncComp->pCallbackData, eEvent, nData1, nData2, pCmdData );
-}
-
-
-static void NX_VidEncCommandThread( void *arg )
-{
-	NX_VIDENC_COMP_TYPE *pEncComp = (NX_VIDENC_COMP_TYPE *)arg;
-	NX_CMD_MSG_TYPE *pCmd = NULL;
-	TRACE( "enter NX_VidEncCommandTrhead() loop\n" );
-
-	NX_PostSem( pEncComp->hSemCmdWait );
-	while(1)
-	{
-		if( 0 != NX_PendSem( pEncComp->hSemCmd ) ){
-			DbgMsg( "NX_VidEncCommandThread : Exit command loop : error NX_PendSem()\n" );
-			break;
-		}
-
-		//	IL Client에서 command response를 wait할 수 있으므로 반드시 command quque를 비워 주어야만 한다.
-		if( NX_THREAD_CMD_RUN!=pEncComp->eCmdThreadCmd && 0==NX_GetQueueCnt(&pEncComp->cmdQueue) ){
-			break;
-		}
-
-		if( 0 != NX_PopQueue( &pEncComp->cmdQueue, (void**)&pCmd ) ){
-			DbgMsg( "NX_VidEncCommandThread : Exit command loop : NX_PopQueue()\n" );
-		}
-
-		if( pCmd != NULL ){
-			NX_VidEncCommandProc( pEncComp, pCmd->eCmd, pCmd->nParam1, pCmd->pCmdData );
-			NxFree( pCmd );
-		}
-	}
-	TRACE( ">> exit NX_VidEncCommandThread() loop!!\n" );
+	SendEvent( (NX_BASE_COMPNENT*)pEncComp, eEvent, nData1, nData2, pCmdData );
 }
 
 //
@@ -1352,7 +1195,11 @@ static OMX_S32 EncoderOpen(NX_VIDENC_COMP_TYPE *pEncComp)
 	memset(&encInitParam, 0, sizeof(encInitParam));
 
 	//	Check NV12 Format
+#ifdef LOLLIPOP
+	if( pEncComp->bUseNativeBuffer == OMX_FALSE && pEncComp->inputFormat.eColorFormat == OMX_COLOR_FormatAndroidOpaque )
+#else
 	if( pEncComp->inputFormat.eColorFormat == OMX_COLOR_FormatAndroidOpaque )
+#endif
 	{
 		DbgMsg("Encoder Input Format NV12\n");
 		encInitParam.chromaInterleave = 1;
@@ -1474,7 +1321,11 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 	//		pInBuf->pBuffer[4~7] : private_hand_t *
 	//		ARGB Buffer
 	//
+#ifdef LOLLIPOP
+	if( pEncComp->bUseNativeBuffer == OMX_FALSE && pEncComp->inputFormat.eColorFormat == OMX_COLOR_FormatAndroidOpaque )
+#else
 	if( pEncComp->inputFormat.eColorFormat == OMX_COLOR_FormatAndroidOpaque )
+#endif
 	{
 		hPrivate = (struct private_handle_t const *)recodingBuffer[1];
 		int ion_fd = ion_open();

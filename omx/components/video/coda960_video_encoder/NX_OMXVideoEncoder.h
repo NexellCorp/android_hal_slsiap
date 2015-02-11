@@ -26,8 +26,6 @@ OMX_ERRORTYPE NX_VidDecComponentInit (OMX_HANDLETYPE hComponent);
 #define	VIDDEC_INPORT_INDEX		0
 #define	VIDDEC_OUTPORT_INDEX	1
 
-#define	NX_OMX_MAX_BUF			128
-
 #define	VIDENC_INPORT_MIN_BUF_CNT	6
 #define	VIDENC_INPORT_MIN_BUF_SIZE	(1920*1088*4)
 
@@ -51,16 +49,6 @@ typedef struct tNX_VIDENC_COMP_TYPE{
 	pthread_t				hBufThread;
 	pthread_mutex_t			hBufMutex;
 	NX_THREAD_CMD			eCmdBufThread;
-	NX_SEMAPHORE			*hBufAllocSem;						//	Buffer allocation semaphore ( Semaphore )
-	NX_SEMAPHORE			*hBufCtrlSem;						//	Buffer thread control semaphore ( Mutex )
-	NX_SEMAPHORE			*hBufChangeSem;						//	Buffer status change semaphore ( Event )
-	/*					Port Information						*/
-	NX_BASEPORTTYPE			*pInputPort;						//	Input Port
-	NX_BASEPORTTYPE			*pOutputPort;						//	Output Port
-	OMX_BUFFERHEADERTYPE	*pInputBuffers[NX_OMX_MAX_BUF];		//	Input Buffers
-	OMX_BUFFERHEADERTYPE	*pOutputBuffers[NX_OMX_MAX_BUF];	//	Output Buffers
-	NX_QUEUE				*pInputPortQueue;
-	NX_QUEUE				*pOutputPortQueue;
 
 	//		Video Format
 	OMX_VIDEO_PARAM_PORTFORMATTYPE	inputFormat;
@@ -69,7 +57,7 @@ typedef struct tNX_VIDENC_COMP_TYPE{
 	//
 	OMX_BOOL					bSendCodecSpecificInfo;
 	OMX_VIDEO_PARAM_MPEG4TYPE	omxMp4EncParam;
-	OMX_VIDEO_PARAM_AVCTYPE   omxAVCEncParam;
+	OMX_VIDEO_PARAM_AVCTYPE   	omxAVCEncParam;
 	OMX_VIDEO_PARAM_H263TYPE	omxH263EncParam;
 
 	//	Android Native Buffer Flasg

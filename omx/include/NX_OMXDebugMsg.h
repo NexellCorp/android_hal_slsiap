@@ -18,7 +18,8 @@
 #define NX_DBG_ERROR		1
 #define NX_DBG_WARNING		2
 #define NX_DBG_INFO			3
-#define NX_DBG_TRACE		4
+#define NX_DBG_DEBUG		4
+#define NX_DBG_TRACE		5
 
 
 void NX_DbgSetPrefix( const char *pPrefix );

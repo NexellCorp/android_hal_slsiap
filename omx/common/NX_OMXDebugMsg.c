@@ -13,7 +13,7 @@
 #include <string.h>
 #include <NX_OMXDebugMsg.h>
 
-static unsigned int gst_TargetDebugLevel = NX_DBG_TRACE;	//	Error
+static unsigned int gst_TargetDebugLevel = NX_DBG_INFO;	//	Error
 static char gst_Prefix[128] = "[NX_OXM]";
 
 void NX_DbgSetPrefix( const char *pPrefix )

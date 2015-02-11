@@ -11,6 +11,13 @@ NX_HW_INCLUDE := $(NX_HW_TOP)/include
 NX_LINUX_TOP := $(TOP)/linux/platform/$(TARGET_CPU_VARIANT2)
 NX_LINUX_INCLUDE := $(NX_LINUX_TOP)/library/include
 
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+#@echo "This is LOLLIPOP!!!"
+LOCAL_CFLAGS += -DLOLLIPOP=1
+endif
+
 OMX_TOP := $(NX_HW_TOP)/omx
 RATECONTROL_PATH := $(NX_LINUX_TOP)/library/lib/ratecontrol
 

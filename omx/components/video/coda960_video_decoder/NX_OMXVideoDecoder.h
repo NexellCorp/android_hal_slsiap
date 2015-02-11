@@ -34,8 +34,6 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent);
 #define	VPUDEC_VID_INPORT_INDEX		0
 #define	VPUDEC_VID_OUTPORT_INDEX	1
 
-#define	NX_OMX_MAX_BUF				32
-
 #define	VID_INPORT_MIN_BUF_CNT		6					//	Max 6 Avaliable
 #define	VID_INPORT_MIN_BUF_SIZE		(1024*1024*4)		//	32 Mbps( 32Mbps, 1 fps )
 
@@ -58,7 +56,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent);
 //	DEBUG FLAGS
 //
 #define	DEBUG_ANDROID	1
-#define	DEBUG_BUFFER	1
+#define	DEBUG_BUFFER	0
 #define	DEBUG_FUNC		0
 #define	TRACE_ON		0
 #define	DEBUG_FLUSH		0
@@ -117,21 +115,12 @@ struct tNX_VIDDEC_VIDEO_COMP_TYPE{
 	pthread_t					hBufThread;
 	pthread_mutex_t				hBufMutex;
 	NX_THREAD_CMD				eCmdBufThread;
-	NX_SEMAPHORE				*hBufAllocSem;						//	Buffer allocation semaphore ( Semaphore )
-	NX_SEMAPHORE				*hBufCtrlSem;						//	Buffer thread control semaphore ( Mutex )
-	NX_SEMAPHORE				*hBufChangeSem;						//	Buffer status change semaphore ( Event )
-	/*					Port Information						*/
-	NX_BASEPORTTYPE				*pInputPort;						//	Input Port
-	NX_BASEPORTTYPE				*pOutputPort;						//	Output Port
 
 	/*				Video Format				*/
 	OMX_VIDEO_PARAM_PORTFORMATTYPE	inputFormat;
 	OMX_VIDEO_PARAM_PORTFORMATTYPE	outputFormat;
 
-	OMX_BUFFERHEADERTYPE		*pInputBuffers[NX_OMX_MAX_BUF];		//	Input Buffers
-
 	// Management Output Buffer
-	OMX_BUFFERHEADERTYPE		*pOutputBuffers[NX_OMX_MAX_BUF];	//	Output Buffer Pool ( NULL is Empty )
 	OMX_S32						outBufferUseFlag[NX_OMX_MAX_BUF];	//	Output Buffer Use Flag( Flag for Decoding )
 	OMX_S32						outUsableBuffers;					//	Max Allocated Buffers or Max Usable Buffers
 	OMX_S32						curOutBuffers;						//	Currently Queued Buffer Counter
@@ -141,9 +130,6 @@ struct tNX_VIDDEC_VIDEO_COMP_TYPE{
 
 	OMX_U32						outBufferAllocSize;					//	Native Buffer Mode vs ThumbnailMode
 	OMX_U32						numOutBuffers;						//
-
-	NX_QUEUE					*pInputPortQueue;
-	NX_QUEUE					*pOutputPortQueue;
 
 	OMX_BOOL					isOutIdr;
 
@@ -207,7 +193,5 @@ int PopVideoTimeStamp(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_TICKS *timestamp,
 int flushVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 int openVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
-
-int SendEvent( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_EVENTTYPE eEvent, OMX_U32 param1, OMX_U32 param2, OMX_PTR pEventData );
 
 #endif	//	__NX_OMXVideoDecoder_h__

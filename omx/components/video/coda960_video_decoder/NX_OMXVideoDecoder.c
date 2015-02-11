@@ -24,11 +24,11 @@ static OMX_ERRORTYPE NX_VidDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE
 static OMX_ERRORTYPE NX_VidDec_UseBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes, OMX_U8* pBuffer);
 static OMX_ERRORTYPE NX_VidDec_AllocateBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes);
 static OMX_ERRORTYPE NX_VidDec_FreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer);
-static OMX_ERRORTYPE NX_VidDec_EmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
 static OMX_ERRORTYPE NX_VidDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
 static OMX_ERRORTYPE NX_VidDec_ComponentDeInit(OMX_HANDLETYPE hComponent);
-static void          NX_VidDec_CommandThread( void *arg );
 static void          NX_VidDec_BufferMgmtThread( void *arg );
+
+static void NX_VidDec_CommandProc( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
 
 
 int flushVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
@@ -36,7 +36,6 @@ int openVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 int decodeVideoFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, NX_QUEUE *pOutQueue);
 int processEOS(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
-int SendEvent( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_EVENTTYPE eEvent, OMX_U32 param1, OMX_U32 param2, OMX_PTR pEventData );
 
 static OMX_S32		gstNumInstance = 0;
 static OMX_S32		gstMaxInstance = 3;
@@ -120,6 +119,10 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 	//					End Port configurations
 	///////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////
+	//
+	//	Registration OMX Standard Functions
+	//
 	//	Base overrided functions
 	pComp->GetComponentVersion    = NX_BaseGetComponentVersion    ;
 	pComp->SendCommand            = NX_BaseSendCommand            ;
@@ -130,7 +133,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 	pComp->SetCallbacks           = NX_BaseSetCallbacks           ;
 	pComp->UseEGLImage            = NX_BaseUseEGLImage            ;
 	pComp->ComponentRoleEnum      = NX_BaseComponentRoleEnum      ;
-
+	pComp->EmptyThisBuffer        = NX_BaseEmptyThisBuffer        ;
 
 	//	Specific implemented functions
 	pComp->GetConfig              = NX_VidDec_GetConfig           ;
@@ -139,16 +142,20 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 	pComp->UseBuffer              = NX_VidDec_UseBuffer           ;
 	pComp->AllocateBuffer         = NX_VidDec_AllocateBuffer      ;
 	pComp->FreeBuffer             = NX_VidDec_FreeBuffer          ;
-	pComp->EmptyThisBuffer        = NX_VidDec_EmptyThisBuffer     ;
 	pComp->FillThisBuffer         = NX_VidDec_FillThisBuffer      ;
 	pComp->ComponentDeInit        = NX_VidDec_ComponentDeInit     ;
+	//
+	///////////////////////////////////////////////////////////////////
+
+	//	Registration Command Procedure
+	pDecComp->cbCmdProcedure = NX_VidDec_CommandProc;			//	Command procedure
 
 	//	Create command thread
 	NX_InitQueue( &pDecComp->cmdQueue, NX_MAX_QUEUE_ELEMENT );
 	pDecComp->hSemCmd = NX_CreateSem( 0, NX_MAX_QUEUE_ELEMENT );
 	pDecComp->hSemCmdWait = NX_CreateSem( 0, 1 );
 	pDecComp->eCmdThreadCmd = NX_THREAD_CMD_RUN;
-	pthread_create( &pDecComp->hCmdThread, NULL, (void*)&NX_VidDec_CommandThread , pDecComp ) ;
+	pthread_create( &pDecComp->hCmdThread, NULL, (void*)&NX_BaseCommandThread , pDecComp ) ;
 	NX_PendSem( pDecComp->hSemCmdWait );
 
 	pDecComp->compName = strdup("OMX.NX.VIDEO_DECODER");
@@ -896,7 +903,7 @@ static OMX_ERRORTYPE NX_VidDec_FreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nP
 
 	if( OMX_StateLoaded != pDecComp->eNewState && OMX_StateExecuting != pDecComp->eNewState )
 	{
-		SendEvent( pDecComp, OMX_EventError, OMX_ErrorPortUnpopulated, nPortIndex, NULL );
+		SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventError, OMX_ErrorPortUnpopulated, nPortIndex, NULL );
 	}
 
 	if( 0 == nPortIndex ){
@@ -933,41 +940,7 @@ static OMX_ERRORTYPE NX_VidDec_FreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nP
 
 	return OMX_ErrorInsufficientResources;
 }
-static OMX_ERRORTYPE NX_VidDec_EmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp = (NX_VIDDEC_VIDEO_COMP_TYPE *)((OMX_COMPONENTTYPE *)hComp)->pComponentPrivate;
-	FUNC_IN;
 
-	//{
-	//	OMX_U8 *buf = pBuffer->pBuffer;
-	//	DbgMsg("pBuffer : Size(%7d) Flag(0x%08x) : 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x\n", pBuffer->nFilledLen, pBuffer->nFlags,
-	//		buf[ 0],buf[ 1],buf[ 2],buf[ 3],buf[ 4],buf[ 5],buf[ 6],buf[ 7]);
-	//}
-
-	//	Push data to command buffer
-	assert( NULL != pDecComp->pInputPort );
-	assert( NULL != pDecComp->pInputPortQueue );
-	if( pDecComp->eCurState == pDecComp->eNewState ){
-		if( !(OMX_StateIdle == pDecComp->eCurState || OMX_StatePause == pDecComp->eCurState || OMX_StateExecuting == pDecComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}else{
-		if( (OMX_StateIdle==pDecComp->eNewState) && (OMX_StateExecuting==pDecComp->eCurState || OMX_StatePause==pDecComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}
-
-	TRACE("%s() : pBuffer = %p, nFilledLen = %d", __FUNCTION__, pBuffer, pBuffer->nFilledLen);
-
-	if( 0 != NX_PushQueue( pDecComp->pInputPortQueue, pBuffer ) )
-	{
-		return OMX_ErrorUndefined;
-	}
-	TRACE("%s() : pBuffer = %p --", __FUNCTION__, pBuffer);
-	NX_PostSem( pDecComp->hBufChangeSem );
-	FUNC_OUT;
-	return OMX_ErrorNone;
-}
 static OMX_ERRORTYPE NX_VidDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer)
 {
 	OMX_S32 foundBuffer=1, i;
@@ -1296,7 +1269,7 @@ static void FlushVideoInputPort( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_PTR pC
 			break;
 		}
 	}while(1);
-	SendEvent( pDecComp, OMX_EventCmdComplete, OMX_CommandFlush, VPUDEC_VID_INPORT_INDEX, pCmdData );
+	SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventCmdComplete, OMX_CommandFlush, VPUDEC_VID_INPORT_INDEX, pCmdData );
 }
 
 static void FlushVideoOutputPort( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_PTR pCmdData )
@@ -1333,7 +1306,7 @@ static void FlushVideoOutputPort( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_PTR p
 		}
 		DBG_FLUSH("-- pDecComp->curOutBuffers = %ld\n", pDecComp->curOutBuffers);
 	}
-	SendEvent( pDecComp, OMX_EventCmdComplete, OMX_CommandFlush, VPUDEC_VID_OUTPORT_INDEX, pCmdData );
+	SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventCmdComplete, OMX_CommandFlush, VPUDEC_VID_OUTPORT_INDEX, pCmdData );
 }
 
 
@@ -1385,7 +1358,7 @@ static void NX_VidDec_CommandProc( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_COMM
 			}
 			if( nParam1 == OMX_ALL )	//	Output Port Flushing
 			{
-				SendEvent( pDecComp, OMX_EventCmdComplete, OMX_CommandFlush, OMX_ALL, pCmdData );
+				SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventCmdComplete, OMX_CommandFlush, OMX_ALL, pCmdData );
 			}
 
 			pDecComp->bNeedKey = OMX_TRUE;
@@ -1503,42 +1476,9 @@ static void NX_VidDec_CommandProc( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_COMM
 		}
 	}
 
-	SendEvent( pDecComp, eEvent, nData1, nData2, pCmdData );
+	SendEvent( (NX_BASE_COMPNENT*)pDecComp, eEvent, nData1, nData2, pCmdData );
 }
 
-
-static void NX_VidDec_CommandThread( void *arg )
-{
-	NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp = (NX_VIDDEC_VIDEO_COMP_TYPE *)arg;
-	NX_CMD_MSG_TYPE *pCmd = NULL;
-	TRACE( "enter NX_VidDec_CommandThread() loop\n" );
-
-	NX_PostSem( pDecComp->hSemCmdWait );
-	while(1)
-	{
-		if( 0 != NX_PendSem( pDecComp->hSemCmd ) ){
-			DbgMsg( "NX_VidDec_CommandThread : Exit command loop : error NX_PendSem()\n" );
-			break;
-		}
-
-		//	IL Client에서 command response를 wait할 수 있으므로 반드시 command quque를 비워 주어야만 한다.
-		if( NX_THREAD_CMD_RUN!=pDecComp->eCmdThreadCmd && 0==NX_GetQueueCnt(&pDecComp->cmdQueue) ){
-			break;
-		}
-
-		if( 0 != NX_PopQueue( &pDecComp->cmdQueue, (void**)&pCmd ) ){
-			DbgMsg( "NX_VidDec_CommandThread : Exit command loop : NX_PopQueue()\n" );
-		}
-
-		TRACE("%s() : pCmd = 0x%08x\n", __FUNCTION__, (unsigned int)pCmd);
-
-		if( pCmd != NULL ){
-			NX_VidDec_CommandProc( pDecComp, pCmd->eCmd, pCmd->nParam1, pCmd->pCmdData );
-			NxFree( pCmd );
-		}
-	}
-	TRACE( ">> exit NX_VidDec_CommandThread() loop!!\n" );
-}
 
 //
 //////////////////////////////////////////////////////////////////////////////
@@ -1649,7 +1589,7 @@ ERROR_EXIT:
 	TRACE("exit buffer management thread.\n");
 	if( err != 0 )
 	{
-		SendEvent( pDecComp, OMX_EventError, 0, 0, NULL );
+		SendEvent( (NX_BASE_COMPNENT*)pDecComp, OMX_EventError, 0, 0, NULL );
 	}
 }
 
@@ -2033,31 +1973,6 @@ int processEOS(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 			}
 		}
 	}
-	return 0;
-}
-
-
-static char *EventCodeToString( OMX_EVENTTYPE eEvent )
-{
-	switch(eEvent)
-	{
-		case OMX_EventCmdComplete:              return "OMX_EventCmdComplete";
-		case OMX_EventError:                    return "OMX_EventError";
-		case OMX_EventMark:						return "OMX_EventMark";
-		case OMX_EventPortSettingsChanged:		return "OMX_EventPortSettingsChanged";
-		case OMX_EventBufferFlag:				return "OMX_EventBufferFlag";
-		case OMX_EventResourcesAcquired:		return "OMX_EventResourcesAcquired";
-		case OMX_EventComponentResumed:			return "OMX_EventComponentResumed";
-		case OMX_EventDynamicResourcesAvailable:return "OMX_EventDynamicResourcesAvailable";
-		case OMX_EventPortFormatDetected:		return "OMX_EventPortFormatDetected";
-		default:								return "Unknown";
-	}
-}
-
-int SendEvent( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_EVENTTYPE eEvent, OMX_U32 param1, OMX_U32 param2, OMX_PTR pEventData )
-{
-	TRACE("Event : %s, param1=%ld, param2=%ld\n", EventCodeToString(eEvent), param1, param2);
-	(*(pDecComp->pCallbacks->EventHandler)) (pDecComp->hComp, pDecComp->pCallbackData, eEvent, param1, param2, pEventData);
 	return 0;
 }
 

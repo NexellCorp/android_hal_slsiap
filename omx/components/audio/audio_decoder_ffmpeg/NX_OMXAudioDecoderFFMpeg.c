@@ -42,15 +42,11 @@
 static OMX_ERRORTYPE NX_FFAudDec_GetParameter (OMX_HANDLETYPE hComponent, OMX_INDEXTYPE nParamIndex,OMX_PTR ComponentParamStruct);
 static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE nParamIndex, OMX_PTR ComponentParamStruct);
 static OMX_ERRORTYPE NX_FFAudDec_UseBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes, OMX_U8* pBuffer);
-static OMX_ERRORTYPE NX_FFAudDec_AllocateBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes);
-static OMX_ERRORTYPE NX_FFAudDec_FreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer);
-static OMX_ERRORTYPE NX_FFAudDec_EmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
-static OMX_ERRORTYPE NX_FFAudDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
 static OMX_ERRORTYPE NX_FFAudDec_ComponentDeInit(OMX_HANDLETYPE hComponent);
-static void          NX_FFAudDec_CommandThread( void *arg );
 static void          NX_FFAudDec_BufferMgmtThread( void *arg );
 
 
+static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
 static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp);
 static void closeAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp);
 static int decodeAudioFrame(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, NX_QUEUE *pOutQueue);
@@ -144,31 +140,43 @@ OMX_ERRORTYPE NX_FFMpegAudioDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 	//					End Port configurations
 	///////////////////////////////////////////////////////////////////
 
+	///////////////////////////////////////////////////////////////////
+	//
+	//	Registration OMX Standard Functions
+	//
+	//	Base overrided functions
 	pComp->GetComponentVersion    = NX_BaseGetComponentVersion    ;
 	pComp->SendCommand            = NX_BaseSendCommand            ;
-	pComp->GetParameter           = NX_FFAudDec_GetParameter      ;
-	pComp->SetParameter           = NX_FFAudDec_SetParameter      ;
 	pComp->GetConfig              = NX_BaseGetConfig              ;
 	pComp->SetConfig              = NX_BaseSetConfig              ;
 	pComp->GetExtensionIndex      = NX_BaseGetExtensionIndex      ;
 	pComp->GetState               = NX_BaseGetState               ;
 	pComp->ComponentTunnelRequest = NX_BaseComponentTunnelRequest ;
-	pComp->UseBuffer              = NX_FFAudDec_UseBuffer         ;
-	pComp->AllocateBuffer         = NX_FFAudDec_AllocateBuffer    ;
-	pComp->FreeBuffer             = NX_FFAudDec_FreeBuffer        ;
-	pComp->EmptyThisBuffer        = NX_FFAudDec_EmptyThisBuffer   ;
-	pComp->FillThisBuffer         = NX_FFAudDec_FillThisBuffer    ;
 	pComp->SetCallbacks           = NX_BaseSetCallbacks           ;
-	pComp->ComponentDeInit        = NX_FFAudDec_ComponentDeInit   ;
 	pComp->UseEGLImage            = NX_BaseUseEGLImage            ;
 	pComp->ComponentRoleEnum      = NX_BaseComponentRoleEnum      ;
+	pComp->AllocateBuffer         = NX_BaseAllocateBuffer         ;
+	pComp->FreeBuffer             = NX_BaseFreeBuffer             ;
+	pComp->EmptyThisBuffer        = NX_BaseEmptyThisBuffer        ;
+	pComp->FillThisBuffer         = NX_BaseFillThisBuffer         ;
+
+	//	Specific implemented functions
+	pComp->GetParameter           = NX_FFAudDec_GetParameter      ;
+	pComp->SetParameter           = NX_FFAudDec_SetParameter      ;
+	pComp->UseBuffer              = NX_FFAudDec_UseBuffer         ;
+	pComp->ComponentDeInit        = NX_FFAudDec_ComponentDeInit   ;
+	//
+	///////////////////////////////////////////////////////////////////
+
+	//	Registration Command Procedure
+	pDecComp->cbCmdProcedure = NX_FFAudDec_CommandProc;			//	Command procedure
 
 	//	Create command thread
 	NX_InitQueue( &pDecComp->cmdQueue, NX_MAX_QUEUE_ELEMENT );
 	pDecComp->hSemCmd = NX_CreateSem( 0, NX_MAX_QUEUE_ELEMENT );
 	pDecComp->hSemCmdWait = NX_CreateSem( 0, 1 );
 	pDecComp->eCmdThreadCmd = NX_THREAD_CMD_RUN;
-	pthread_create( &pDecComp->hCmdThread, NULL, (void*)&NX_FFAudDec_CommandThread , pDecComp ) ;
+	pthread_create( &pDecComp->hCmdThread, NULL, (void*)&NX_BaseCommandThread , pDecComp ) ;
 	NX_PendSem( pDecComp->hSemCmdWait );
 
 	pDecComp->compName = strdup("OMX.NX.AUDIO_DECODER.FFMPEG");
@@ -621,166 +629,8 @@ static OMX_ERRORTYPE NX_FFAudDec_UseBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFE
 	}
 	return OMX_ErrorInsufficientResources;
 }
-static OMX_ERRORTYPE NX_FFAudDec_AllocateBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes)
-{
-	OMX_COMPONENTTYPE *pStdComp = (OMX_COMPONENTTYPE *)hComponent;
-	NX_FFDEC_AUDIO_COMP_TYPE *pDecComp = (NX_FFDEC_AUDIO_COMP_TYPE *)pStdComp->pComponentPrivate;
-	NX_BASEPORTTYPE *pPort = NULL;
-	OMX_BUFFERHEADERTYPE         **pPortBuf = NULL;
-	OMX_U32 i=0;
 
-	if( nPortIndex >= pDecComp->nNumPort )
-		return OMX_ErrorBadPortIndex;
 
-	if( OMX_StateLoaded != pDecComp->eCurState || OMX_StateIdle != pDecComp->eNewState )
-		return OMX_ErrorIncorrectStateTransition;
-
-	if( 0 ==nPortIndex ){
-		pPort = pDecComp->pInputPort;
-		pPortBuf = pDecComp->pInputBuffers;
-	}else{
-		pPort = pDecComp->pOutputPort;
-		pPortBuf = pDecComp->pOutputBuffers;
-	}
-
-	if( pPort->stdPortDef.nBufferSize > nSizeBytes )
-		return OMX_ErrorBadParameter;
-
-	for( i=0 ; i<pPort->stdPortDef.nBufferCountActual ; i++ ){
-		if( NULL == pPortBuf[i] ){
-			//	Allocate Actual Data
-			pPortBuf[i] = NxMalloc( sizeof(OMX_BUFFERHEADERTYPE) );
-			if( NULL == pPortBuf[i] )
-				return OMX_ErrorInsufficientResources;
-			NxMemset( pPortBuf[i], 0, sizeof(OMX_BUFFERHEADERTYPE) );
-			pPortBuf[i]->nSize = sizeof(OMX_BUFFERHEADERTYPE);
-			NX_OMXSetVersion( &pPortBuf[i]->nVersion );
-			pPortBuf[i]->pBuffer = NxMalloc( nSizeBytes );
-			if( NULL == pPortBuf[i]->pBuffer )
-				return OMX_ErrorInsufficientResources;
-			pPortBuf[i]->nAllocLen = nSizeBytes;
-			pPortBuf[i]->pAppPrivate = pAppPrivate;
-			pPortBuf[i]->pPlatformPrivate = pStdComp;
-			if( OMX_DirInput == pPort->stdPortDef.eDir ){
-				pPortBuf[i]->nInputPortIndex = pPort->stdPortDef.nPortIndex;
-			}else{
-				pPortBuf[i]->nOutputPortIndex = pPort->stdPortDef.nPortIndex;
-			}
-			pPort->nAllocatedBuf ++;
-			if( pPort->nAllocatedBuf == pPort->stdPortDef.nBufferCountActual ){
-				pPort->stdPortDef.bPopulated = OMX_TRUE;
-				pPort->eBufferType = NX_BUFHEADER_TYPE_ALLOCATED;
-				TRACE("%s(): port:%ld, %ld buffer allocated\n", __FUNCTION__, nPortIndex, pPort->nAllocatedBuf);
-				NX_PostSem(pDecComp->hBufAllocSem);
-			}
-			*pBuffer = pPortBuf[i];
-			return OMX_ErrorNone;
-		}
-	}
-	pPort->stdPortDef.bPopulated = OMX_TRUE;
-	*pBuffer = pPortBuf[0];
-	return OMX_ErrorInsufficientResources;
-}
-static OMX_ERRORTYPE NX_FFAudDec_FreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	OMX_COMPONENTTYPE *pStdComp = (OMX_COMPONENTTYPE *)hComponent;
-	NX_FFDEC_AUDIO_COMP_TYPE *pDecComp = (NX_FFDEC_AUDIO_COMP_TYPE *)pStdComp->pComponentPrivate;
-	NX_BASEPORTTYPE *pPort = NULL;
-	OMX_BUFFERHEADERTYPE **pPortBuf = NULL;
-	OMX_U32 i=0;
-
-	if( nPortIndex >= pDecComp->nNumPort )
-		return OMX_ErrorBadPortIndex;
-
-	if( OMX_StateLoaded != pDecComp->eNewState )
-		return OMX_ErrorIncorrectStateTransition;
-
-	if( 0 == nPortIndex ){
-		pPort = pDecComp->pInputPort;
-		pPortBuf = pDecComp->pInputBuffers;
-	}else{
-		pPort = pDecComp->pOutputPort;
-		pPortBuf = pDecComp->pOutputBuffers;
-	}
-
-	//	OMX_StateLoaded로 transition하는 경우 아닐 경우 ????
-	if( NULL == pBuffer ){
-		return OMX_ErrorBadParameter;
-	}
-
-	for( i=0 ; i<pPort->stdPortDef.nBufferCountActual ; i++ ){
-		if( NULL != pBuffer && pBuffer == pPortBuf[i] ){
-			if( pPort->eBufferType == NX_BUFHEADER_TYPE_ALLOCATED ){
-				NxFree(pPortBuf[i]->pBuffer);
-				pPortBuf[i]->pBuffer = NULL;
-			}
-			NxFree(pPortBuf[i]);
-			pPortBuf[i] = NULL;
-			pPort->nAllocatedBuf --;
-			if( 0 == pPort->nAllocatedBuf ){
-				pPort->stdPortDef.bPopulated = OMX_FALSE;
-				NX_PostSem(pDecComp->hBufAllocSem);
-			}
-			return OMX_ErrorNone;
-		}
-	}
-	return OMX_ErrorInsufficientResources;
-}
-static OMX_ERRORTYPE NX_FFAudDec_EmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	NX_FFDEC_AUDIO_COMP_TYPE *pDecComp = (NX_FFDEC_AUDIO_COMP_TYPE *)((OMX_COMPONENTTYPE *)hComp)->pComponentPrivate;
-	FUNC_IN;
-	//	Push data to command buffer
-	assert( NULL != pDecComp->pInputPort );
-	assert( NULL != pDecComp->pInputPortQueue );
-	if( pDecComp->eCurState == pDecComp->eNewState ){
-		if( !(OMX_StateIdle == pDecComp->eCurState || OMX_StatePause == pDecComp->eCurState || OMX_StateExecuting == pDecComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}else{
-		if( (OMX_StateIdle==pDecComp->eNewState) && (OMX_StateExecuting==pDecComp->eCurState || OMX_StatePause==pDecComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}
-
-	//DbgMsg("%s() : pBuffer = %p", __FUNCTION__, pBuffer);
-
-	if( 0 != NX_PushQueue( pDecComp->pInputPortQueue, pBuffer ) ){
-		return OMX_ErrorUndefined;
-	}
-	NX_PostSem( pDecComp->hBufChangeSem );
-	FUNC_OUT;
-	return OMX_ErrorNone;
-}
-static OMX_ERRORTYPE NX_FFAudDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer)
-{
-	NX_FFDEC_AUDIO_COMP_TYPE *pDecComp = (NX_FFDEC_AUDIO_COMP_TYPE *)((OMX_COMPONENTTYPE *)hComp)->pComponentPrivate;
-
-	FUNC_IN;
-
-	//	Push data to command buffer
-	assert( NULL != pDecComp->pOutputPort );
-	assert( NULL != pDecComp->pOutputPortQueue );
-
-	if( pDecComp->eCurState == pDecComp->eNewState ){
-		if( !(OMX_StateIdle == pDecComp->eCurState || OMX_StatePause == pDecComp->eCurState || OMX_StateExecuting == pDecComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}else{
-		if( (OMX_StateIdle==pDecComp->eNewState) && (OMX_StateExecuting==pDecComp->eCurState || OMX_StatePause==pDecComp->eCurState) ){
-			return OMX_ErrorIncorrectStateOperation;
-		}
-	}
-
-	//DbgMsg("%s() : pBuffer = %p", __FUNCTION__, pBuffer);
-
-	if( 0 != NX_PushQueue( pDecComp->pOutputPortQueue, pBuffer ) ){
-		return OMX_ErrorUndefined;
-	}
-	NX_PostSem( pDecComp->hBufChangeSem );
-	FUNC_OUT;
-	return OMX_ErrorNone;
-}
 
 
 
@@ -1043,7 +893,7 @@ static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COM
 						break;
 					}
 				}while(1);
-				pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, eEvent, OMX_CommandFlush, FFDEC_AUD_INPORT_INDEX, pCmdData );
+				SendEvent( (NX_BASE_COMPNENT*)pDecComp, eEvent, OMX_CommandFlush, FFDEC_AUD_INPORT_INDEX, pCmdData );
 			}
 
 			if( nParam1 == FFDEC_AUD_OUTPORT_INDEX || nParam1 == OMX_ALL )
@@ -1058,12 +908,12 @@ static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COM
 						break;
 					}
 				}while(1);
-				pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, eEvent, OMX_CommandFlush, FFDEC_AUD_OUTPORT_INDEX, pCmdData );
+				SendEvent( (NX_BASE_COMPNENT*)pDecComp, eEvent, OMX_CommandFlush, FFDEC_AUD_OUTPORT_INDEX, pCmdData );
 			}
 
 			if( nParam1 == OMX_ALL )	//	Output Port Flushing
 			{
-				pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, OMX_EventCmdComplete, OMX_CommandFlush, OMX_ALL, pCmdData );
+				SendEvent( (NX_BASE_COMPNENT*)pDecComp, eEvent, OMX_CommandFlush, OMX_ALL, pCmdData );
 			}
 			pDecComp->bFlush = OMX_TRUE;
 
@@ -1116,41 +966,7 @@ static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COM
 		}
 	}
 
-	pDecComp->pCallbacks->EventHandler( (OMX_HANDLETYPE)pStdComp, pDecComp->pCallbackData, eEvent, nData1, nData2, pCmdData );
-}
-
-
-static void NX_FFAudDec_CommandThread( void *arg )
-{
-	NX_FFDEC_AUDIO_COMP_TYPE *pDecComp = (NX_FFDEC_AUDIO_COMP_TYPE *)arg;
-	NX_CMD_MSG_TYPE *pCmd = NULL;
-	TRACE( "enter NX_FFAudDec_CommandThread() loop\n" );
-
-	NX_PostSem( pDecComp->hSemCmdWait );
-	while(1)
-	{
-		if( 0 != NX_PendSem( pDecComp->hSemCmd ) ){
-			DbgMsg( "NX_FFAudDec_CommandThread : Exit command loop : error NX_PendSem()\n" );
-			break;
-		}
-
-		//	IL Client에서 command response를 wait할 수 있으므로 반드시 command quque를 비워 주어야만 한다.
-		if( NX_THREAD_CMD_RUN!=pDecComp->eCmdThreadCmd && 0==NX_GetQueueCnt(&pDecComp->cmdQueue) ){
-			break;
-		}
-
-		if( 0 != NX_PopQueue( &pDecComp->cmdQueue, (void**)&pCmd ) ){
-			DbgMsg( "NX_FFAudDec_CommandThread : Exit command loop : NX_PopQueue()\n" );
-		}
-
-		TRACE("%s() : pCmd = 0x%08x\n", __FUNCTION__, (unsigned int)pCmd);
-
-		if( pCmd != NULL ){
-			NX_FFAudDec_CommandProc( pDecComp, pCmd->eCmd, pCmd->nParam1, pCmd->pCmdData );
-			NxFree( pCmd );
-		}
-	}
-	TRACE( ">> exit NX_FFAudDec_CommandThread() loop!!\n" );
+	SendEvent( (NX_BASE_COMPNENT*)pDecComp, eEvent, nData1, nData2, pCmdData );
 }
 
 //

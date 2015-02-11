@@ -11,7 +11,7 @@ LOCAL_PRELINK_MODULE := false
 ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
 ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
 ifeq "5" "$(ANDROID_VERSION_MAJOR)"
-print:echo "This is LOLLIPOP!!!"
+#@echo "This is LOLLIPOP!!!"
 LOCAL_CFLAGS += -DLOLLIPOP=1
 endif
 
@@ -48,7 +48,7 @@ LOCAL_LDFLAGS += \
 	-lavfilter-2.1.4		\
 	-lswresample-2.1.4
 
-LOCAL_CFLAGS := $(NX_OMX_CFLAGS)
+LOCAL_CFLAGS += $(NX_OMX_CFLAGS)
 
 LOCAL_CFLAGS += -DNX_DYNAMIC_COMPONENTS
 

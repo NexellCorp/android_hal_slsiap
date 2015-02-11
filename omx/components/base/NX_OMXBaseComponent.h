@@ -39,15 +39,17 @@ OMX_ERRORTYPE NX_BaseSetConfig (OMX_HANDLETYPE hComp, OMX_INDEXTYPE nConfigIndex
 OMX_ERRORTYPE NX_BaseGetExtensionIndex(OMX_HANDLETYPE hComponent, OMX_STRING cParameterName, OMX_INDEXTYPE* pIndexType);
 OMX_ERRORTYPE NX_BaseGetState (OMX_HANDLETYPE hComp, OMX_STATETYPE* pState);
 OMX_ERRORTYPE NX_BaseComponentTunnelRequest(OMX_HANDLETYPE hComp, OMX_U32 nPort, OMX_HANDLETYPE hTunneledComp, OMX_U32 nTunneledPort, OMX_TUNNELSETUPTYPE* pTunnelSetup); 
-OMX_ERRORTYPE NX_BaseEmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
-OMX_ERRORTYPE NX_BaseFillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
 OMX_ERRORTYPE NX_BaseSetCallbacks(OMX_HANDLETYPE hComponent, OMX_CALLBACKTYPE* pCallbacks, OMX_PTR pAppData);
 OMX_ERRORTYPE NX_BaseComponentDeInit(OMX_HANDLETYPE hComponent);
 OMX_ERRORTYPE NX_BaseUseEGLImage(OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, void* eglImage);
 OMX_ERRORTYPE NX_BaseComponentRoleEnum(OMX_HANDLETYPE hComponent, OMX_U8 *cRole, OMX_U32 nIndex);
 
-#define	NX_OMX_MAX_PORTS		4		//	Max number of ports within components
+OMX_ERRORTYPE NX_BaseAllocateBuffer(OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes);
+OMX_ERRORTYPE NX_BaseFreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer);
+OMX_ERRORTYPE NX_BaseEmptyThisBuffer (OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
+OMX_ERRORTYPE NX_BaseFillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE* pBuffer);
 
+#define	NX_OMX_MAX_PORTS		4		//	Max number of ports within components
 
 typedef enum NX_THREAD_CMD{
 	NX_THREAD_CMD_INVALID,
@@ -70,8 +72,10 @@ struct _NX_CMD_MSG_TYPE{
 ///////////////////////////////////////////////////////////////////////
 
 
+#define	NX_OMX_MAX_BUF		128
 ///////////////////////////////////////////////////////////////////////
 //					Nexell Base Component Type
+typedef struct _NX_BASE_COMPNENT NX_BASE_COMPNENT;
 #define NX_BASECOMPONENTTYPE								\
 	OMX_COMPONENTTYPE		*hComp;							\
 	OMX_U32					nNumPort;						\
@@ -91,14 +95,36 @@ struct _NX_CMD_MSG_TYPE{
 	NX_SEMAPHORE			*hSemCmdWait;					\
 	NX_QUEUE				cmdQueue;						\
 	OMX_U32					cmdId;							\
+	/*					Command Procedure			*/		\
+	void					(*cbCmdProcedure)(NX_BASE_COMPNENT*, OMX_COMMANDTYPE , OMX_U32 , OMX_PTR );\
+	/*					In/Out Port & Buffer		*/		\
+	NX_BASEPORTTYPE			*pInputPort;					\
+	NX_BASEPORTTYPE			*pOutputPort;					\
+	OMX_BUFFERHEADERTYPE	*pInputBuffers[NX_OMX_MAX_BUF];	\
+	OMX_BUFFERHEADERTYPE	*pOutputBuffers[NX_OMX_MAX_BUF];\
+	/*	Buffer allocation semaphore ( Semaphore )	*/		\
+	NX_SEMAPHORE			*hBufAllocSem;					\
+	/*	Buffer thread control semaphore ( Mutex )	*/		\
+	NX_SEMAPHORE			*hBufCtrlSem;					\
+	/*	Buffer status change semaphore ( Event )	*/		\
+	NX_SEMAPHORE			*hBufChangeSem;					\
+	NX_QUEUE				*pInputPortQueue;				\
+	NX_QUEUE				*pOutputPortQueue;				\
 
 //	End of nexell base component type
 ///////////////////////////////////////////////////////////////////////
 
 
-typedef struct _NX_BASE_COMPNENT NX_BASE_COMPNENT;
 struct _NX_BASE_COMPNENT{
 	NX_BASECOMPONENTTYPE
 };
+
+
+//
+//	Base Component Tools
+//
+int SendEvent( NX_BASE_COMPNENT *pBaseComp, OMX_EVENTTYPE eEvent, OMX_U32 param1, OMX_U32 param2, OMX_PTR pEventData );
+void NX_BaseCommandThread( void *arg );
+
 
 #endif	//	 __NX_OMXBaseComponent_h__
