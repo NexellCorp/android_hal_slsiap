@@ -241,7 +241,12 @@ bool PreviewThread::threadLoop()
     ret = v4l2_dqbuf(Id, PlaneNum, &dqIdx, NULL);
     if (ret < 0) {
         ALOGE("failed to v4l2_dqbuf for preview");
+        // psw0523 fix for s5p6818 dronel
+#ifdef ARCH_S5P6818
+        return true;
+#else
         ERROR_EXIT();
+#endif
     }
     ALOGV("dqIdx: %d", dqIdx);
 
