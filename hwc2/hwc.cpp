@@ -1128,7 +1128,7 @@ static int hwc_eventControl(struct hwc_composer_device_1 *dev, int dpy,
     switch (event) {
     case HWC_EVENT_VSYNC:
         __u32 val = !!enabled;
-        ALOGD("HWC_EVENT_VSYNC: val %d", val);
+        ALOGV("HWC_EVENT_VSYNC: val %d", val);
         int err;
         if (val)
             err = write(me->mVsyncCtlFd, VSYNC_ON, sizeof(VSYNC_ON));
