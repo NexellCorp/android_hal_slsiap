@@ -334,12 +334,12 @@ static OMX_ERRORTYPE NX_FFAudDec_GetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 		case OMX_IndexParamAudioMp3:
 		{
 			OMX_AUDIO_PARAM_MP3TYPE *pMp3Mode = (OMX_AUDIO_PARAM_MP3TYPE*)ComponentParamStruct;
-			DbgMsg("%s, ++\n", __FUNCTION__);
+			DbgMsg("%s, ++  OMX_IndexParamAudioMp3\n", __FUNCTION__);
 			if( pMp3Mode->nPortIndex != FFDEC_AUD_INPORT_INDEX){
 				NX_ErrMsg("%s Bad port index.(%d)\n", __FUNCTION__, nParamIndex);
 				return OMX_ErrorBadPortIndex;
 			}
-			DbgMsg("%s, ++\n", __FUNCTION__);
+			DbgMsg("%s, --  OMX_IndexParamAudioMp3\n", __FUNCTION__);
 			NxMemcpy( ComponentParamStruct, &pDecComp->inPortType, sizeof(OMX_AUDIO_PARAM_MP3TYPE) );
 			break;
 		}
@@ -508,7 +508,7 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 			//	Modify Out Port Information
 			pDecComp->outPortType.nChannels = FFMIN(2, pRaType->nChannels);
 			pDecComp->outPortType.nSamplingRate = pRaType->nSamplingRate;
-			TRACE( "%s() OK. (Channels=%ld, SamplingRate=%ld, Bitrate = %ld)\n", __FUNCTION__, pRaType->nChannels, pRaType->nSamplingRate );
+			TRACE( "%s() OK. OMX_IndexParamAudioRa,, (Channels=%ld, SamplingRate=%ld)\n", __FUNCTION__, pRaType->nChannels, pRaType->nSamplingRate );
 			break;
 		}
 		case OMX_IndexParamAudioWma:
@@ -1085,8 +1085,8 @@ static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp)
 			codecId = CODEC_ID_COOK;
 			channels = pDecComp->inPortType.raType.nChannels;
 			sampleRate = pDecComp->inPortType.raType.nSamplingRate;
-			blockAlign = pDecComp->inPortType.raType.nBitsPerFrame/8;
-			DbgMsg("Audio coding type COOK, channels=%d, samplingrate=%d\n", channels, sampleRate);
+			blockAlign = pDecComp->inPortType.raType.nBitsPerFrame;
+			DbgMsg("Audio coding type COOK, channels=%d, samplingrate=%d, blockAlign=%d\n", channels, sampleRate, blockAlign);
 			break;
 		case OMX_AUDIO_CodingWMA:
 			if( pDecComp->inPortType.wmaType.eFormat == OMX_AUDIO_WMAFormat7)
@@ -1384,7 +1384,14 @@ static int decodeAudioFrame(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, NX_QUEUE *pInQue
 		OMX_TICKS sampleDuration = (1000000ll*(OMX_S64)pDecComp->nSampleCount) / pDecComp->avctx->sample_rate;
 		pOutBuf->nTimeStamp = pInBuf->nTimeStamp + sampleDuration;
 	}
-	TRACE("%s outTimeStamp = %lld,  inTimeStamp = %lld, pOutBuf->nFilledLen = %d", __func__, pOutBuf->nTimeStamp, pInBuf->nTimeStamp, pOutBuf->nFilledLen );
+
+	if( pOutBuf->nFlags & OMX_BUFFERFLAG_EOS )
+	{
+		pOutBuf->nFlags = OMX_BUFFERFLAG_EOS;
+		pOutBuf->nTimeStamp = -1;
+	}
+
+	TRACE("%s outTimeStamp = %lld,  inTimeStamp = %lld, nFilledLen = %d, nFlags=0x%08x", __func__, pOutBuf->nTimeStamp, pInBuf->nTimeStamp, pOutBuf->nFilledLen, pOutBuf->nFlags );
 
 	pDecComp->nSampleCount += outSize/4;		//	Output Fixed in 16bit 2channel.
 

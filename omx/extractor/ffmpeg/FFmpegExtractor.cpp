@@ -499,6 +499,9 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	case CODEC_ID_WMV3:
 	case CODEC_ID_VC1:
 
+	case CODEC_ID_VP8:
+	case AV_CODEC_ID_VP9:
+
 	case CODEC_ID_RV40:
 
 	case CODEC_ID_AAC:
@@ -513,6 +516,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	case CODEC_ID_COOK:
 	case CODEC_ID_APE:
 	case CODEC_ID_DTS:
+	case CODEC_ID_VORBIS:
 	case CODEC_ID_FLAC:
 	case CODEC_ID_PCM_S16LE:
 		supported = true;
@@ -679,6 +683,16 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_RV);
 			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 			break;
+		case CODEC_ID_VP8:
+			ALOGV("VP8");
+			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP8);
+			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
+			break;
+		case AV_CODEC_ID_VP9:
+			ALOGV("VP9");
+			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP9);
+			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
+			break;
 		default:
 			CHECK(!"Should not be here. Unsupported codec.");
 			break;
@@ -843,6 +857,11 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			ALOGV("RAW");
 			meta = new MetaData;
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_RAW);
+			break;
+		case CODEC_ID_VORBIS:
+			ALOGV("VORBIS");
+			meta = new MetaData;
+			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_VORBIS);
 			break;
 		default:
 			CHECK(!"Should not be here. Unsupported codec.");
@@ -1114,6 +1133,7 @@ int av_find_best_audio_stream(AVFormatContext *ic,
 			case CODEC_ID_APE:
 			case CODEC_ID_DTS:
 			case CODEC_ID_FLAC:
+			case CODEC_ID_VORBIS:
 			case CODEC_ID_PCM_S16LE:
 				break;
 			default:
@@ -1831,7 +1851,7 @@ static formatmap FILE_FORMATS[] = {
 	{"mov",					MEDIA_MIMETYPE_CONTAINER_MOV		, 0.88f	},
 };
 
-const char *BetterSniffFFMPEG(const char * uri, bool &isMp3Audio, bool dumpInfo)
+const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 {
 	size_t i;
 	int err;
@@ -1863,7 +1883,26 @@ const char *BetterSniffFFMPEG(const char * uri, bool &isMp3Audio, bool dumpInfo)
 	{
 		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_MP3 )
 		{
-			isMp3Audio= true;
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_FLAC )
+		{
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_DTS )
+		{
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AC3 )
+		{
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AAC )
+		{
+			if( ic->streams[i]->codec->profile == FF_PROFILE_AAC_MAIN )
+			{
+				useFFMPEG= true;
+			}
 		}
 	}
 
@@ -1890,7 +1929,7 @@ ErrorExit:
 	return container;
 }
 
-const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &isMp3Audio, bool dumpInfo)
+const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bool dumpInfo)
 {
 	size_t i;
 	int err;
@@ -1898,7 +1937,7 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &isMp3Audio, b
 	char url[128] = {0};
 	const char *container = NULL;
 	AVFormatContext *ic = NULL;
-	isMp3Audio= false;
+	useFFMPEG= false;
 
 	status_t status = initFFmpeg();
 	if (status != OK) {
@@ -1932,7 +1971,26 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &isMp3Audio, b
 	{
 		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_MP3 )
 		{
-			isMp3Audio= true;
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_FLAC )
+		{
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_DTS )
+		{
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AC3 )
+		{
+			useFFMPEG= true;
+		}
+		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AAC )
+		{
+			if( ic->streams[i]->codec->profile == FF_PROFILE_AAC_MAIN )
+			{
+				useFFMPEG= true;
+			}
 		}
 	}
 
@@ -1966,7 +2024,7 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 	ALOGV("SniffFFMPEG");
 	const char *uri = NULL;
 	const char *container = NULL;
-	bool isMp3Audio = false;
+	bool bUseFfmpeg = false;
 	uri = source->getUri();
 
 	if (!uri)
@@ -1979,11 +2037,11 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 		return false;
 	}
 
-	container = Better2SniffFFMPEG(source, isMp3Audio, false);
+	container = Better2SniffFFMPEG(source, bUseFfmpeg, false);
 	if (!container)
 	{
 		ALOGW("sniff through Better2SniffFFMPEG failed, try BetterSniffFFMPEG");
-		container = BetterSniffFFMPEG(uri, isMp3Audio, false);
+		container = BetterSniffFFMPEG(uri, bUseFfmpeg, false);
 		if (!container)
 		{
 			ALOGW("sniff through BetterSniffFFMPEG failed!");
@@ -2001,18 +2059,18 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 	if (container == NULL)
 		return false;
 
-	if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MOV ) && !isMp3Audio )
+	if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MOV ) && !bUseFfmpeg )
 		*confidence = 0.39f;
 	else if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MPEG2TS ) )
 		*confidence = 0.09f;
-	else if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MATROSKA ) )
+	else if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MATROSKA ) && !bUseFfmpeg )
 		*confidence = 0.59f;
 	else if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MPEG2PS ) )
 		*confidence = 0.24f;
 	else
 		*confidence = 0.88f;  // Slightly larger than other extractor's confidence
 
-	ALOGV("found container: %s", container);
+	ALOGV("found container: %s, bUseFfmpeg = %d, confidence = %f", container, bUseFfmpeg, *confidence);
 
 	mimeType->setTo(container);
 

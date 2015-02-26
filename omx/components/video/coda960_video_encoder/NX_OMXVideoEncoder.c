@@ -26,7 +26,7 @@
 #include <csc.h>		//	NEON Color Space Converter
 
 #define	DEBUG_BUFFER	0
-#define	TRACE_ON		1
+#define	TRACE_ON		0
 #define	DEBUG_FUNC		0
 
 #ifdef	DbgMsg

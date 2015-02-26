@@ -98,7 +98,7 @@ int NX_DecodeRVFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, NX
 	inSize = pInBuf->nFilledLen;
 	pDecComp->inFrameCount++;
 
-	TRACE("pInBuf->nFlags = 0x%08x, size = %ld\n", (int)pInBuf->nFlags, pInBuf->nFilledLen );
+	TRACE("pInBuf->nFlags = 0x%08x, size = %ld, timeStamp = %lld\n", (int)pInBuf->nFlags, pInBuf->nFilledLen, pInBuf->nTimeStamp );
 
 	if( pInBuf->nFlags & OMX_BUFFERFLAG_EOS )
 	{
