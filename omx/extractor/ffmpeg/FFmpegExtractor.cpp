@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "FFmpegExtractor"
+#define LOG_TAG "NX_FFmpegExtractor"
 #include <utils/Log.h>
 
 #include <strings.h>
@@ -47,6 +47,7 @@
 #define DEBUG_DISABLE_AUDIO        0
 #define WAIT_KEY_PACKET_AFTER_SEEK 1
 #define DISABLE_NAL_TO_ANNEXB      0
+#define DUMP_EXTRA_DATA            0
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024)
 #define MIN_AUDIOQ_SIZE (20 * 16 * 1024)
@@ -572,7 +573,8 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 
 		if (avctx->extradata) {
 			ALOGV("video stream extradata:");
-			hexdump(avctx->extradata, avctx->extradata_size);
+			if( DUMP_EXTRA_DATA )
+				hexdump(avctx->extradata, avctx->extradata_size);
 		} else {
 			ALOGV("video stream no extradata, but we can ignore it.");
 		}
@@ -747,7 +749,8 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 
 		if (avctx->extradata) {
 			ALOGV("audio stream extradata:");
-			hexdump(avctx->extradata, avctx->extradata_size);
+			if( DUMP_EXTRA_DATA )
+				hexdump(avctx->extradata, avctx->extradata_size);
 		} else {
 			ALOGV("audio stream no extradata, but we can ignore it.");
 		}
@@ -1881,28 +1884,26 @@ const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_MP3 )
+		AVCodecID codec_id = ic->streams[i]->codec->codec_id;
+		if( codec_id == AV_CODEC_ID_MP3 ||
+			codec_id == AV_CODEC_ID_FLAC ||
+			codec_id == AV_CODEC_ID_DTS ||
+			codec_id == AV_CODEC_ID_AC3 )
 		{
 			useFFMPEG= true;
 		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_FLAC )
-		{
-			useFFMPEG= true;
-		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_DTS )
-		{
-			useFFMPEG= true;
-		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AC3 )
-		{
-			useFFMPEG= true;
-		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AAC )
+		if( codec_id == AV_CODEC_ID_AAC )
 		{
 			if( ic->streams[i]->codec->profile == FF_PROFILE_AAC_MAIN )
 			{
 				useFFMPEG= true;
 			}
+		}
+		if( codec_id == CODEC_ID_WMV3 ||
+			codec_id == CODEC_ID_VC1 ||
+			codec_id == CODEC_ID_RV40 )
+		{
+			useFFMPEG= true;
 		}
 	}
 
@@ -1969,28 +1970,26 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bo
 
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_MP3 )
+		AVCodecID codec_id = ic->streams[i]->codec->codec_id;
+		if( codec_id == AV_CODEC_ID_MP3 ||
+			codec_id == AV_CODEC_ID_FLAC ||
+			codec_id == AV_CODEC_ID_DTS ||
+			codec_id == AV_CODEC_ID_AC3 )
 		{
 			useFFMPEG= true;
 		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_FLAC )
-		{
-			useFFMPEG= true;
-		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_DTS )
-		{
-			useFFMPEG= true;
-		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AC3 )
-		{
-			useFFMPEG= true;
-		}
-		if( ic->streams[i]->codec->codec_id == AV_CODEC_ID_AAC )
+		if( codec_id == AV_CODEC_ID_AAC )
 		{
 			if( ic->streams[i]->codec->profile == FF_PROFILE_AAC_MAIN )
 			{
 				useFFMPEG= true;
 			}
+		}
+		if( codec_id == CODEC_ID_WMV3 ||
+			codec_id == CODEC_ID_VC1 ||
+			codec_id == CODEC_ID_RV40 )
+		{
+			useFFMPEG= true;
 		}
 	}
 
