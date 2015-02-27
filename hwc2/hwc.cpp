@@ -1309,7 +1309,9 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     ALOGD("hwc_open");
 
     NXHWC::HWCPropertyChangeListener *listener = NULL;
+#ifndef LOLLIPOP
     NXHWCService *service = NULL;
+#endif
 
     if (strcmp(name, HWC_HARDWARE_COMPOSER)) {
         ALOGE("invalid name: %s", name);
@@ -1423,6 +1425,7 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     }
     me->mPropertyChangeListener = listener;
 
+#ifndef LOLLIPOP
     ALOGD("start NXHWCService");
     service = startNXHWCService();
     if (!service) {
@@ -1431,6 +1434,7 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     }
 
     service->registerListener(listener);
+#endif
 
     // prepare - set sync
 #ifdef USE_PREPARE_SET_SERIALIZING_SYNC
