@@ -80,7 +80,7 @@ static formatmap FILE_FORMATS[] = {
 	{"avi",					MEDIA_MIMETYPE_CONTAINER_AVI		, 0.88f	},
 	{"mpegts",				MEDIA_MIMETYPE_CONTAINER_MPEG2TS	, 0.09f	},
 	{"mpeg",				MEDIA_MIMETYPE_CONTAINER_MPEG2PS	, 0.24f	},
-	{"mov",					MEDIA_MIMETYPE_CONTAINER_MOV		, 0.88f	},
+	{"mov",					MEDIA_MIMETYPE_CONTAINER_MPEG4		, 0.88f	},
 };
 
 
@@ -1802,6 +1802,73 @@ retry:
 
 ////////////////////////////////////////////////////////////////////////////////
 
+//
+//	Find number of tracks that can playable.
+//
+
+
+static int get_num_supported_audio_tracks(AVFormatContext *avfctx)
+{
+	int count = 0;
+	int i;
+	for( i=0; i<avfctx->nb_streams ; i++ )
+	{
+		switch ( avfctx->streams[i]->codec->codec_id )
+		{
+			case CODEC_ID_AAC:
+			case CODEC_ID_AC3:
+			case CODEC_ID_MP1:
+			case CODEC_ID_MP2:
+			case CODEC_ID_MP3:
+			case CODEC_ID_WMAV1:
+			case CODEC_ID_WMAV2:
+			case CODEC_ID_WMAPRO:
+			case CODEC_ID_WMALOSSLESS:
+			case CODEC_ID_COOK:
+			case CODEC_ID_DTS:
+			case CODEC_ID_FLAC:
+			case CODEC_ID_VORBIS:
+			case CODEC_ID_PCM_S16LE:
+				count ++;
+				break;
+			default:
+				break;
+		}
+	}
+	return count;
+}
+
+static int get_num_supported_video_tracks(AVFormatContext *avfctx)
+{
+	int count = 0;
+	int i;
+	for( i=0; i<avfctx->nb_streams ; i++ )
+	{
+		switch ( avfctx->streams[i]->codec->codec_id )
+		{
+			case CODEC_ID_H264:
+			case CODEC_ID_MPEG4:
+			case CODEC_ID_FLV1:
+			case CODEC_ID_MSMPEG4V3:
+			case CODEC_ID_H263:
+			case CODEC_ID_H263P:
+			case CODEC_ID_H263I:
+			case CODEC_ID_MPEG2VIDEO:
+			case CODEC_ID_WMV3:
+			case CODEC_ID_VC1:
+			case CODEC_ID_VP8:
+			case AV_CODEC_ID_VP9:
+			case CODEC_ID_RV40:
+				count ++;
+				break;
+			default:
+				break;
+		}
+	}
+	return count;
+}
+
+
 // LegacySniffFFMPEG
 typedef struct {
 	const char *extension;
@@ -1888,6 +1955,12 @@ const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 		goto ErrorExit;
 	}
 
+	if( get_num_supported_video_tracks(ic) < 1 )
+	{
+		ALOGI("BetterSniffFFMPEG() : Have no video stream for playable.!!");
+		goto ErrorExit;
+	}
+
 	if( dumpInfo )
 		av_dump_format(ic, 0, uri, 0);
 
@@ -1939,6 +2012,8 @@ ErrorExit:
 	return container;
 }
 
+
+
 const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bool dumpInfo)
 {
 	size_t i;
@@ -1976,6 +2051,12 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bo
 		av_dump_format(ic, 0, url, 0);
 
 	ALOGI("FFmpegExtrator::Better2SniffFFMPEG url: %s, format_name: %s, format_long_name: %s", url, ic->iformat->name, ic->iformat->long_name);
+
+	if( get_num_supported_video_tracks(ic) < 1 )
+	{
+		ALOGI("Better2SniffFFMPEG() :Have no video stream for playable.!!");
+		goto ErrorExit;
+	}
 
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
@@ -2056,7 +2137,7 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 		}
 		else
 		{
-			ALOGI("sniff through Better1SniffFFMPEG success");
+			ALOGI("sniff through BetterSniffFFMPEG success");
 		}
 	}
 	else
@@ -2067,7 +2148,7 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 	if (container == NULL)
 		return false;
 
-	if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MOV ) && !bUseFfmpeg )
+	if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MPEG4 ) && !bUseFfmpeg )
 		*confidence = 0.39f;
 	else if( !strcmp( container, MEDIA_MIMETYPE_CONTAINER_MPEG2TS ) )
 		*confidence = 0.09f;
@@ -2083,10 +2164,10 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 	mimeType->setTo(container);
 
 	/* use MPEG4Extractor(not extended extractor) for HTTP source only */
-	if (!strcasecmp(container, MEDIA_MIMETYPE_CONTAINER_MPEG4) && (source->flags() & DataSource::kIsCachingDataSource))
-	{
-		return true;
-	}
+	// if (!strcasecmp(container, MEDIA_MIMETYPE_CONTAINER_MPEG4) && (source->flags() & DataSource::kIsCachingDataSource))
+	// {
+	// 	return true;
+	// }
 
 	*meta = new AMessage;
 	(*meta)->setString("extended-extractor", "extended-extractor");

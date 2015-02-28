@@ -39,9 +39,9 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent);
 
 //	Default Native Buffer Mode's buffers & buffer size
 #define	VID_OUTPORT_MIN_BUF_CNT_THUMB	4
-#define	VID_OUTPORT_MIN_BUF_CNT			10				//	Max Avaiable Frames
+#define	VID_OUTPORT_MIN_BUF_CNT			12				//	Max Avaiable Frames
 
-#define	VID_OUTPORT_MIN_BUF_CNT_H264_UNDER720P	20			//	~720p
+#define	VID_OUTPORT_MIN_BUF_CNT_H264_UNDER720P	22			//	~720p
 #define	VID_OUTPORT_MIN_BUF_CNT_H264_1080P		12			//	1080p
 
 #define	VID_OUTPORT_MIN_BUF_SIZE	(4*1024)			//	Video Memory Structure Size
