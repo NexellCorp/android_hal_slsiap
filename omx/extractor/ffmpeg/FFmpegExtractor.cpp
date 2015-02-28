@@ -65,6 +65,25 @@ static AVPacket flush_pkt;
 
 namespace android {
 
+typedef struct {
+	const char *format;
+	const char *container;
+	const float confidence;
+} formatmap;
+
+static formatmap FILE_FORMATS[] = {
+	{"asf",					MEDIA_MIMETYPE_CONTAINER_ASF		, 0.88f	},
+	{"wmv",					MEDIA_MIMETYPE_CONTAINER_WMV		, 0.88f	},
+	{"rm",					MEDIA_MIMETYPE_CONTAINER_RM			, 0.88f	},
+	{"flv",					MEDIA_MIMETYPE_CONTAINER_FLV		, 0.88f	},
+	{"matroska",			MEDIA_MIMETYPE_CONTAINER_MATROSKA	, 0.59f	},
+	{"avi",					MEDIA_MIMETYPE_CONTAINER_AVI		, 0.88f	},
+	{"mpegts",				MEDIA_MIMETYPE_CONTAINER_MPEG2TS	, 0.09f	},
+	{"mpeg",				MEDIA_MIMETYPE_CONTAINER_MPEG2PS	, 0.24f	},
+	{"mov",					MEDIA_MIMETYPE_CONTAINER_MOV		, 0.88f	},
+};
+
+
 void NX_Delay( int ms )
 {
 	usleep( ms*1000 );
@@ -185,13 +204,20 @@ sp<MetaData> FFmpegExtractor::getTrackMetaData(size_t index, uint32_t flags) {
 sp<MetaData> FFmpegExtractor::getMetaData() {
 	ALOGV("FFmpegExtractor::getMetaData");
 
-	if (mInitCheck != OK) {
+	if (mInitCheck != OK || !mFormatCtx ) {
 		return NULL;
 	}
 
 	sp<MetaData> meta = new MetaData;
-	// TODO
-	meta->setCString(kKeyMIMEType, "video/ffmpeg");
+
+	for (int i = 0; i < NELEM(FILE_FORMATS); ++i) {
+		int len = strlen(FILE_FORMATS[i].format);
+		if (!strncasecmp(mFormatCtx->iformat->name, FILE_FORMATS[i].format, len)) {
+			meta->setCString(kKeyMIMEType, FILE_FORMATS[i].container);
+			break;
+		}
+	}
+
 
 	return meta;
 }
@@ -1836,23 +1862,6 @@ const char *LegacySniffFFMPEG(const char * uri)
 }
 
 // BetterSniffFFMPEG
-typedef struct {
-	const char *format;
-	const char *container;
-	const float confidence;
-} formatmap;
-
-static formatmap FILE_FORMATS[] = {
-	{"asf",					MEDIA_MIMETYPE_CONTAINER_ASF		, 0.88f	},
-	{"wmv",					MEDIA_MIMETYPE_CONTAINER_WMV		, 0.88f	},
-	{"rm",					MEDIA_MIMETYPE_CONTAINER_RM			, 0.88f	},
-	{"flv",					MEDIA_MIMETYPE_CONTAINER_FLV		, 0.88f	},
-	{"matroska",			MEDIA_MIMETYPE_CONTAINER_MATROSKA	, 0.59f	},
-	{"avi",					MEDIA_MIMETYPE_CONTAINER_AVI		, 0.88f	},
-	{"mpegts",				MEDIA_MIMETYPE_CONTAINER_MPEG2TS	, 0.09f	},
-	{"mpeg",				MEDIA_MIMETYPE_CONTAINER_MPEG2PS	, 0.24f	},
-	{"mov",					MEDIA_MIMETYPE_CONTAINER_MOV		, 0.88f	},
-};
 
 const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 {
