@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+//#define LOG_NDEBUG 0
 #define LOG_TAG "NX_FFmpegExtractor"
 #include <utils/Log.h>
 
@@ -49,7 +50,7 @@
 #define DISABLE_NAL_TO_ANNEXB      0
 #define DUMP_EXTRA_DATA            0
 
-#define MAX_QUEUE_SIZE (15 * 1024 * 1024)
+#define MAX_QUEUE_SIZE (80 * 1024 * 1024)		//	FIXME
 #define MIN_AUDIOQ_SIZE (20 * 16 * 1024)
 #define MIN_FRAMES		10
 #define EXTRACTOR_MAX_PROBE_PACKETS 200
@@ -1408,7 +1409,7 @@ void FFmpegExtractor::readerEntry() {
 			|| (   (mAudioQ   .size  > MIN_AUDIOQ_SIZE || mAudioStreamIdx < 0)
 			&& (mVideoQ   .nb_packets > MIN_FRAMES || mVideoStreamIdx < 0))) {
 #if DEBUG_READ_ENTRY
-				ALOGV("readerEntry, is full, fuck");
+				ALOGV("readerEntry, is full!!!");
 #endif
 				/* wait 10 ms */
 				NX_Delay(10);
