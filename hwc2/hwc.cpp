@@ -893,7 +893,9 @@ void NXHWC::checkHDMIModeAndSetProperty()
         mode = (char *)"primary";
         close(fd);
     }
+#ifndef LOLLIPOP
     property_set((const char *)HWC_HDMIMODE_PROPERTY_KEY, mode);
+#endif
 }
 
 void NXHWC::setHDMIPreset(uint32_t preset)
