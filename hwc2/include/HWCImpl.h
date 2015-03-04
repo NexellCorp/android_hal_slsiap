@@ -81,13 +81,13 @@ public:
 
 protected:
     virtual bool canOverlay(struct hwc_layer_1 &layer) {
-        if (layer.transform != 0) {
-            ALOGV("transform: 0x%x", layer.transform);
+        if (layer.blending != HWC_BLENDING_NONE) {
+            ALOGV("blending: 0x%x", layer.blending);
             return false;
         }
 
-        if (layer.blending != HWC_BLENDING_NONE) {
-            ALOGV("blending: 0x%x", layer.blending);
+        if (layer.transform != 0x00000BAD) {
+            ALOGV("transform: 0x%x", layer.transform);
             return false;
         }
 
@@ -99,9 +99,6 @@ protected:
                     (format == HAL_PIXEL_FORMAT_YCbCr_422_I)  ||
                     (format == HAL_PIXEL_FORMAT_YV12);
         }
-
-        // if (hnd)
-        //     ALOGD("format: 0x%x", hnd->format);
 
         return false;
     }
