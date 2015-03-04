@@ -115,6 +115,8 @@ private:
     mutable Mutex mLock;
 
     bool mIsAVC;
+    bool mIsMp3;
+    bool mIsMp3Seek;
     size_t mNALLengthSize;
     bool mNal2AnnexB;
 
@@ -1409,7 +1411,7 @@ void FFmpegExtractor::readerEntry() {
 			|| (   (mAudioQ   .size  > MIN_AUDIOQ_SIZE || mAudioStreamIdx < 0)
 			&& (mVideoQ   .nb_packets > MIN_FRAMES || mVideoStreamIdx < 0))) {
 #if DEBUG_READ_ENTRY
-				ALOGV("readerEntry, is full!!!");
+				ALOGD("readerEntry, is full!!!");
 #endif
 				/* wait 10 ms */
 				NX_Delay(10);
@@ -1433,7 +1435,7 @@ void FFmpegExtractor::readerEntry() {
 			}
 			NX_Delay(10);
 #if DEBUG_READ_ENTRY
-			ALOGV("readerEntry, eof = 1, mVideoQ.size: %d, mVideoQ.nb_packets: %d, mAudioQ.size: %d, mAudioQ.nb_packets: %d",
+			ALOGD("readerEntry, eof = 1, mVideoQ.size: %d, mVideoQ.nb_packets: %d, mAudioQ.size: %d, mAudioQ.nb_packets: %d",
 				mVideoQ.size, mVideoQ.nb_packets, mAudioQ.size, mAudioQ.nb_packets);
 #endif
 			if (mAudioQ.size + mVideoQ.size  == 0) {
@@ -1569,6 +1571,8 @@ FFmpegExtractor::Track::Track(const sp<FFmpegExtractor> &extractor, sp<MetaData>
 	: mExtractor(extractor)
 	, mMeta(meta)
 	, mIsAVC(isAVC)
+	, mIsMp3(false)
+	, mIsMp3Seek(false)
 	, mStream(stream)
 	, mQueue(queue)
 {
@@ -1597,6 +1601,12 @@ FFmpegExtractor::Track::Track(const sp<FFmpegExtractor> &extractor, sp<MetaData>
 
 			mNal2AnnexB = true;
 		}
+	}
+
+	//	Check MP3 Codec
+	if( stream->codec->codec_id == AV_CODEC_ID_MP3 )
+	{
+		mIsMp3 = true;
 	}
 
 	mMediaType = mStream->codec->codec_type;
@@ -1648,8 +1658,10 @@ status_t FFmpegExtractor::Track::read(MediaBuffer **buffer, const ReadOptions *o
 			seekTimeUs += mStream->start_time * av_q2d(mStream->time_base) * 1000000;
 		ALOGV("~~~%s seekTimeUs[+startTime]: %lld, mode: %d", av_get_media_type_string(mMediaType), seekTimeUs, mode);
 
-		if (mExtractor->stream_seek(seekTimeUs, mMediaType) == SEEK)
+		if (mExtractor->stream_seek(seekTimeUs, mMediaType) == SEEK){
 			seeking = true;
+		}
+		mIsMp3Seek = true;
 	}
 
 retry:
@@ -1778,6 +1790,26 @@ retry:
 			av_free_packet(&pkt);
 			return ERROR_MALFORMED;
 		}
+	}
+	else if( mIsMp3 )
+	{
+		uint32_t mp3Header;
+		if( pkt.size < 4 )
+		{
+			av_free_packet(&pkt);
+			return 0;
+		}
+		mp3Header = pkt.data[0]<<24 | pkt.data[1]<<16 | pkt.data[2]<<8 | pkt.data[3];
+		if( ((mp3Header&0xffe00000) != 0xffe00000) && mIsMp3Seek )
+		{
+			av_free_packet(&pkt);
+			goto retry;
+		}
+		else
+		{
+			mIsMp3Seek = false;
+		}
+		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
 	}
 	else
 	{

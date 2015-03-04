@@ -36,6 +36,7 @@ int openVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 int decodeVideoFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, NX_QUEUE *pOutQueue);
 int processEOS(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
+int processEOSforFlush(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
 
 static OMX_S32		gstNumInstance = 0;
 static OMX_S32		gstMaxInstance = 3;
@@ -1354,6 +1355,7 @@ static void NX_VidDec_CommandProc( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_COMM
 			//	Input Port Flushing
 			if( nParam1 == VPUDEC_VID_OUTPORT_INDEX || nParam1 == OMX_ALL )
 			{
+				processEOSforFlush(pDecComp);
 				FlushVideoOutputPort(pDecComp, pCmdData );
 			}
 			if( nParam1 == OMX_ALL )	//	Output Port Flushing
@@ -1702,7 +1704,6 @@ void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 {
 	FUNC_IN;
 	if( NULL != pDecComp->hVpuCodec ){
-		NX_VidDecFlush( pDecComp->hVpuCodec );
 		NX_VidDecClose( pDecComp->hVpuCodec );
 		pDecComp->bInitialized = OMX_FALSE;
 		pDecComp->bNeedKey = OMX_TRUE;
@@ -1721,10 +1722,16 @@ int flushVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 	InitVideoTimeStamp(pDecComp);
 	if( NULL != pDecComp->hVpuCodec )
 	{
-		NX_VidDecFlush( pDecComp->hVpuCodec );
+		switch( pDecComp->videoCodecId )
+		{
+			case NX_AVC_DEC:
+			case NX_MP2_DEC:
+			break;
+			default:
+				NX_VidDecFlush( pDecComp->hVpuCodec );
+			break;
+		}
 		pDecComp->isOutIdr = OMX_FALSE;
-		FUNC_OUT;
-		return NX_VidDecFlush( pDecComp->hVpuCodec );
 	}
 	FUNC_OUT;
 	return 0;
@@ -1972,6 +1979,33 @@ int processEOS(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 				break;
 			}
 		}
+	}
+	return 0;
+}
+
+
+int processEOSforFlush(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
+{
+	if( pDecComp->hVpuCodec )
+	{
+		int i=0;
+		VID_ERROR_E ret;
+		NX_VID_DEC_IN decIn;
+		NX_VID_DEC_OUT decOut;
+		do{
+			decIn.strmBuf = 0;
+			decIn.strmSize = 0;
+			decIn.timeStamp = 0;
+			decIn.eos = 1;
+			ret = NX_VidDecDecodeFrame( pDecComp->hVpuCodec, &decIn, &decOut );
+			if( ret==VID_ERR_NONE && decOut.outImgIdx >= 0 && ( decOut.outImgIdx < NX_OMX_MAX_BUF ) )
+			{
+				if( pDecComp->bEnableThumbNailMode != OMX_TRUE )
+				{
+					NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
+				}
+			}
+		}while(ret==VID_ERR_NONE && decOut.outImgIdx >= 0);
 	}
 	return 0;
 }
