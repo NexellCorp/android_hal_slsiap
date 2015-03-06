@@ -6,6 +6,13 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_PRELINK_MODULE := false
 
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+# This is LOLLIPOP!!!
+LOCAL_CFLAGS += -DLOLLIPOP=1
+endif
+
 NX_HW_TOP := $(TOP)/hardware/samsung_slsi/slsiap
 NX_HW_INCLUDE := $(NX_HW_TOP)/include
 NX_LINUX_TOP := $(TOP)/linux/platform/$(TARGET_CPU_VARIANT2)
