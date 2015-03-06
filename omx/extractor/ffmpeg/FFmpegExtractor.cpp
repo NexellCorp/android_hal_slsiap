@@ -51,11 +51,13 @@
 #define DUMP_EXTRA_DATA            0
 
 #define MAX_QUEUE_SIZE (80 * 1024 * 1024)		//	FIXME
-#define MIN_AUDIOQ_SIZE (20 * 16 * 1024)
+#define MIN_AUDIOQ_SIZE (8 * 16 * 1024)			//	128 kbps, 8 seconds
 #define MIN_FRAMES		10
 #define EXTRACTOR_MAX_PROBE_PACKETS 200
 
 #define FF_MAX_EXTRADATA_SIZE ((1 << 28) - FF_INPUT_BUFFER_PADDING_SIZE)
+
+static unsigned int gstExtractorCounter = 0;
 
 enum {
     NO_SEEK = 0,
@@ -161,6 +163,8 @@ FFmpegExtractor::FFmpegExtractor(const sp<DataSource> &source)
 		mProbePkts, mEOF, mFormatCtx->pb ? mFormatCtx->pb->error : 0, mDefersToCreateVideoTrack, mDefersToCreateAudioTrack);
 
 	mInitCheck = OK;
+
+	mMyInstanceId = gstExtractorCounter ++;
 }
 
 FFmpegExtractor::~FFmpegExtractor() {
@@ -1000,7 +1004,7 @@ void FFmpegExtractor::stream_component_close(int stream_index)
 
 void FFmpegExtractor::reachedEOS(enum AVMediaType media_type)
 {
-	Mutex::Autolock autoLock(mLock);
+	Mutex::Autolock autoLock(mExtractorLock);
 
 	if (media_type == AVMEDIA_TYPE_VIDEO) {
 		mVideoEOSReceived = true;
@@ -1012,7 +1016,7 @@ void FFmpegExtractor::reachedEOS(enum AVMediaType media_type)
 /* seek in the stream */
 int FFmpegExtractor::stream_seek(int64_t pos, enum AVMediaType media_type)
 {
-	Mutex::Autolock autoLock(mLock);
+	Mutex::Autolock autoLock(mExtractorLock);
 
 	if (mVideoStreamIdx >= 0 &&
 		mAudioStreamIdx >= 0 &&
@@ -1027,13 +1031,10 @@ int FFmpegExtractor::stream_seek(int64_t pos, enum AVMediaType media_type)
 	if (mVideoStreamIdx >= 0)
 		packet_queue_flush(&mVideoQ);
 
-
-	//
-	mSeekFlags = AVSEEK_FLAG_FRAME;
-
 	mSeekPos = pos;
 	mSeekFlags &= ~AVSEEK_FLAG_BYTE;
 	mSeekReq = 1;
+	mEOF2 = false;
 
 	return SEEK;
 }
@@ -1199,7 +1200,6 @@ int FFmpegExtractor::initStreams()
 {
 	int err, i;
 	status_t status;
-	int eof = 0;
 	int ret = 0, audio_ret = 0, video_ret = 0;
 	int pkt_in_play_range = 0;
 	int orig_nb_streams;
@@ -1314,7 +1314,7 @@ void FFmpegExtractor::deInitStreams()
 
 status_t FFmpegExtractor::startReaderThread() {
 	ALOGV("Starting reader thread");
-	Mutex::Autolock autoLock(mLock);
+	Mutex::Autolock autoLock(mExtractorLock);
 
 	if (mReaderThreadStarted)
 		return OK;
@@ -1332,7 +1332,7 @@ status_t FFmpegExtractor::startReaderThread() {
 
 void FFmpegExtractor::stopReaderThread() {
 	ALOGV("Stopping reader thread");
-	Mutex::Autolock autoLock(mLock);
+	Mutex::Autolock autoLock(mExtractorLock);
 
 	if (!mReaderThreadStarted) {
 		ALOGD("Reader thread have been stopped");
@@ -1357,7 +1357,8 @@ void *FFmpegExtractor::ReaderWrapper(void *me) {
 void FFmpegExtractor::readerEntry() {
 	int err, i, ret;
 	AVPacket pkt1, *pkt = &pkt1;
-	int eof = 0;
+//	int eof = 0;
+	mEOF2 = false;
 	int pkt_in_play_range = 0;
 
 	ALOGV("FFmpegExtractor::readerEntry");
@@ -1403,7 +1404,7 @@ void FFmpegExtractor::readerEntry() {
 				}
 			}
 			mSeekReq = 0;
-			eof = 0;
+			mEOF2 = false;
 		}
 
 		/* if the queue are full, no need to read more */
@@ -1411,14 +1412,14 @@ void FFmpegExtractor::readerEntry() {
 			|| (   (mAudioQ   .size  > MIN_AUDIOQ_SIZE || mAudioStreamIdx < 0)
 			&& (mVideoQ   .nb_packets > MIN_FRAMES || mVideoStreamIdx < 0))) {
 #if DEBUG_READ_ENTRY
-				ALOGD("readerEntry, is full!!!");
+				ALOGD("readerEntry, is full!!!(%d)", mMyInstanceId);
 #endif
 				/* wait 10 ms */
 				NX_Delay(10);
 				continue;
 		}
 
-		if (eof) {
+		if (mEOF2) {
 			if (mVideoStreamIdx >= 0) {
 				av_init_packet(pkt);
 				pkt->data = NULL;
@@ -1434,8 +1435,13 @@ void FFmpegExtractor::readerEntry() {
 				packet_queue_put(&mAudioQ, pkt);
 			}
 			NX_Delay(10);
+			{
+				Mutex::Autolock autoLock(mSeekLock);
+				if( mSeekReq )
+					continue;
+			}
 #if DEBUG_READ_ENTRY
-			ALOGD("readerEntry, eof = 1, mVideoQ.size: %d, mVideoQ.nb_packets: %d, mAudioQ.size: %d, mAudioQ.nb_packets: %d",
+			ALOGD("readerEntry, mEOF2 = 1, mVideoQ.size: %d, mVideoQ.nb_packets: %d, mAudioQ.size: %d, mAudioQ.nb_packets: %d",
 				mVideoQ.size, mVideoQ.nb_packets, mAudioQ.size, mAudioQ.nb_packets);
 #endif
 			if (mAudioQ.size + mVideoQ.size  == 0) {
@@ -1444,10 +1450,12 @@ void FFmpegExtractor::readerEntry() {
 					goto fail;
 				}
 			}
-			eof=0;
+			mEOF2=false;
 			continue;
 		}
 
+		if( mSeekReq )
+			continue;
 		ret = av_read_frame(mFormatCtx, pkt);
 		mProbePkts++;
 		if (ret < 0) {
@@ -1459,13 +1467,13 @@ void FFmpegExtractor::readerEntry() {
 					//ALOGV("url_feof(mFormatCtx->pb)");
 				}
 
-				eof = 1;
+				mEOF2 = 1;
 				mEOF = true;
 				if (mFormatCtx->pb && mFormatCtx->pb->error) {
 					ALOGE("mFormatCtx->pb->error: %d", mFormatCtx->pb->error);
 					break;
 				}
-				NX_Delay(100);
+				NX_Delay(10);
 				continue;
 		}
 

@@ -76,7 +76,8 @@ private:
     class Track;
 	class FFMpegParser;
 
-    mutable Mutex mLock;
+    mutable Mutex mExtractorLock;
+    mutable Mutex mSeekLock;
     sp<DataSource> mDataSource;
     status_t mInitCheck;
 
@@ -93,7 +94,9 @@ private:
     int64_t mDuration;
     int mLoop;
     bool mEOF;
+    bool mEOF2;
     size_t mProbePkts;
+    int mMyInstanceId;
 
     int mAbortRequest;
     int mPaused;
