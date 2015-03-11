@@ -61,11 +61,13 @@ struct private_handle_t {
     struct native_handle nativeHandle;
 #endif
 
+#ifdef __cplusplus
     enum {
          PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
          PRIV_FLAGS_USES_UMP    = 0x00000002,
          PRIV_FLAGS_USES_ION    = 0x00000004,
     };
+#endif
 
     // file descriptors
     int share_fd;
