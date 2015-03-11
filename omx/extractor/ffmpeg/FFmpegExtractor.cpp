@@ -92,45 +92,353 @@ void NX_Delay( int ms )
 	usleep( ms*1000 );
 }
 
-class FFmpegExtractor::Track : public MediaSource {
-    Track(const sp<FFmpegExtractor> &extractor, sp<MetaData> meta, bool isAVC,
-          AVStream *stream, PacketQueue *queue);
-
-    virtual status_t start(MetaData *params);
-    virtual status_t stop();
-    virtual sp<MetaData> getFormat();
-
-    virtual status_t read(
-            MediaBuffer **buffer, const ReadOptions *options);
-
-protected:
-    virtual ~Track();
+//////////////////////////////////////////////////////////////////////////////
+//
+//	Implementaion TrackInfo Class
+//
+class FFmpegExtractor::TrackInfo : public RefBase{
+public:
+	TrackInfo(int streamIndex, sp<MetaData> meta , bool isAVC, AVStream *pStream, PacketQueue *pQueue )
+		: mMeta(meta)
+		, mStreamIndex(streamIndex)
+		, mIsAVC(isAVC)
+		, mpStream(pStream)
+		, mpQueue(pQueue)
+	{
+	}
+	~TrackInfo(){};
+	sp<MetaData>	mMeta;
+	int				mStreamIndex;
+	bool			mIsAVC;
+	AVStream		*mpStream;
+	PacketQueue		*mpQueue;
 
 private:
-    friend struct FFmpegExtractor;
+	TrackInfo(const TrackInfo &);
+	TrackInfo &operator=(const TrackInfo &);
+};
+//
+//////////////////////////////////////////////////////////////////////////////
 
-    sp<FFmpegExtractor> mExtractor;
-    sp<MetaData> mMeta;
 
-    enum AVMediaType mMediaType;
 
-    mutable Mutex mLock;
+//////////////////////////////////////////////////////////////////////////////
+//
+//	Implementation FFMpegSource class
+//
+//
+class FFMpegSource : public MediaSource {
+	FFMpegSource(const sp<FFmpegExtractor> &extractor, sp<MetaData> meta, bool isAVC, AVStream *stream, PacketQueue *queue);
+	virtual status_t start(MetaData *params);
+	virtual status_t stop();
+	virtual sp<MetaData> getFormat();
+	virtual status_t read(MediaBuffer **buffer, const ReadOptions *options);
 
-    bool mIsAVC;
-    bool mIsMp3;
-    bool mIsMp3Seek;
-    size_t mNALLengthSize;
-    bool mNal2AnnexB;
+protected:
+	virtual ~FFMpegSource();
 
-    AVStream *mStream;
-    PacketQueue *mQueue;
+private:
+	friend struct FFmpegExtractor;
 
-    int64_t mFirstKeyPktTimestamp;
+	sp<FFmpegExtractor> mExtractor;
+	sp<MetaData> mMeta;
 
-    DISALLOW_EVIL_CONSTRUCTORS(Track);
+	enum AVMediaType mMediaType;
+
+	mutable Mutex mLock;
+
+	bool mIsAVC;
+	bool mIsMp3;
+	bool mIsMp3Seek;
+	size_t mNALLengthSize;
+	bool mNal2AnnexB;
+
+	AVStream *mStream;
+	PacketQueue *mQueue;
+
+	int64_t mFirstKeyPktTimestamp;
+
+private:
+	FFMpegSource(const FFMpegSource &);
+	FFMpegSource &operator=(const FFMpegSource &);
 };
 
+FFMpegSource::FFMpegSource(const sp<FFmpegExtractor> &extractor, sp<MetaData> meta, bool isAVC, AVStream *stream, PacketQueue *queue)
+	: mExtractor(extractor)
+	, mMeta(meta)
+	, mIsAVC(isAVC)
+	, mIsMp3(false)
+	, mIsMp3Seek(false)
+	, mStream(stream)
+	, mQueue(queue)
+{
+	const char *mime;
+
+	/* H.264 Video Types */
+	{
+		mNal2AnnexB = false;
+
+		if (mIsAVC)
+		{
+			uint32_t type;
+			const void *data;
+			size_t size;
+			CHECK(meta->findData(kKeyAVCC, &type, &data, &size));
+
+			const uint8_t *ptr = (const uint8_t *)data;
+
+			CHECK(size >= 7);
+			CHECK_EQ((unsigned)ptr[0], 1u);  // configurationVersion == 1
+
+			// The number of bytes used to encode the length of a NAL unit.
+			mNALLengthSize = 1 + (ptr[4] & 3);
+
+			ALOGV("the stream is AVC, the length of a NAL unit: %d", mNALLengthSize);
+
+			mNal2AnnexB = true;
+		}
+	}
+
+	//	Check MP3 Codec
+	if( stream->codec->codec_id == AV_CODEC_ID_MP3 )
+	{
+		mIsMp3 = true;
+	}
+
+	mMediaType = mStream->codec->codec_type;
+	mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
+}
+
+FFMpegSource::~FFMpegSource() {
+	ALOGD("%s()", __func__);
+}
+
+status_t FFMpegSource::start(MetaData* /*params*/) {
+	Mutex::Autolock autoLock(mLock);
+	//mExtractor->startReaderThread();
+	return OK;
+}
+
+status_t FFMpegSource::stop() {
+	Mutex::Autolock autoLock(mLock);
+	mExtractor->stopReaderThread();
+	return OK;
+}
+
+sp<MetaData> FFMpegSource::getFormat() {
+	Mutex::Autolock autoLock(mLock);
+	return mMeta;
+}
+
+status_t FFMpegSource::read(MediaBuffer **buffer, const ReadOptions *options)
+{
+	*buffer = NULL;
+
+	Mutex::Autolock autoLock(mLock);
+
+	AVPacket pkt;
+	bool seeking = false;
+	bool waitKeyPkt = false;
+	ReadOptions::SeekMode mode;
+	int64_t pktTS = AV_NOPTS_VALUE;
+	int64_t seekTimeUs = AV_NOPTS_VALUE;
+	int64_t timeUs;
+	int key;
+	status_t status = OK;
+
+	if (options && options->getSeekTo(&seekTimeUs, &mode))
+	{
+		ALOGV("~~~%s seekTimeUs: %lld, mode: %d", av_get_media_type_string(mMediaType), seekTimeUs, mode);
+		/* add the stream start time */
+		if (mStream->start_time != AV_NOPTS_VALUE)
+			seekTimeUs += mStream->start_time * av_q2d(mStream->time_base) * 1000000;
+		ALOGV("~~~%s seekTimeUs[+startTime]: %lld, mode: %d", av_get_media_type_string(mMediaType), seekTimeUs, mode);
+
+		if (mExtractor->stream_seek(seekTimeUs, mMediaType) == SEEK){
+			seeking = true;
+		}
+		mIsMp3Seek = true;
+	}
+
+retry:
+	if (mExtractor->packet_queue_get(mQueue, &pkt, 1) < 0)
+	{
+		mExtractor->reachedEOS(mMediaType);
+		return ERROR_END_OF_STREAM;
+	}
+
+	if (seeking)
+	{
+		if (pkt.data != flush_pkt.data)
+		{
+			av_free_packet(&pkt);
+			goto retry;
+		}
+		else
+		{
+			seeking = false;
+#if WAIT_KEY_PACKET_AFTER_SEEK
+			waitKeyPkt = true;
+#endif
+		}
+	}
+
+	if (pkt.data == flush_pkt.data)
+	{
+		ALOGV("read %s flush pkt", av_get_media_type_string(mMediaType));
+		av_free_packet(&pkt);
+		mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
+		goto retry;
+	}
+	else if (pkt.data == NULL && pkt.size == 0)
+	{
+		ALOGV("read %s eos pkt", av_get_media_type_string(mMediaType));
+		av_free_packet(&pkt);
+		mExtractor->reachedEOS(mMediaType);
+		return ERROR_END_OF_STREAM;
+	}
+
+	key = (pkt.flags & AV_PKT_FLAG_KEY) ? 1 : 0;
+	pktTS = pkt.pts;
+	// use dts when AVI
+	if (pkt.pts == AV_NOPTS_VALUE)
+		pktTS = pkt.dts;
+
+	if (waitKeyPkt)
+	{
+		if (!key)
+		{
+			ALOGV("drop the no key packet");
+			av_free_packet(&pkt);
+			goto retry;
+		}
+		else
+		{
+			ALOGV("~~~~~~ got the key packet");
+			waitKeyPkt = false;
+		}
+	}
+
+	if (mFirstKeyPktTimestamp == AV_NOPTS_VALUE)
+	{
+		// update the first key timestamp
+		mFirstKeyPktTimestamp = pktTS;
+	}
+
+	if (pktTS < mFirstKeyPktTimestamp)
+	{
+		ALOGV("drop the packet with the backward timestamp, maybe them are B-frames after I-frame ^_^");
+		av_free_packet(&pkt);
+		goto retry;
+	}
+
+	MediaBuffer *mediaBuffer = new MediaBuffer(pkt.size + FF_INPUT_BUFFER_PADDING_SIZE);
+	mediaBuffer->meta_data()->clear();
+	mediaBuffer->set_range(0, pkt.size);
+#if DISABLE_NAL_TO_ANNEXB
+	mNal2AnnexB = false;
+#endif
+	if (mIsAVC && mNal2AnnexB)
+	{
+		/* Convert H.264 NAL format to annex b */
+		if (mNALLengthSize >= 3 && mNALLengthSize <= 4 )
+		{
+			uint8_t *dst = (uint8_t *)mediaBuffer->data();
+
+			/* This only works for NAL sizes 3-4 */
+			size_t len = pkt.size, i;
+			uint8_t *ptr = pkt.data;
+			while (len >= mNALLengthSize)
+			{
+				uint32_t nal_len = 0;
+				for( i = 0; i < mNALLengthSize; i++ )
+				{
+					nal_len = (nal_len << 8) | ptr[i];
+					dst[i] = 0;
+				}
+				dst[mNALLengthSize - 1] = 1;
+				if (nal_len > INT_MAX || nal_len > (unsigned int)len)
+				{
+					status = ERROR_MALFORMED;
+					break;
+				}
+				dst += mNALLengthSize;
+				ptr += mNALLengthSize;
+				len -= mNALLengthSize;
+
+				memcpy(dst, ptr, nal_len);
+
+				dst += nal_len;
+				ptr += nal_len;
+				len -= nal_len;
+			}
+		}
+		else
+		{
+			status = ERROR_MALFORMED;
+		}
+
+		if (status != OK)
+		{
+			ALOGV("status != OK");
+			mediaBuffer->release();
+			mediaBuffer = NULL;
+			av_free_packet(&pkt);
+			return ERROR_MALFORMED;
+		}
+	}
+	else if( mIsMp3 )
+	{
+		uint32_t mp3Header;
+		if( pkt.size < 4 )
+		{
+			av_free_packet(&pkt);
+			return 0;
+		}
+		mp3Header = pkt.data[0]<<24 | pkt.data[1]<<16 | pkt.data[2]<<8 | pkt.data[3];
+		if( ((mp3Header&0xffe00000) != 0xffe00000) && mIsMp3Seek )
+		{
+			av_free_packet(&pkt);
+			goto retry;
+		}
+		else
+		{
+			mIsMp3Seek = false;
+		}
+		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
+	}
+	else
+	{
+		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
+	}
+
+	int64_t start_time = mStream->start_time != AV_NOPTS_VALUE ? mStream->start_time : 0;
+	timeUs = (int64_t)((pktTS - start_time) * av_q2d(mStream->time_base) * 1000000);
+
+#if 0
+	ALOGD("read %s pkt, size: %d, flags: %d(key=%d), pts: %lld, dts: %lld, timeUs[-startTime]: %llu us (%.2f secs)",
+		av_get_media_type_string(mMediaType), pkt.size, pkt.flags, key, pkt.pts, pkt.dts, timeUs, timeUs/1E6);
+#endif
+
+	mediaBuffer->meta_data()->setInt64(kKeyTime, timeUs);
+	mediaBuffer->meta_data()->setInt32(kKeyIsSyncFrame, key);
+
+	*buffer = mediaBuffer;
+
+	av_free_packet(&pkt);
+
+	return OK;
+}
+//
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
+//
+//		Implementation FFMPEG Extractor
+//
 
 FFmpegExtractor::FFmpegExtractor(const sp<DataSource> &source)
 	: mDataSource(source)
@@ -177,7 +485,7 @@ FFmpegExtractor::~FFmpegExtractor() {
 }
 
 size_t FFmpegExtractor::countTracks() {
-	return mInitCheck == OK ? mTracks.size() : 0;
+	return mInitCheck == OK ? mTrackMetas.size() : 0;
 }
 
 sp<MediaSource> FFmpegExtractor::getTrack(size_t index) {
@@ -187,25 +495,30 @@ sp<MediaSource> FFmpegExtractor::getTrack(size_t index) {
 		return NULL;
 	}
 
-	if (index >= mTracks.size()) {
+	if (index >= mTrackMetas.size()) {
 		return NULL;
 	}
 
-	return mTracks.valueAt(index);
+	sp<TrackInfo> pTrackInfo = mTrackMetas.valueAt(index);
+
+	return new FFMpegSource(this, pTrackInfo->mMeta, pTrackInfo->mIsAVC, pTrackInfo->mpStream, pTrackInfo->mpQueue);
+/*
+	return mTrackMetas.valueAt(index);
+*/
 }
 
-sp<MetaData> FFmpegExtractor::getTrackMetaData(size_t index, uint32_t flags) {
+sp<MetaData> FFmpegExtractor::getTrackMetaData(size_t index, uint32_t /*flags*/) {
 	ALOGV("FFmpegExtractor::getTrackMetaData[%d]", index);
 
 	if (mInitCheck != OK) {
 		return NULL;
 	}
 
-	if (index >= mTracks.size()) {
+	if (index >= mTrackMetas.size()) {
 		return NULL;
 	}
 
-	return mTracks.valueAt(index)->getFormat();
+	return mTrackMetas.valueAt(index)->mMeta;
 }
 
 sp<MetaData> FFmpegExtractor::getMetaData() {
@@ -568,7 +881,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	ALOGV("support the codec");
 
 	unsigned streamType;
-	ssize_t index = mTracks.indexOfKey(stream_index);
+	ssize_t index = mTrackMetas.indexOfKey(stream_index);
 
 	if (index >= 0) {
 		ALOGE("this track already exists");
@@ -752,8 +1065,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 		}
 
 		ALOGV("create a video track");
-		index = mTracks.add(
-			stream_index, new Track(this, meta, isAVC, mVideoStream, &mVideoQ));
+		index = mTrackMetas.add( stream_index, new TrackInfo(mVideoStreamIdx, meta, isAVC, mVideoStream, &mVideoQ) );
 
 		mDefersToCreateVideoTrack = false;
 
@@ -924,8 +1236,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 		}
 
 		ALOGV("create a audio track");
-		index = mTracks.add(
-			stream_index, new Track(this, meta, false, mAudioStream, &mAudioQ));
+		index = mTrackMetas.add( stream_index, new TrackInfo(mAudioStreamIdx, meta, false, mAudioStream, &mAudioQ) );
 
 		mDefersToCreateAudioTrack = false;
 
@@ -1032,6 +1343,7 @@ int FFmpegExtractor::stream_seek(int64_t pos, enum AVMediaType media_type)
 		packet_queue_flush(&mVideoQ);
 
 	mSeekPos = pos;
+	mSeekFlags |= AVSEEK_FLAG_FRAME;
 	mSeekFlags &= ~AVSEEK_FLAG_BYTE;
 	mSeekReq = 1;
 	mEOF2 = false;
@@ -1124,8 +1436,8 @@ int av_find_best_audio_stream(AVFormatContext *ic,
 	                          enum AVMediaType type,
 	                          int wanted_stream_nb,
 	                          int related_stream,
-	                          AVCodec **decoder_ret,
-	                          int flags)
+	                          AVCodec ** /*decoder_ret*/,
+	                          int /*flags*/)
 {
 	int i, nb_streams = ic->nb_streams;
 	int ret = AVERROR_STREAM_NOT_FOUND, best_count = -1, best_bitrate = -1, best_multiframe = -1, count, bitrate, multiframe;
@@ -1215,7 +1527,8 @@ int FFmpegExtractor::initStreams()
 	status = initFFmpeg();
 	if (status != OK) {
 		ret = -1;
-		goto fail;
+		return -1;
+		//goto fail;
 	}
 
 	av_init_packet(&flush_pkt);
@@ -1223,6 +1536,7 @@ int FFmpegExtractor::initStreams()
 	flush_pkt.size = 0;
 
 	mFormatCtx = avformat_alloc_context();
+
 	mFormatCtx->interrupt_callback.callback = decode_interrupt_cb;
 	mFormatCtx->interrupt_callback.opaque = this;
 	ALOGV("mFilename: %s", mFilename);
@@ -1313,7 +1627,7 @@ void FFmpegExtractor::deInitStreams()
 }
 
 status_t FFmpegExtractor::startReaderThread() {
-	ALOGV("Starting reader thread");
+	ALOGD("Starting reader thread");
 	Mutex::Autolock autoLock(mExtractorLock);
 
 	if (mReaderThreadStarted)
@@ -1331,7 +1645,7 @@ status_t FFmpegExtractor::startReaderThread() {
 }
 
 void FFmpegExtractor::stopReaderThread() {
-	ALOGV("Stopping reader thread");
+	ALOGD("Stopping reader thread");
 	Mutex::Autolock autoLock(mExtractorLock);
 
 	if (!mReaderThreadStarted) {
@@ -1572,287 +1886,27 @@ fail:
 		avformat_close_input(&mFormatCtx);
 	}
 }
+//
+//////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////////
 
-FFmpegExtractor::Track::Track(const sp<FFmpegExtractor> &extractor, sp<MetaData> meta, bool isAVC, AVStream *stream, PacketQueue *queue)
-	: mExtractor(extractor)
-	, mMeta(meta)
-	, mIsAVC(isAVC)
-	, mIsMp3(false)
-	, mIsMp3Seek(false)
-	, mStream(stream)
-	, mQueue(queue)
-{
-	const char *mime;
 
-	/* H.264 Video Types */
-	{
-		mNal2AnnexB = false;
 
-		if (mIsAVC)
-		{
-			uint32_t type;
-			const void *data;
-			size_t size;
-			CHECK(meta->findData(kKeyAVCC, &type, &data, &size));
 
-			const uint8_t *ptr = (const uint8_t *)data;
 
-			CHECK(size >= 7);
-			CHECK_EQ((unsigned)ptr[0], 1u);  // configurationVersion == 1
 
-			// The number of bytes used to encode the length of a NAL unit.
-			mNALLengthSize = 1 + (ptr[4] & 3);
-
-			ALOGV("the stream is AVC, the length of a NAL unit: %d", mNALLengthSize);
-
-			mNal2AnnexB = true;
-		}
-	}
-
-	//	Check MP3 Codec
-	if( stream->codec->codec_id == AV_CODEC_ID_MP3 )
-	{
-		mIsMp3 = true;
-	}
-
-	mMediaType = mStream->codec->codec_type;
-	mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
-}
-
-FFmpegExtractor::Track::~Track() {
-}
-
-status_t FFmpegExtractor::Track::start(MetaData *params) {
-	Mutex::Autolock autoLock(mLock);
-	//mExtractor->startReaderThread();
-	return OK;
-}
-
-status_t FFmpegExtractor::Track::stop() {
-	Mutex::Autolock autoLock(mLock);
-	mExtractor->stopReaderThread();
-	return OK;
-}
-
-sp<MetaData> FFmpegExtractor::Track::getFormat() {
-	Mutex::Autolock autoLock(mLock);
-
-	return mMeta;
-}
-
-status_t FFmpegExtractor::Track::read(MediaBuffer **buffer, const ReadOptions *options)
-{
-	*buffer = NULL;
-
-	Mutex::Autolock autoLock(mLock);
-
-	AVPacket pkt;
-	bool seeking = false;
-	bool waitKeyPkt = false;
-	ReadOptions::SeekMode mode;
-	int64_t pktTS = AV_NOPTS_VALUE;
-	int64_t seekTimeUs = AV_NOPTS_VALUE;
-	int64_t timeUs;
-	int key;
-	status_t status = OK;
-
-	if (options && options->getSeekTo(&seekTimeUs, &mode))
-	{
-		ALOGV("~~~%s seekTimeUs: %lld, mode: %d", av_get_media_type_string(mMediaType), seekTimeUs, mode);
-		/* add the stream start time */
-		if (mStream->start_time != AV_NOPTS_VALUE)
-			seekTimeUs += mStream->start_time * av_q2d(mStream->time_base) * 1000000;
-		ALOGV("~~~%s seekTimeUs[+startTime]: %lld, mode: %d", av_get_media_type_string(mMediaType), seekTimeUs, mode);
-
-		if (mExtractor->stream_seek(seekTimeUs, mMediaType) == SEEK){
-			seeking = true;
-		}
-		mIsMp3Seek = true;
-	}
-
-retry:
-	if (mExtractor->packet_queue_get(mQueue, &pkt, 1) < 0)
-	{
-		mExtractor->reachedEOS(mMediaType);
-		return ERROR_END_OF_STREAM;
-	}
-
-	if (seeking)
-	{
-		if (pkt.data != flush_pkt.data)
-		{
-			av_free_packet(&pkt);
-			goto retry;
-		}
-		else
-		{
-			seeking = false;
-#if WAIT_KEY_PACKET_AFTER_SEEK
-			waitKeyPkt = true;
-#endif
-		}
-	}
-
-	if (pkt.data == flush_pkt.data)
-	{
-		ALOGV("read %s flush pkt", av_get_media_type_string(mMediaType));
-		av_free_packet(&pkt);
-		mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
-		goto retry;
-	}
-	else if (pkt.data == NULL && pkt.size == 0)
-	{
-		ALOGV("read %s eos pkt", av_get_media_type_string(mMediaType));
-		av_free_packet(&pkt);
-		mExtractor->reachedEOS(mMediaType);
-		return ERROR_END_OF_STREAM;
-	}
-
-	key = (pkt.flags & AV_PKT_FLAG_KEY) ? 1 : 0;
-	pktTS = pkt.pts;
-	// use dts when AVI
-	if (pkt.pts == AV_NOPTS_VALUE)
-		pktTS = pkt.dts;
-
-	if (waitKeyPkt)
-	{
-		if (!key)
-		{
-			ALOGV("drop the no key packet");
-			av_free_packet(&pkt);
-			goto retry;
-		}
-		else
-		{
-			ALOGV("~~~~~~ got the key packet");
-			waitKeyPkt = false;
-		}
-	}
-
-	if (mFirstKeyPktTimestamp == AV_NOPTS_VALUE)
-	{
-		// update the first key timestamp
-		mFirstKeyPktTimestamp = pktTS;
-	}
-
-	if (pktTS < mFirstKeyPktTimestamp)
-	{
-		ALOGV("drop the packet with the backward timestamp, maybe them are B-frames after I-frame ^_^");
-		av_free_packet(&pkt);
-		goto retry;
-	}
-
-	MediaBuffer *mediaBuffer = new MediaBuffer(pkt.size + FF_INPUT_BUFFER_PADDING_SIZE);
-	mediaBuffer->meta_data()->clear();
-	mediaBuffer->set_range(0, pkt.size);
-#if DISABLE_NAL_TO_ANNEXB
-	mNal2AnnexB = false;
-#endif
-	if (mIsAVC && mNal2AnnexB)
-	{
-		/* Convert H.264 NAL format to annex b */
-		if (mNALLengthSize >= 3 && mNALLengthSize <= 4 )
-		{
-			uint8_t *dst = (uint8_t *)mediaBuffer->data();
-
-			/* This only works for NAL sizes 3-4 */
-			size_t len = pkt.size, i;
-			uint8_t *ptr = pkt.data;
-			while (len >= mNALLengthSize)
-			{
-				uint32_t nal_len = 0;
-				for( i = 0; i < mNALLengthSize; i++ )
-				{
-					nal_len = (nal_len << 8) | ptr[i];
-					dst[i] = 0;
-				}
-				dst[mNALLengthSize - 1] = 1;
-				if (nal_len > INT_MAX || nal_len > (unsigned int)len)
-				{
-					status = ERROR_MALFORMED;
-					break;
-				}
-				dst += mNALLengthSize;
-				ptr += mNALLengthSize;
-				len -= mNALLengthSize;
-
-				memcpy(dst, ptr, nal_len);
-
-				dst += nal_len;
-				ptr += nal_len;
-				len -= nal_len;
-			}
-		}
-		else
-		{
-			status = ERROR_MALFORMED;
-		}
-
-		if (status != OK)
-		{
-			ALOGV("status != OK");
-			mediaBuffer->release();
-			mediaBuffer = NULL;
-			av_free_packet(&pkt);
-			return ERROR_MALFORMED;
-		}
-	}
-	else if( mIsMp3 )
-	{
-		uint32_t mp3Header;
-		if( pkt.size < 4 )
-		{
-			av_free_packet(&pkt);
-			return 0;
-		}
-		mp3Header = pkt.data[0]<<24 | pkt.data[1]<<16 | pkt.data[2]<<8 | pkt.data[3];
-		if( ((mp3Header&0xffe00000) != 0xffe00000) && mIsMp3Seek )
-		{
-			av_free_packet(&pkt);
-			goto retry;
-		}
-		else
-		{
-			mIsMp3Seek = false;
-		}
-		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
-	}
-	else
-	{
-		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
-	}
-
-	int64_t start_time = mStream->start_time != AV_NOPTS_VALUE ? mStream->start_time : 0;
-	timeUs = (int64_t)((pktTS - start_time) * av_q2d(mStream->time_base) * 1000000);
-
-#if 0
-	ALOGD("read %s pkt, size: %d, flags: %d(key=%d), pts: %lld, dts: %lld, timeUs[-startTime]: %llu us (%.2f secs)",
-		av_get_media_type_string(mMediaType), pkt.size, pkt.flags, key, pkt.pts, pkt.dts, timeUs, timeUs/1E6);
-#endif
-
-	mediaBuffer->meta_data()->setInt64(kKeyTime, timeUs);
-	mediaBuffer->meta_data()->setInt32(kKeyIsSyncFrame, key);
-
-	*buffer = mediaBuffer;
-
-	av_free_packet(&pkt);
-
-	return OK;
-}
-
-////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+//
+//			Implementation Sniffer Application
+//
 
 //
 //	Find number of tracks that can playable.
 //
-
-
 static int get_num_supported_audio_tracks(AVFormatContext *avfctx)
 {
 	int count = 0;
-	int i;
+	unsigned int i;
 	for( i=0; i<avfctx->nb_streams ; i++ )
 	{
 		switch ( avfctx->streams[i]->codec->codec_id )
@@ -1883,7 +1937,7 @@ static int get_num_supported_audio_tracks(AVFormatContext *avfctx)
 static int get_num_supported_video_tracks(AVFormatContext *avfctx)
 {
 	int count = 0;
-	int i;
+	unsigned int i;
 	for( i=0; i<avfctx->nb_streams ; i++ )
 	{
 		switch ( avfctx->streams[i]->codec->codec_id )
@@ -2062,7 +2116,6 @@ ErrorExit:
 }
 
 
-
 const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bool dumpInfo)
 {
 	size_t i;
@@ -2186,6 +2239,7 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 	if (!container)
 	{
 		ALOGW("sniff through Better2SniffFFMPEG failed, try BetterSniffFFMPEG");
+#if 0
 		container = BetterSniffFFMPEG(uri, bUseFfmpeg, false);
 		if (!container)
 		{
@@ -2195,6 +2249,7 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 		{
 			ALOGI("sniff through BetterSniffFFMPEG success");
 		}
+#endif
 	}
 	else
 	{
@@ -2232,5 +2287,7 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 
 	return true;
 }
+//
+//////////////////////////////////////////////////////////////////////////////
 
 }  // namespace android

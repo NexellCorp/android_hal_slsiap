@@ -113,7 +113,7 @@ off64_t FFSource::getSize()
 
 /////////////////////////////////////////////////////////////////
 
-static int android_open(URLContext *h, const char *url, int flags)
+static int android_open(URLContext *h, const char *url, int /*flags*/)
 {
 	// the url in form of "android:<DataSource Ptr>",
 	// the DataSource Pointer passed by the ffmpeg extractor
@@ -147,7 +147,7 @@ static int android_read(URLContext *h, unsigned char *buf, int size)
 	return ffs->read(buf, size);
 }
 
-static int android_write(URLContext *h, const unsigned char *buf, int size)
+static int android_write(URLContext * /*h*/, const unsigned char* /*buf*/, int /*size*/)
 {
 	return -1;
 }

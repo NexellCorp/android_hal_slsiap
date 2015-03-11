@@ -53,8 +53,9 @@ namespace android {
 
 class ABuffer;
 class AMessage;
-class Track;
 class String8;
+class FFMpegSource;
+class TrackInfo;
 
 class FFmpegExtractor : public MediaExtractor
 {
@@ -73,15 +74,16 @@ protected:
     virtual ~FFmpegExtractor();
 
 private:
-    class Track;
-	class FFMpegParser;
+    friend class FFMpegSource;
+
+    class TrackInfo;
 
     mutable Mutex mExtractorLock;
     mutable Mutex mSeekLock;
     sp<DataSource> mDataSource;
     status_t mInitCheck;
 
-    KeyedVector<unsigned, sp<Track> > mTracks;
+    KeyedVector<unsigned, sp<TrackInfo> > mTrackMetas;
 
     char mFilename[1024];
     int mGenPTS;

@@ -233,7 +233,7 @@ status_t initFFmpeg()
 		avdevice_register_all();
 #endif
 		av_register_all();
-		avformat_network_init();
+//		avformat_network_init();
 
 		/* register android source */
 		ffmpeg_register_android_source();
@@ -262,7 +262,7 @@ void deInitFFmpeg()
 	if(ref_count == 0) {
 		av_lockmgr_register(NULL);
 		//        uninit_opts();
-		avformat_network_deinit();
+		//avformat_network_deinit();
 	}
 
 	pthread_mutex_unlock(&init_mutex);
@@ -272,7 +272,7 @@ void deInitFFmpeg()
 // parser
 //////////////////////////////////////////////////////////////////////////////////
 /* H.264 bitstream with start codes, NOT AVC1! ref: libavcodec/h264_parser.c */
-static int h264_split(AVCodecContext *avctx, const uint8_t *buf, int buf_size, int check_compatible_only)
+static int h264_split(AVCodecContext* /*avctx*/, const uint8_t *buf, int buf_size, int check_compatible_only)
 {
 	int i;
 	uint32_t state = -1;
@@ -305,7 +305,7 @@ static int h264_split(AVCodecContext *avctx, const uint8_t *buf, int buf_size, i
 }
 
 /* ref: libavcodec/mpegvideo_parser.c */
-static int mpegvideo_split(AVCodecContext *avctx, const uint8_t *buf, int buf_size, int check_compatible_only)
+static int mpegvideo_split(AVCodecContext* /*avctx*/, const uint8_t *buf, int buf_size, int /*check_compatible_only*/)
 {
 	int i;
 	uint32_t state= -1;
