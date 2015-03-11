@@ -156,6 +156,9 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 
 			if( pDecComp->outBufferUseFlag[decOut.outImgIdx] == 0 )
 			{
+				OMX_TICKS timestamp;
+				OMX_U32 flag;
+				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
 				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit\n");
 				goto Exit;

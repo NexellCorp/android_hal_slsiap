@@ -282,6 +282,9 @@ int NX_DecodeAvcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 		{
 			if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType != PIC_TYPE_I )
 			{
+				OMX_TICKS timestamp;
+				OMX_U32 flag;
+				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
 				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 				goto Exit;
 			}
@@ -300,9 +303,16 @@ int NX_DecodeAvcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 
 			if( pDecComp->outBufferUseFlag[decOut.outImgIdx] == 0 )
 			{
+				OMX_TICKS timestamp;
+				OMX_U32 flag;
+				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
 				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
-				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit\n");
+				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit(%ld,%d)\n", pDecComp->curOutBuffers, decOut.outImgIdx);
 				goto Exit;
+			}
+			else
+			{
+				DbgBuffer("curOutBuffers(%ld),idx(%d)\n", pDecComp->curOutBuffers, decOut.outImgIdx);
 			}
 			pDecComp->outBufferUseFlag[decOut.outImgIdx] = 0;
 			pDecComp->curOutBuffers --;

@@ -23,7 +23,7 @@
 #define DEBUG_OMXPLUGIN 
 
 #ifdef DEBUG_OMXPLUGIN
-#define	TRACE	ALOGD
+#define	TRACE	ALOGV
 #define	DbgMsg	ALOGD
 #define	ErrMsg	ALOGE
 #else

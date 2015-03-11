@@ -28,7 +28,7 @@ static OMX_ERRORTYPE NX_VidDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHE
 static OMX_ERRORTYPE NX_VidDec_ComponentDeInit(OMX_HANDLETYPE hComponent);
 static void          NX_VidDec_BufferMgmtThread( void *arg );
 
-static void NX_VidDec_CommandProc( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
+static void NX_VidDec_CommandProc( NX_BASE_COMPNENT *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
 
 
 int flushVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp);
@@ -58,7 +58,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 
 	FUNC_IN;
 
-	DbgMsg("%s()++ gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
+	TRACE("%s()++ gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
 
 	if( gstNumInstance >= gstMaxInstance )
 	{
@@ -208,7 +208,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 	gstNumInstance ++;
 
 	FUNC_OUT;
-	DbgMsg("%s()-- gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
+	TRACE("%s()-- gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
 
 	return OMX_ErrorNone;
 }
@@ -220,7 +220,7 @@ static OMX_ERRORTYPE NX_VidDec_ComponentDeInit(OMX_HANDLETYPE hComponent)
 	OMX_U32 i=0;
 	FUNC_IN;
 
-	DbgMsg("%s()++ gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
+	TRACE("%s()++ gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
 
 	//	prevent duplacation
 	if( NULL == pComp->pComponentPrivate )
@@ -272,7 +272,7 @@ static OMX_ERRORTYPE NX_VidDec_ComponentDeInit(OMX_HANDLETYPE hComponent)
 
 	gstNumInstance --;
 	FUNC_OUT;
-	DbgMsg("%s()-- gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
+	TRACE("%s()-- gstNumInstance = %ld, gstMaxInstance = %ld\n", __func__, gstNumInstance, gstMaxInstance);
 	return OMX_ErrorNone;
 }
 
@@ -677,7 +677,7 @@ static OMX_ERRORTYPE NX_VidDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE
 				}
 				else
 				{
-					DbgMsg("CodecID(%d) NX_AVC_DEC(%d)\n", pDecComp->videoCodecId, NX_AVC_DEC);
+					DbgMsg("CodecID(%ld) NX_AVC_DEC(%d)\n", pDecComp->videoCodecId, NX_AVC_DEC);
 					if( pDecComp->videoCodecId == NX_AVC_DEC )
 					{
 						int32_t MBs = ((pDecComp->width+15)>>4)*((pDecComp->height+15)>>4);
@@ -704,7 +704,7 @@ static OMX_ERRORTYPE NX_VidDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE
 
 				if( (((pDecComp->width+15)>>4) * ((pDecComp->height+15)>>4) ) > ((1920>>4)*(1088>>4)) )
 				{
-					DbgMsg("Cannot Support Video Resolution : Max(1920x1080), Input(%dx%d)\n", pDecComp->width, pDecComp->height);
+					DbgMsg("Cannot Support Video Resolution : Max(1920x1080), Input(%ldx%ld)\n", pDecComp->width, pDecComp->height);
 					return OMX_ErrorUnsupportedSetting;
 				}
 			}
@@ -1001,6 +1001,7 @@ static OMX_ERRORTYPE NX_VidDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHE
 				}
 				pDecComp->outBufferUseFlag[i] = 1;		//	Check
 				pDecComp->curOutBuffers ++;
+				DbgBuffer("curOutBuffers = %d, index(%d)", pDecComp->curOutBuffers, i);
 				foundBuffer = 1;
 			}
 		}
@@ -1319,8 +1320,9 @@ static void FlushVideoOutputPort( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_PTR p
 
 
 
-static void NX_VidDec_CommandProc( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData )
+static void NX_VidDec_CommandProc( NX_BASE_COMPNENT *pBaseComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData )
 {
+	NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp = (NX_VIDDEC_VIDEO_COMP_TYPE *)pBaseComp;
 	OMX_ERRORTYPE eError=OMX_ErrorNone;
 	OMX_EVENTTYPE eEvent = OMX_EventCmdComplete;
 	OMX_COMPONENTTYPE *pStdComp = pDecComp->hComp;

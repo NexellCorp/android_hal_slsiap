@@ -46,7 +46,7 @@ static OMX_ERRORTYPE NX_FFAudDec_ComponentDeInit(OMX_HANDLETYPE hComponent);
 static void          NX_FFAudDec_BufferMgmtThread( void *arg );
 
 
-static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
+static void NX_FFAudDec_CommandProc( NX_BASE_COMPNENT *pBaseComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
 static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp);
 static void closeAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp);
 static int decodeAudioFrame(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, NX_QUEUE *pOutQueue);
@@ -845,8 +845,10 @@ static OMX_ERRORTYPE NX_FFAudDec_StateTransition( NX_FFDEC_AUDIO_COMP_TYPE *pDec
 	return eError;
 }
 
-static void NX_FFAudDec_CommandProc( NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData )
+
+static void NX_FFAudDec_CommandProc( NX_BASE_COMPNENT *pBaseComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData )
 {
+	NX_FFDEC_AUDIO_COMP_TYPE *pDecComp = (NX_FFDEC_AUDIO_COMP_TYPE *)pBaseComp;
 	OMX_ERRORTYPE eError=OMX_ErrorNone;
 	OMX_EVENTTYPE eEvent = OMX_EventCmdComplete;
 	OMX_COMPONENTTYPE *pStdComp = pDecComp->hComp;
@@ -1086,7 +1088,7 @@ static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp)
 			channels = pDecComp->inPortType.raType.nChannels;
 			sampleRate = pDecComp->inPortType.raType.nSamplingRate;
 			blockAlign = pDecComp->inPortType.raType.nBitsPerFrame;
-			DbgMsg("Audio coding type COOK, channels=%d, samplingrate=%d, blockAlign=%d\n", channels, sampleRate, blockAlign);
+			DbgMsg("Audio coding type COOK, channels=%d, samplingrate=%d, blockAlign=%ld\n", channels, sampleRate, blockAlign);
 			break;
 		case OMX_AUDIO_CodingWMA:
 			if( pDecComp->inPortType.wmaType.eFormat == OMX_AUDIO_WMAFormat7)
@@ -1150,7 +1152,7 @@ static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp)
 
 	pDecComp->avctx->channels = channels;
 	pDecComp->avctx->sample_rate = sampleRate;
-	pDecComp->avctx->request_channels = FFMIN(2, channels);
+	pDecComp->avctx->request_channel_layout = FFMIN(2, channels);
 	pDecComp->avctx->block_align = blockAlign;
 	pDecComp->avctx->bit_rate = bitRate;
 

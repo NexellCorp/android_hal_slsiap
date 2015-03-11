@@ -227,11 +227,11 @@ int NX_DecodeVC1Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 			}
 			pDecComp->pExtraData = malloc(pDecComp->nExtraDataSize);
 			memcpy(pDecComp->pExtraData, inData, inSize);
-			DbgMsg("Copy Extra Data (%d)\n", inSize );
+			DbgMsg("Copy Extra Data (%ld)\n", inSize );
 
 			{
 				OMX_U8 *buf = pDecComp->pExtraData;
-				DbgMsg("DumpData (%6d) : 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x\n",
+				DbgMsg("DumpData (%6ld) : 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x, 0x%02x%02x%02x%02x\n",
 					inSize,
 					buf[ 0],buf[ 1],buf[ 2],buf[ 3],buf[ 4],buf[ 5],buf[ 6],buf[ 7],
 					buf[ 8],buf[ 9],buf[10],buf[11],buf[12],buf[13],buf[14],buf[15],
@@ -332,6 +332,9 @@ int NX_DecodeVC1Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 
 			if( pDecComp->outBufferUseFlag[decOut.outImgIdx] == 0 )
 			{
+				OMX_TICKS timestamp;
+				OMX_U32 flag;
+				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
 				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit\n");
 				goto Exit;

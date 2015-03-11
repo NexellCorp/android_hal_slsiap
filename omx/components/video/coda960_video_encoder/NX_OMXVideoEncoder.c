@@ -70,7 +70,7 @@ static OMX_ERRORTYPE NX_VidEncSetParameter			( OMX_HANDLETYPE hComp, OMX_INDEXTY
 static OMX_ERRORTYPE NX_VidEncUseBuffer				( OMX_HANDLETYPE hComp, OMX_BUFFERHEADERTYPE** ppBufferHdr, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes, OMX_U8* pBuffer);
 static OMX_ERRORTYPE NX_VidEncComponentDeInit		( OMX_HANDLETYPE hComp);
 static void NX_VidEncBufferMgmtThread( void *arg );
-static void NX_VidEncCommandProc( NX_VIDENC_COMP_TYPE *pEncComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
+static void NX_VidEncCommandProc( NX_BASE_COMPNENT *pBaseComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData );
 
 
 static OMX_S32		gstNumInstance = 0;
@@ -975,8 +975,9 @@ static OMX_ERRORTYPE NX_VidEncStateTransition( NX_VIDENC_COMP_TYPE *pEncComp, OM
 	return eError;
 }
 
-static void NX_VidEncCommandProc( NX_VIDENC_COMP_TYPE *pEncComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData )
+static void NX_VidEncCommandProc( NX_BASE_COMPNENT *pBaseComp, OMX_COMMANDTYPE Cmd, OMX_U32 nParam1, OMX_PTR pCmdData )
 {
+	NX_VIDENC_COMP_TYPE *pEncComp = (NX_VIDENC_COMP_TYPE *)pBaseComp;
 	OMX_ERRORTYPE eError=OMX_ErrorNone;
 	OMX_EVENTTYPE eEvent = OMX_EventCmdComplete;
 	OMX_COMPONENTTYPE *pStdComp = pEncComp->hComp;
@@ -1350,9 +1351,9 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 		{
 			//struct timeval start, end;
 			//gettimeofday( &start, NULL );
-			mAllocMod->lock(mAllocMod, hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, hPrivate->stride, hPrivate->height, inData);	
+			mAllocMod->lock(mAllocMod, (void*)hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, hPrivate->stride, hPrivate->height, (void*)inData);	
 			cscARGBToNV21( (char*)inData, (char*)pEncComp->hCSCMem->luVirAddr, (char*)pEncComp->hCSCMem->cbVirAddr, pEncComp->encWidth, pEncComp->encHeight, 1);
-			mAllocMod->unlock(mAllocMod, hPrivate);
+			mAllocMod->unlock(mAllocMod, (void*)hPrivate);
 			//gettimeofday( &end, NULL );
 			//uint32_t value = (end.tv_sec - start.tv_sec)*1000 + (end.tv_usec - start.tv_usec)/1000;
 			//DbgMsg("~~~~TimeStamp = %d msec\n", value);
@@ -1408,6 +1409,7 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 	//
 	else
 	{
+		hPrivate = (struct private_handle_t const *)recodingBuffer[1];
 		//	CSC
 		if( pEncComp->hCSCMem == NULL )
 		{
@@ -1418,13 +1420,13 @@ static OMX_S32 EncodeFrame(NX_VIDENC_COMP_TYPE *pEncComp, NX_QUEUE *pInQueue, NX
 			char *srcY = (char*)pInBuf->pBuffer;
 			char *srcU = srcY + pEncComp->encWidth * pEncComp->encHeight;
 			char *srcV = srcU + pEncComp->encWidth * pEncComp->encHeight / 4;
-			mAllocMod->lock(mAllocMod, hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, pEncComp->encWidth, pEncComp->encHeight * 3 / 2, srcY);
+			mAllocMod->lock(mAllocMod, (void*)hPrivate, GRALLOC_USAGE_SW_READ_OFTEN, 0, 0, pEncComp->encWidth, pEncComp->encHeight * 3 / 2, (void*)srcY);
 			cscYV12ToYV12(  srcY, srcU, srcV,
 							(char*)pEncComp->hCSCMem->luVirAddr, (char*)pEncComp->hCSCMem->cbVirAddr, (char*)pEncComp->hCSCMem->crVirAddr,
 							pEncComp->encWidth, pEncComp->hCSCMem->luStride, pEncComp->hCSCMem->cbStride,
 							pEncComp->encWidth, pEncComp->encHeight );
 			memcpy(&inputMem, pEncComp->hCSCMem, sizeof(inputMem) );
-			mAllocMod->unlock(mAllocMod, hPrivate);
+			mAllocMod->unlock(mAllocMod, (void*)hPrivate);
 		}
 	}
 

@@ -214,7 +214,7 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_ComponentNameEnum(
 	OMX_IN  OMX_U32 nIndex)
 {
 	OMX_ERRORTYPE err = OMX_ErrorNone;
-	NX_LOGD("\t %s(index = %ld, nNameLength=%ld)++\n", __FUNCTION__, nIndex, nNameLength);
+	NX_LOGV("\t %s(index = %ld, nNameLength=%ld)++\n", __FUNCTION__, nIndex, nNameLength);
 	if( OMX_TRUE!=gstNXOMXInit || nIndex > gstCurOMXComponents-1 ){
 		return OMX_ErrorNoMore;
 	}
@@ -226,7 +226,7 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_ComponentNameEnum(
 		strcpy( cComponentName, gstOMXComponentList[nIndex].strName );
 	}
 	pthread_mutex_unlock( &gstOMXCoreMutex );
-    NX_LOGD("\t %s(err=%d,Name=%s)--\n", __FUNCTION__, err, cComponentName);
+    NX_LOGV("\t %s(err=%d,Name=%s)--\n", __FUNCTION__, err, cComponentName);
 	return err;
 }
 
