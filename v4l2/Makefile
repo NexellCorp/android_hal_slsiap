@@ -1,7 +1,7 @@
 CROSS := arm-cortex_a9-linux-gnueabi-
 CXX := $(CROSS)g++
 
-KERNEL_SOURCE := /home/swpark/android-3.4/
+KERNEL_SOURCE := /home/swpark/disk3/lollipop-fine/kernel
 CXXFLAGS := -O2 -g -fpic -I$(KERNEL_SOURCE)/include -I../include
 
 SRCS := nxp-v4l2.cpp nxp-v4l2-dev.cpp
