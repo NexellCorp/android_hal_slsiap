@@ -142,11 +142,13 @@ int HDMICommonImpl::configHDMI(uint32_t preset)
     if (likely(mHDMIConfigured))
         return 0;
 
-    int ret = v4l2_set_preset(nxp_v4l2_hdmi, preset);
+#ifndef TVOUT
+    int ret = v4l2_set_preset(EXTERNAL_DISPLAY_V4L2_DEVICE_ID, preset);
     if (ret < 0) {
         ALOGE("configHDMI(): failed to v4l2_set_preset(0x%x)", preset);
         return ret;
     }
+#endif
     mHDMIConfigured = true;
     return 0;
 }

@@ -46,6 +46,8 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_SHARED_LIBRARIES := liblog libsync libEGL libcutils libhardware libhardware_legacy libnxhwcservice libutils libbinder libion-nexell libv4l2-nexell libion libnxutil
 LOCAL_STATIC_LIBRARIES := libcec
 LOCAL_CFLAGS += -DLOG_TAG=\"hwcomposer\"
+#LOCAL_CFLAGS += -DEXTERNAL_DISPLAY_V4L2_DEVICE_ID=nxp_v4l2_hdmi
+LOCAL_CFLAGS += -DTVOUT -DEXTERNAL_DISPLAY_V4L2_DEVICE_ID=nxp_v4l2_tvout
 
 LOCAL_C_INCLUDES += \
 	frameworks/native/include \

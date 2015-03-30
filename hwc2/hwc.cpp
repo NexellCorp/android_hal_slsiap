@@ -50,12 +50,22 @@
 
 #include "service/NXHWCService.h"
 
+// TVOUT
+#define MODE_TVOUT
+
 #define VSYNC_CTL_FILE      "/sys/devices/platform/display/active.0"
 #define VSYNC_MON_FILE      "/sys/devices/platform/display/vsync.0"
 #define VSYNC_ON            "1"
 #define VSYNC_OFF           "0"
 
+#ifdef TVOUT
+#define HDMI_STATE_FILE     "/sys/class/switch/tvout/state"
+#define HDMI_STATE_CHANGE_EVENT "change@/devices/virtual/switch/tvout"
+#else
 #define HDMI_STATE_FILE     "/sys/class/switch/hdmi/state"
+#define HDMI_STATE_CHANGE_EVENT "change@/devices/virtual/switch/hdmi"
+#endif
+#define HDMI_MODE_FILE      "/sys/devices/platform/nxp-hdmi/modalias"
 #define FRAMEBUFFER_FILE    "/dev/graphics/fb0"
 
 #define HWC_SCENARIO_PROPERTY_KEY    "hwc.scenario"
@@ -200,28 +210,9 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
 
     close(fd);
 
-#if 0
-    uint64_t base =
-         (uint64_t)((info.upper_margin + info.lower_margin + info.yres)
-             * (info.left_margin + info.right_margin + info.xres)
-             * info.pixclock);
-    uint32_t refreshRate = 60;
-    if (base != 0) {
-        refreshRate = 1000000000000LLU / base;
-        if (refreshRate <= 0 || refreshRate > 60) {
-            ALOGE("invalid refresh rate(%d), assuming 60Hz", refreshRate);
-            ALOGE("upper_margin(%d), lower_margin(%d), yres(%d),left_margin(%d), right_margin(%d), xres(%d),pixclock(%d)",
-                    info.upper_margin, info.lower_margin, info.yres,
-                    info.left_margin, info.right_margin, info.xres,
-                    info.pixclock);
-            refreshRate = 60;
-        }
-    }
-#else
     int32_t xres, yres, refreshRate;
     getScreenAttribute("fb0", xres, yres, refreshRate);
     ALOGD("%s: refreshRate %d", __func__, refreshRate);
-#endif
 
     pInfo->xres = info.xres;
     pInfo->yres = info.yres;
@@ -293,7 +284,7 @@ static void *hwc_vsync_thread(void *data)
             } else if ((me->mHDMIMode == HDMI_MODE_SECONDARY) &&
                        (fds[1].revents & POLLIN)) {
                 int len = uevent_next_event(uevent_desc, sizeof(uevent_desc) - 2);
-                bool hdmi = !strcmp(uevent_desc, "change@/devices/virtual/switch/hdmi");
+                bool hdmi = !strcmp(uevent_desc, HDMI_STATE_CHANGE_EVENT);
                 if (hdmi)
                     me->handleHDMIEvent(uevent_desc, len);
             }
@@ -306,6 +297,7 @@ static void *hwc_vsync_thread(void *data)
     return NULL;
 }
 
+#ifndef TVOUT
 /**********************************************************************************************
  * HDMI CEC Thread
  */
@@ -567,6 +559,7 @@ static void *hdmi_cec_thread(void *data)
     ALOGD("<=============== CECTHREAD Exit");
     return NULL;
 }
+#endif
 
 /**********************************************************************************************
  * NXHWC Member Functions
@@ -639,10 +632,12 @@ void NXHWC::handleHDMIEvent(const char *buf, int len)
             mHDMIImpl->enable();
             mProcs->hotplug(mProcs, HWC_DISPLAY_EXTERNAL, mHDMIPlugged);
 
+#ifndef TVOUT
             usleep(300000);
             int ret = pthread_create(&mHDMICECThread, NULL, hdmi_cec_thread, this);
             if (ret)
                 ALOGE("failed to start hdmi cec thread: %s", strerror(ret));
+#endif
         }
     } else {
         if (mHDMIPlugged) {
@@ -881,7 +876,7 @@ void NXHWC::getHWCProperty()
 
 void NXHWC::checkHDMIModeAndSetProperty()
 {
-    int fd = open("/sys/devices/platform/nxp-hdmi/modalias", O_RDONLY);
+    int fd = open(HDMI_MODE_FILE, O_RDONLY);
     char *mode;
     if (fd < 0) {
         ALOGD("%s: hdmi is secondary", __func__);
@@ -900,6 +895,10 @@ void NXHWC::checkHDMIModeAndSetProperty()
 
 void NXHWC::setHDMIPreset(uint32_t preset)
 {
+#ifdef TVOUT
+    mHDMIWidth = 720;
+    mHDMIHeight = 480;
+#else
     if (preset != mHDMIPreset) {
         switch (preset) {
             case V4L2_DV_1080P60:
@@ -931,6 +930,7 @@ void NXHWC::setHDMIPreset(uint32_t preset)
 
         ALOGD("HDMI Resolution: %dx%d", mHDMIWidth, mHDMIHeight);
     }
+#endif
 }
 
 void NXHWC::determineUsageScenario()
@@ -1162,10 +1162,12 @@ static int hwc_blank(struct hwc_composer_device_1 *dev, int disp, int blank)
         break;
 
     case HWC_DISPLAY_EXTERNAL:
+#ifndef TVOUT
         if (blank)
             v4l2_set_ctrl(nxp_v4l2_hdmi, V4L2_CID_HDMI_ON_OFF, 0);
         else
             v4l2_set_ctrl(nxp_v4l2_hdmi, V4L2_CID_HDMI_ON_OFF, 1);
+#endif
         break;
 
     default:
