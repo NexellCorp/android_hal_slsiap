@@ -207,6 +207,7 @@ int NX_DecodeRVFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, NX
 				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit\n");
 				goto Exit;
 			}
+			pDecComp->outBufferValidFlag[decOut.outImgIdx] = 1;
 			pDecComp->outBufferUseFlag[decOut.outImgIdx] = 0;
 			pDecComp->curOutBuffers --;
 

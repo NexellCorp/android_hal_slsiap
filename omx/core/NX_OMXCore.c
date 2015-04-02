@@ -258,7 +258,7 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_GetHandle(
 
 	//	Find Component Name From ComponentList
 	for( i=0 ; i < gstCurOMXComponents ; i++ ){
-		if( !strcmp( cComponentName, gstOMXComponentList[i].strName ) ){
+		if( !strncmp( cComponentName, gstOMXComponentList[i].strName, strlen(gstOMXComponentList[i].strName) ) ){
 			pCompInfo = &gstOMXComponentList[i];
 			found = OMX_TRUE;
 			break;
@@ -278,7 +278,7 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_GetHandle(
 		static const char prefix[] = "libNX_OMX_";
 		static const char postfix[] = ".so";
 		static char soname[1024] , role[64];
-		sscanf( cComponentName, "OMX.NX.%s", role);
+		sscanf( pCompInfo->strName, "OMX.NX.%s", role);
 		strcpy( soname, prefix );
 		//	converter '.' --> '_'
 		ConverteRoleName( role );
@@ -337,6 +337,7 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_GetHandle(
 		pComponent->pApplicationPrivate = pAppData;
 	}else{
 		NxFree( pComponent );
+		NX_LOGE("\t Error : ComponentInit() Failed, (%s, eError=%ld(0x%08x) ).\n", cComponentName, eError, eError );
 	}
     NX_LOGV("\t %s()--\n", __FUNCTION__);
 	pthread_mutex_unlock( &gstOMXCoreMutex );

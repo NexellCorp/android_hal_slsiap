@@ -55,7 +55,7 @@ NX_OMXPlugin::NX_OMXPlugin()
 
     if (mLibHandle != NULL) {
         mInit = (InitFunc)dlsym(mLibHandle, "NX_OMX_Init");
-        mDeinit = (DeinitFunc)dlsym(mLibHandle, "NX_OMX_DeInit");
+        mDeinit = (DeinitFunc)dlsym(mLibHandle, "NX_OMX_Deinit");
 
         mComponentNameEnum =
             (ComponentNameEnumFunc)dlsym(mLibHandle, "NX_OMX_ComponentNameEnum");

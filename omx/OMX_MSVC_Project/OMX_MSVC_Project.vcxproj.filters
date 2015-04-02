@@ -141,6 +141,12 @@
     <ClCompile Include="..\extractor\ffmpeg\FFmpegExtractor.cpp">
       <Filter>extractor</Filter>
     </ClCompile>
+    <ClCompile Include="..\components\video\coda960_video_decoder\NX_MPEG2Decoder.c">
+      <Filter>components\video\coda960_video_decoder</Filter>
+    </ClCompile>
+    <ClCompile Include="..\components\video\coda960_video_decoder\NX_VP8Decoder.c">
+      <Filter>components\video\coda960_video_decoder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\components\base\NX_OMXCommon.h">

@@ -993,7 +993,11 @@ static OMX_ERRORTYPE NX_VidDec_FillThisBuffer(OMX_HANDLETYPE hComp, OMX_BUFFERHE
 			//	Find Matching Buffer Pointer
 			if( pDecComp->pOutputBuffers[i] == pBuffer )
 			{
-				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, i );
+				if( pDecComp->outBufferValidFlag[i] )
+				{
+					NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, i );
+					pDecComp->outBufferValidFlag[i] = 0;
+				}
 
 				if( pDecComp->outBufferUseFlag[i] )
 				{
@@ -1753,7 +1757,7 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 	FUNC_IN;
 	if( pDecComp->hVpuCodec )
 	{
-		int i;
+		int32_t iNumCurRegBuf, i;
 		NX_VID_SEQ_IN seqIn;
 		NX_VID_SEQ_OUT seqOut;
 		memset( &seqIn, 0, sizeof(seqIn) );
@@ -1765,12 +1769,14 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 		seqIn.addNumBuffers = 4;
 		seqIn.enablePostFilter = 0;
 
+		iNumCurRegBuf = pDecComp->outUsableBuffers;
+
 		if( pDecComp->bUseNativeBuffer == OMX_TRUE )
 		{
-			DbgMsg("[%ld] Native Buffer Mode : pDecComp->outUsableBuffers=%ld, ExtraSize = %ld, MAX_DEC_FRAME_BUFFERS = %d\n",
-				pDecComp->instanceId, pDecComp->outUsableBuffers, pDecComp->codecSpecificDataSize, MAX_DEC_FRAME_BUFFERS );
+			DbgMsg("[%ld] Native Buffer Mode : iNumCurRegBuf=%ld, ExtraSize = %ld, MAX_DEC_FRAME_BUFFERS = %d\n",
+				pDecComp->instanceId, iNumCurRegBuf, pDecComp->codecSpecificDataSize, MAX_DEC_FRAME_BUFFERS );
 			//	Translate Gralloc Memory Buffer Type To Nexell Video Memory Type
-			for( i=0 ; i<pDecComp->outUsableBuffers ; i++ )
+			for( i=0 ; i<iNumCurRegBuf ; i++ )
 			{
 				int vstride;
 				struct private_handle_t const *handle;
@@ -1812,7 +1818,7 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 						pDecComp->vidFrameBuf[i].luPhyAddr, pDecComp->vidFrameBuf[i].cbPhyAddr, pDecComp->vidFrameBuf[i].crPhyAddr, handle->stride, vstride );
 				pDecComp->hVidFrameBuf[i] = &pDecComp->vidFrameBuf[i];
 			}
-			seqIn.numBuffers = pDecComp->outUsableBuffers;
+			seqIn.numBuffers = iNumCurRegBuf;
 			seqIn.pMemHandle = &pDecComp->hVidFrameBuf[0];
 		}
 

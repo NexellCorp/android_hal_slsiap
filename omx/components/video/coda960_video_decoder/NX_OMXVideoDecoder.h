@@ -122,6 +122,7 @@ struct tNX_VIDDEC_VIDEO_COMP_TYPE{
 
 	// Management Output Buffer
 	OMX_S32						outBufferUseFlag[NX_OMX_MAX_BUF];	//	Output Buffer Use Flag( Flag for Decoding )
+	OMX_S32						outBufferValidFlag[NX_OMX_MAX_BUF];	//	Valid Buffer Flag
 	OMX_S32						outUsableBuffers;					//	Max Allocated Buffers or Max Usable Buffers
 	OMX_S32						curOutBuffers;						//	Currently Queued Buffer Counter
 	OMX_S32						minRequiredFrameBuffer;				//	Minimum H/W Required FrameBuffer( Sequence Output )

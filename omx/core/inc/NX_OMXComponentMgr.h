@@ -1,6 +1,6 @@
 #include <OMX_Component.h>
 
-#define		NX_MAX_COMPONENTS			20
+#define		NX_MAX_COMPONENTS			32
 #define		NX_MAX_ROLES				16
 #define		NX_MAX_CONCURRENT_COMPS		1
 

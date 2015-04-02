@@ -314,6 +314,7 @@ int NX_DecodeAvcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 			{
 				DbgBuffer("curOutBuffers(%ld),idx(%d)\n", pDecComp->curOutBuffers, decOut.outImgIdx);
 			}
+			pDecComp->outBufferValidFlag[decOut.outImgIdx] = 1;
 			pDecComp->outBufferUseFlag[decOut.outImgIdx] = 0;
 			pDecComp->curOutBuffers --;
 
