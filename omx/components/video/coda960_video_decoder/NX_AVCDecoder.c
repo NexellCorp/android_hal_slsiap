@@ -280,14 +280,14 @@ int NX_DecodeAvcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 		}
 		else
 		{
-			if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType != PIC_TYPE_I )
-			{
-				OMX_TICKS timestamp;
-				OMX_U32 flag;
-				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
-				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
-				goto Exit;
-			}
+			// if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType != PIC_TYPE_I )
+			// {
+			// 	OMX_TICKS timestamp;
+			// 	OMX_U32 flag;
+			// 	PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+			// 	NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
+			// 	goto Exit;
+			// }
 			pDecComp->isOutIdr = OMX_TRUE;
 
 			//	Native Window Buffer Mode

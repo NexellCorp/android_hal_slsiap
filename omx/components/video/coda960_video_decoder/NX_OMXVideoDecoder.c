@@ -671,8 +671,10 @@ static OMX_ERRORTYPE NX_VidDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE
 
 				if( pDecComp->bEnableThumbNailMode )
 				{
+#ifdef LOLLIPOP
 					pDecComp->pOutputPort->stdPortDef.nBufferCountActual = VID_OUTPORT_MIN_BUF_CNT_THUMB;
 					pDecComp->pOutputPort->stdPortDef.nBufferCountMin    = VID_OUTPORT_MIN_BUF_CNT_THUMB;
+#endif
 					pDecComp->pOutputPort->stdPortDef.nBufferSize = pDecComp->width*pDecComp->height*3/2;
 				}
 				else
