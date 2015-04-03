@@ -133,3 +133,34 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
 endif
+
+LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libbinder libutils libgui libui libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_native_test
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
+
+
+#LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native-thread.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libhardware_legacy libbinder libutils libgui libui libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_thread_native_test
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
