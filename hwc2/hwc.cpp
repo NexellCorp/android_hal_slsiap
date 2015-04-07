@@ -639,10 +639,12 @@ void NXHWC::handleHDMIEvent(const char *buf, int len)
             mHDMIImpl->enable();
             mProcs->hotplug(mProcs, HWC_DISPLAY_EXTERNAL, mHDMIPlugged);
 
+#ifndef LOLLIPOP
             usleep(300000);
             int ret = pthread_create(&mHDMICECThread, NULL, hdmi_cec_thread, this);
             if (ret)
                 ALOGE("failed to start hdmi cec thread: %s", strerror(ret));
+#endif
         }
     } else {
         if (mHDMIPlugged) {
