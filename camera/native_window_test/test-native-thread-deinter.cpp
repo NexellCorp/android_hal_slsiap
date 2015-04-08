@@ -176,22 +176,44 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
 
         CHECK_COMMAND(v4l2_streamon(clipper_id));
 
-        ANativeWindowBuffer *tempBuffer;
+				ANativeWindowBuffer *tempBuffer;
+				private_handle_t const *handle_src;
+				int ion_fd;
         int capture_index;
         int count = 1000;
+				int ret=0;
+				int start_fd;
+				unsigned long *start_phy;
+
         while (count--) {
             ret = v4l2_dqbuf(clipper_id, plane_num, &capture_index, NULL);
             if (ret) {
                 ALOGE("v4l2_dqbuf ret %d, capture_index %d", ret, capture_index);
                 break;
             }
-#if 0
-            window->queueBuffer(window.get(), anBuffer[capture_index], -1);
+#if 1
             ret = native_window_dequeue_buffer_and_wait(window.get(), &tempBuffer);
             if (ret) {
                 ALOGE("failed to native_window_dequeue_buffer_and_wait(): ret %d, line %d", ret, __LINE__);
                 break;
             }
+            handle_src = reinterpret_cast<private_handle_t const *>(tempBuffer->handle);
+            ion_fd = handle_src->share_fd;
+						ret = ion_get_phys(ion_fd, start_fd, start_phy);
+						if( ret<0 )
+						{
+                ALOGE("failed to ion_get_phys : ret %d, line %d", ret, __LINE__);
+                break;
+						}
+#if 0
+						char *phys_y;
+						char *phys_cb;
+						char *phys_cr;
+						ion_get_phys(...);
+						// calc phys_cb, phys_cr;
+						// here deinterlace
+            window->queueBuffer(window.get(), tempBuffer, -1);
+#endif
 #endif
             buf = &camera_buffer[capture_index];
             ret = v4l2_qbuf(clipper_id, plane_num, capture_index, buf, -1, NULL);
