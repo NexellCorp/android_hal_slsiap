@@ -164,3 +164,18 @@ LOCAL_MODULE := camera_thread_native_test
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native-thread-deinter.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libhardware_legacy libbinder libutils libgui libui libnxutil libion-nexell libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					system/core/libion/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_thread_deinter_native_test
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
