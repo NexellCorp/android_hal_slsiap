@@ -31,6 +31,8 @@
 
 #include <NXAllocator.h>
 
+#include "NXDeinterlacerManager.h"
+
 #define CHECK_COMMAND(command) do { \
         int ret = command; \
         if (ret < 0) { \
@@ -47,7 +49,10 @@ static int camera_init(int module, int width, int height, bool is_mipi)
     int clipper_id = module == 0 ? nxp_v4l2_clipper0 : nxp_v4l2_clipper1;
     int sensor_id = module == 0 ? nxp_v4l2_sensor0 : nxp_v4l2_sensor1;
 
-    CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420));
+    if (module == 0)
+        CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420));
+    else
+        CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420M));
     CHECK_COMMAND(v4l2_set_crop(clipper_id, 0, 0, width, height));
     CHECK_COMMAND(v4l2_set_format(sensor_id, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
     if (is_mipi)
@@ -148,13 +153,30 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
             }
         }
     } else {
+
+				
+        class NXDeinterlacerManager *manager = new NXDeinterlacerManager(width, height/2);
+
         // module 1 : deinterlace camera input to native window
-        int deinter_width = 1024;
+        int deinter_width = width;
         int deinter_height = height;
+
         ret = native_window_set_buffers_geometry(window.get(), deinter_width, deinter_height, HAL_PIXEL_FORMAT_YV12);
         if (ret) {
             ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
             return -1;
+        }
+
+        ANativeWindowBuffer *anBuffer[BUFFER_COUNT];
+        private_handle_t const *handle[BUFFER_COUNT];
+
+        for (int i = 0; i < BUFFER_COUNT; i++) {
+            ret = native_window_dequeue_buffer_and_wait(window.get(), &anBuffer[i]);
+            if (ret) {
+                ALOGE("failed to native_window_dequeue_buffer_and_wait(): ret %d", ret);
+                return ret;
+            }
+            manager->qDstBuf(anBuffer[i]);
         }
 
         struct nxp_vid_buffer camera_buffer[BUFFER_COUNT];
@@ -162,9 +184,6 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
             ALOGE("failed to allocateBuffer for camera");
             return -1;
         }
-
-        ANativeWindowBuffer *anBuffer[BUFFER_COUNT];
-        private_handle_t const *handle[BUFFER_COUNT];
 
         struct nxp_vid_buffer *buf;
         for (int i = 0; i < BUFFER_COUNT; i++) {
@@ -179,25 +198,37 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         ANativeWindowBuffer *tempBuffer;
         int capture_index;
         int count = 1000;
+
         while (count--) {
             ret = v4l2_dqbuf(clipper_id, plane_num, &capture_index, NULL);
             if (ret) {
                 ALOGE("v4l2_dqbuf ret %d, capture_index %d", ret, capture_index);
                 break;
             }
-#if 0
-            window->queueBuffer(window.get(), anBuffer[capture_index], -1);
-            ret = native_window_dequeue_buffer_and_wait(window.get(), &tempBuffer);
-            if (ret) {
-                ALOGE("failed to native_window_dequeue_buffer_and_wait(): ret %d, line %d", ret, __LINE__);
-                break;
-            }
-#endif
+
             buf = &camera_buffer[capture_index];
-            ret = v4l2_qbuf(clipper_id, plane_num, capture_index, buf, -1, NULL);
-            if (ret) {
-                ALOGE("v4l2_qbuf ret %d, capture_index %d", ret, capture_index);
-                break;
+            manager->qSrcBuf(capture_index, buf); 
+            if (manager->run()) {
+
+                for (int i = 0; i < manager->getRunCount(); i++) {
+                    manager->dqDstBuf(&tempBuffer);
+                    window->queueBuffer(window.get(), tempBuffer, -1);
+                    ret = native_window_dequeue_buffer_and_wait(window.get(), &tempBuffer);
+                    if (ret) {
+                        ALOGE("failed to native_window_dequeue_buffer_and_wait(): ret %d, line %d", ret, __LINE__);
+                        break;
+                    }
+                    manager->qDstBuf(tempBuffer);
+                }
+            }
+
+            if (manager->dqSrcBuf(&capture_index, &buf)) {
+                ret = v4l2_qbuf(clipper_id, plane_num, capture_index, buf, -1, NULL);
+                if (ret) {
+                    ALOGE("v4l2_qbuf ret %d, capture_index %d", ret, capture_index);
+                    break;
+                }
+                //ALOGD("capture index %d", capture_index);
             }
         }
     }
@@ -304,6 +335,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+#if 1
     s_thread_data0.module = 0;
     s_thread_data0.width = 704;
     s_thread_data0.height = 480;
@@ -315,6 +347,9 @@ int main(int argc, char *argv[])
         ALOGE("failed to start camera0 thread: %s", strerror(ret));
         return ret;
     }
+#else
+    int ret;
+#endif
 
     s_thread_data1.module = 1;
     s_thread_data1.width = 720;
