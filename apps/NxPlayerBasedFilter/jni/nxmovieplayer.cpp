@@ -1,3 +1,5 @@
+// THIS IS FITLER NEW VERSION
+
 //------------------------------------------------------------------------------
 //
 //	Copyright (C) 2014 Nexell Co. All Rights Reserved
@@ -28,33 +30,45 @@
 
 #include <NX_MoviePlay.h>
 
-#define LOG_TAG	"libnxmovieplayer"
+#define NX_DTAG		"libnxmovieplayer"
 
-#if(0)
-#define LOGV(...)   __android_log_print(ANDROID_LOG_VERBOSE,	LOG_TAG, __VA_ARGS__)
-#define LOGD(...)   __android_log_print(ANDROID_LOG_DEBUG,		LOG_TAG, __VA_ARGS__)
-#define LOGI(...)   __android_log_print(ANDROID_LOG_INFO,		LOG_TAG, __VA_ARGS__)
-#define LOGW(...)   __android_log_print(ANDROID_LOG_WARN,		LOG_TAG, __VA_ARGS__)
-#define LOGE(...)   __android_log_print(ANDROID_LOG_ERROR,		LOG_TAG, __VA_ARGS__)
-#else
-#define LOGV(...)
-#define LOGD(...)
-#define LOGI(...)
-#define LOGW(...)	__android_log_print(ANDROID_LOG_WARN,		LOG_TAG, __VA_ARGS__)
-#define LOGE(...)	__android_log_print(ANDROID_LOG_ERROR,		LOG_TAG, __VA_ARGS__)
-#endif
+//------------------------------------------------------------------------------
+//
+//	Debug Tools
+//
+#define NX_DBG_VBS			2	// ANDROID_LOG_VERBOSE
+#define NX_DBG_DEBUG		3	// ANDROID_LOG_DEBUG
+#define	NX_DBG_INFO			4	// ANDROID_LOG_INFO
+#define	NX_DBG_WARN			5	// ANDROID_LOG_WARN
+#define	NX_DBG_ERR			6	// ANDROID_LOG_ERROR
+#define NX_DBG_DISABLE		9
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+int gNxFilterDebugLevel 	= NX_DBG_INFO;
+
+#define DBG_PRINT			__android_log_print
+#define NxTrace(...)		DBG_PRINT(ANDROID_LOG_VERBOSE, NX_DTAG, __VA_ARGS__);
+
+#define NxDbgMsg(A, ...)	do {										\
+								if( gNxFilterDebugLevel <= A ) {		\
+									DBG_PRINT(A, NX_DTAG, __VA_ARGS__);	\
+								}										\
+							} while(0)
+
+
+//------------------------------------------------------------------------------
 //
 //	Fucntion Lock
 //
 class CNX_AutoLock {
 public:
-    CNX_AutoLock( pthread_mutex_t *pLock ) : m_pLock(pLock) {
+    CNX_AutoLock( pthread_mutex_t *pLock )
+    	: m_pLock(pLock)
+    {
         pthread_mutex_lock( m_pLock );
     }
-    ~CNX_AutoLock() {
-        pthread_mutex_unlock(m_pLock);
+    ~CNX_AutoLock()
+    {
+        pthread_mutex_unlock( m_pLock );
     }
 
 protected:
@@ -65,102 +79,148 @@ private:
     CNX_AutoLock &operator=(CNX_AutoLock &Ref);
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//------------------------------------------------------------------------------
 //
 //	Global Variable
 //
+#define MAX_DISPLAY_CHANNEL		8
+
 static JavaVM 		*gJavaVM;
 static jclass 		gClass;
 static jmethodID 	gMethodID;
 
-MP_HANDLE	hMoviePlayer = 0x00;
-Media_Info	gMediaInfo;
+char				gClassName[1024];
+char				gCallbackName[1024];
 
-char 		gUriBuf[256];
+MP_HANDLE			hMoviePlayer = NULL;
+MP_MEDIA_INFO		gMediaInfo;
+char 				gUriBuf[256];
 
-int			gAudioRequestTrackNum = 1;
-int			bIsPlay = false;
+ANativeWindow		*gpNativeWindow[MAX_DISPLAY_CHANNEL];
+MP_DSP_CONFIG		*gpDspConfig[MAX_DISPLAY_CHANNEL];
 
-ANativeWindow		*pNativeWindow1 = NULL;
-ANativeWindow		*pNativeWindow2 = NULL;
-
+bool				bPlay	= false;
+bool				bPause	= false;
 pthread_mutex_t		hLock;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//------------------------------------------------------------------------------
 //
 //	Interface Function
 //
-#define VIDEO_TYPE_NUM	20
-static const char *VideoTypeString[VIDEO_TYPE_NUM] = {
-	"CODEC_H264",		"CODEC_H263",		"CODEC_MPEG1VIDEO",	"CODEC_MPEG2VIDEO",	"CODEC_MPEG4",
-	"CODEC_MSMPEG4V3",	"CODEC_FLV1",		"CODEC_WMV1",		"CODEC_WMV2",		"CODEC_WMV3",
-	"CODEC_VC1",		"CODEC_RV30",		"CODEC_RV40",		"CODEC_THEORA",		"CODEC_VP8",
-	"RESERVED"			"RESERVED",			"RESERVED",			"RESERVED",			"RESERVED"
+
+//------------------------------------------------------------------------------
+typedef struct CodecType {
+	int32_t CodecId;
+	char 	CodecString[16];
+} CodecType;
+
+static CodecType gCodecType[] = {
+	{     1, "MPEG1VIDEO"	},	{     2, "MPEG2VIDEO"	},	{     5, "H263"			},	{    13, "MPEG4"		},
+	{    17, "MSMPEG4V3"	},	{    20, "H263P"		},	{    21, "H263I"		},	{    22, "FLV1"			},
+	{    28, "H264"			},	{    31, "THEORA"		},	{    69, "RV30"			},	{    70, "RV40"			},
+	{    71, "VC1"			},	{    72, "WMV3"			},	{   141, "VP8"			},
+
+	{ 77824, "RA_144"		},	{ 77825, "RA_288"		},	{ 86016, "MP2"			},	{ 86017, "MP3"			},
+	{ 86018, "AAC"			},	{ 86019, "AC3"			},	{ 86020, "DTS"			},	{ 86021, "VORBIS"		},
+	{ 86023, "WMAV1"		},	{ 86024, "WMAV2"		},	{ 86028, "FLAC"			},	{ 86036, "COOK"			},
+	{ 86048, "APE"			},	{ 86053, "WMAPRO"		},	{ 86065, "AAC_LATM"		},
+	{ 65536, "PCM"			},	{ 65537, "PCM"			},	{ 65538, "PCM"			},	{ 65539, "PCM"			},
+	{ 65540, "PCM"			},	{ 65541, "PCM"			},	{ 65542, "PCM"			},	{ 65543, "PCM"			},
+	{ 65544, "PCM"			},	{ 65545, "PCM"			},	{ 65546, "PCM"			},	{ 65547, "PCM"			},
+	{ 65548, "PCM"			},	{ 65549, "PCM"			},	{ 65550, "PCM"			},	{ 65551, "PCM"			},
+	{ 65552, "PCM"			},	{ 65553, "PCM"			},	{ 65554, "PCM"			},	{ 65555, "PCM"			},
+	{ 65556, "PCM"			},	{ 65557, "PCM"			},	{ 65558, "PCM"			},	{ 65559, "PCM"			},
+	{ 65560, "PCM"			},	{ 65561, "PCM"			},	{ 65562, "PCM"			},
+	{ 69632, "ADPCM"		},	{ 69633, "ADPCM"		},	{ 69634, "ADPCM"		},	{ 69635, "ADPCM"		},
+	{ 69636, "ADPCM"		},	{ 69637, "ADPCM"		},	{ 69638, "ADPCM"		},	{ 69639, "ADPCM"		},
+	{ 69640, "ADPCM"		},	{ 69641, "ADPCM"		},	{ 69642, "ADPCM"		},	{ 69643, "ADPCM"		},
+	{ 69644, "ADPCM"		},	{ 69645, "ADPCM"		},	{ 69646, "ADPCM"		},	{ 69647, "ADPCM"		},
+	{ 69648, "ADPCM"		},	{ 69649, "ADPCM"		},	{ 69650, "ADPCM"		},	{ 69651, "ADPCM"		},
+	{ 69652, "ADPCM"		},	{ 69653, "ADPCM"		},	{ 69654, "ADPCM"		},	{ 69655, "ADPCM"		},
+	{ 69656, "ADPCM"		},	{ 69657, "ADPCM"		},	{ 69658, "ADPCM"		},	{ 69659, "ADPCM"		},
+	{ 69660, "ADPCM"		},
 };
 
-#define AUDIO_TYPE_NUM	20
-static const char *AudioTypeString[AUDIO_TYPE_NUM] = {
-	"CODEC_RA_144",		"CODEC_RA_288",		"CODEC_MP2",		"CODEC_MP3",		"CODEC_AAC",
-	"CODEC_AC3",		"CODEC_DTS",		"CODEC_VORBIS",		"CODEC_WMAV1",		"CODEC_WMAV2",
-	"CODEC_WMAPRO",		"CODEC_FLAC",		"CODEC_COOK",		"CODEC_APE",		"CODEC_AAC_LATM",
-	"CODEC_PCM_S16LE",	"RESERVED",			"RESERVED",			"RESERVED",			"RESERVED"
-};
-
-static void MediaStreamInfo()
+//------------------------------------------------------------------------------
+static void PrintMediaInfo( void )
 {
-	if( gMediaInfo.VideoTrackTotNum > 0 ) {
-		LOGI("-------------------------------------------------------------------------------");
-		LOGI("                         Video Information                                     ");
-		LOGI("-------------------------------------------------------------------------------");
-		LOGI("    VideoTrackTotNum : %d", (int)gMediaInfo.VideoTrackTotNum);
+	int pos = 0;
+	NxDbgMsg( NX_DBG_INFO, "FileName : %s\n\n", gUriBuf );
 
-		for( int i = 0; i < (int)gMediaInfo.VideoTrackTotNum; i++ )
-		{
-			LOGI("    VideoTrackNum    : %d    ", (int)gMediaInfo.VideoInfo[i].VideoTrackNum + 1);
-			LOGI("    VCodecType       : %d, %s", (int)gMediaInfo.VideoInfo[i].VCodecID, VideoTypeString[gMediaInfo.VideoInfo[i].VCodecID - 1]);
-			LOGI("    Width            : %d    ", (int)gMediaInfo.VideoInfo[i].Width);
-			LOGI("    Height           : %d    ", (int)gMediaInfo.VideoInfo[i].Height);
-		}
-	}
+	NxDbgMsg( NX_DBG_INFO, "iProgramNum       : %d\n", gMediaInfo.iProgramNum );
+	NxDbgMsg( NX_DBG_INFO, "iAudioTrackNum    : %d\n", gMediaInfo.iAudioTrackNum );
+	NxDbgMsg( NX_DBG_INFO, "iVideoTrackNum    : %d\n", gMediaInfo.iVideoTrackNum );
+	NxDbgMsg( NX_DBG_INFO, "iSubTitleTrackNum : %d\n", gMediaInfo.iSubTitleTrackNum );
+	NxDbgMsg( NX_DBG_INFO, "iDataTrackNum     : %d\n", gMediaInfo.iDataTrackNum );
 
-	if( gMediaInfo.AudioTrackTotNum > 0 ) {
-		LOGI("-------------------------------------------------------------------------------");
-		LOGI("                         Audio Information                                     ");
-		LOGI("-------------------------------------------------------------------------------");
-		LOGI("    AudioTrackTotNum : %d", (int)gMediaInfo.AudioTrackTotNum);
-
-
-		for( int i = 0; i < (int)gMediaInfo.AudioTrackTotNum; i++ )
-		{
-			LOGI("    AudioTrackNum    : %d    ", (int)gMediaInfo.AudioInfo[i].AudioTrackNum + 1);
-			LOGI("    ACodecType       : %d, %s", (int)gMediaInfo.AudioInfo[i].ACodecID, AudioTypeString[gMediaInfo.AudioInfo[i].ACodecID - 0x1001]);
-			LOGI("    samplerate       : %d    ", (int)gMediaInfo.AudioInfo[i].samplerate);
-			LOGI("    channels         : %d    ", (int)gMediaInfo.AudioInfo[i].channels);
-		}
-	}
-	if( gMediaInfo.DataTrackTotNum > 0 )
+	for( int32_t i = 0; i < gMediaInfo.iProgramNum; i++ )
 	{
-		LOGI("-------------------------------------------------------------------------------");
-		LOGI("                         Data Information                                      ");
-		LOGI("-------------------------------------------------------------------------------");
-		LOGI("    DataTrackTotNum  : %d", (int)gMediaInfo.DataTrackTotNum);
-	}
+		NxDbgMsg( NX_DBG_INFO, "********** Program #%d **********\n", i );
 
-	if( (gMediaInfo.VideoTrackTotNum == 0) && (gMediaInfo.AudioTrackTotNum == 0) && (gMediaInfo.DataTrackTotNum == 0) )
-	{
-		LOGI("    Warring! Invalid Media Stream Information (VideoTrackTotNum = %d, AudioTrackTotNum = %d, DataTrackTotNum = %d)",
-			gMediaInfo.VideoTrackTotNum, gMediaInfo.AudioTrackTotNum, gMediaInfo.DataTrackTotNum);
+		NxDbgMsg( NX_DBG_INFO, "iAudioNum    : %d\n", gMediaInfo.ProgramInfo[i].iAudioNum);
+		NxDbgMsg( NX_DBG_INFO, "iVideoNum    : %d\n", gMediaInfo.ProgramInfo[i].iVideoNum);
+		NxDbgMsg( NX_DBG_INFO, "iSubTitleNum : %d\n", gMediaInfo.ProgramInfo[i].iSubTitleNum);
+		NxDbgMsg( NX_DBG_INFO, "iDataNum     : %d\n", gMediaInfo.ProgramInfo[i].iDataNum);
+		NxDbgMsg( NX_DBG_INFO, "iDuration    : %lld\n", gMediaInfo.ProgramInfo[i].iDuration);
+
+		if( 0 < gMediaInfo.ProgramInfo[i].iVideoNum )
+		{
+			int num = 0;
+			NxDbgMsg( NX_DBG_INFO, "[ Video Information ]\n" );
+
+			for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+			{
+				MP_TRACK_INFO *pTrackInfo = &gMediaInfo.ProgramInfo[i].TrackInfo[j];
+				
+				if( MP_TRACK_VIDEO == pTrackInfo->iTrackType ) {
+					NxDbgMsg( NX_DBG_INFO, " Video Track #%d\n", num++ );
+					NxDbgMsg( NX_DBG_INFO, "  -. Track Index : %d\n", pTrackInfo->iTrackIndex );
+					NxDbgMsg( NX_DBG_INFO, "  -. Codec Type  : %d\n", (int)pTrackInfo->iCodecId );
+					NxDbgMsg( NX_DBG_INFO, "  -. Resolution  : %d x %d\n", pTrackInfo->iWidth, pTrackInfo->iHeight );
+					if( 0 > pTrackInfo->iDuration )
+						NxDbgMsg( NX_DBG_INFO, "  -. Duration    : Unknown\n\n", pTrackInfo->iDuration );
+					else
+						NxDbgMsg( NX_DBG_INFO, "  -. Duration    : %lld ms\n\n", pTrackInfo->iDuration );
+				}
+			}
+		}
+
+		if( 0 < gMediaInfo.ProgramInfo[i].iAudioNum )
+		{
+			int num = 0;
+			NxDbgMsg( NX_DBG_INFO, "[ Audio Information ]\n" );
+
+			for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+			{
+				MP_TRACK_INFO *pTrackInfo = &gMediaInfo.ProgramInfo[i].TrackInfo[j];
+
+				if( MP_TRACK_AUDIO == pTrackInfo->iTrackType ) {
+					NxDbgMsg( NX_DBG_INFO, " Audio Track #%d\n", num++ );
+					NxDbgMsg( NX_DBG_INFO, "  -. Track Index : %d\n", pTrackInfo->iTrackIndex );
+					NxDbgMsg( NX_DBG_INFO, "  -. Codec Type  : %d\n", (int)pTrackInfo->iCodecId );
+					NxDbgMsg( NX_DBG_INFO, "  -. Channels    : %d\n", pTrackInfo->iChannels );
+					NxDbgMsg( NX_DBG_INFO, "  -. SampleRate  : %d Hz\n", pTrackInfo->iSampleRate );
+					NxDbgMsg( NX_DBG_INFO, "  -. Bitrate     : %d bps\n", pTrackInfo->iBitrate );
+					if( 0 > pTrackInfo->iDuration )
+						NxDbgMsg( NX_DBG_INFO, "  -. Duration    : Unknown\n\n", pTrackInfo->iDuration );
+					else
+						NxDbgMsg( NX_DBG_INFO, "  -. Duration    : %lld ms\n\n", pTrackInfo->iDuration );
+				}					
+			}
+		}
 	}
 }
 
-static void EventCallback(void *privateDesc, unsigned int EventType, unsigned int EventData, unsigned int param2)
+//------------------------------------------------------------------------------
+static void EventCallback( void *privateDesc, unsigned int EventType, unsigned int EventData, unsigned int param2 )
 {
-	static char __FUNC__[32] = "EventCallback";
-	LOGV("%s()++", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 
 	JNIEnv *env;
 	if( JNI_OK != gJavaVM->AttachCurrentThread( &env, NULL ) ) {
-		LOGE("%s(): AttachCurrentThread() failed.", __FUNC__);
+		NxDbgMsg( NX_DBG_ERR, "%s(): AttachCurrentThread() failed.", __FUNCTION__ );
 		return;
 	}
 
@@ -168,509 +228,1010 @@ static void EventCallback(void *privateDesc, unsigned int EventType, unsigned in
 		env->CallStaticVoidMethod( gClass, gMethodID, (int)EventType, (int)EventData );	
 	}
 	else {
-		LOGE("%s(): CallStaticVoidMethod() failed. - gClass( 0x%08x ), gMethodID( 0x%08x ).", __FUNC__, (unsigned int)gClass, (unsigned int)gMethodID );
+		NxDbgMsg( NX_DBG_ERR, "%s(): CallStaticVoidMethod() failed. - gClass( 0x%08x ), gMethodID( 0x%08x ).", __FUNCTION__, (unsigned int)gClass, (unsigned int)gMethodID );
 	}
-	
 
 	if( JNI_OK != gJavaVM->DetachCurrentThread() ) {
-		LOGE("%s(): DetachCurrentThread() failed.", __FUNC__);
+		NxDbgMsg( NX_DBG_ERR, "%s(): DetachCurrentThread() failed.", __FUNCTION__);
 	}
 
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 }
 
-JNIEXPORT void JNICALL Mp_JniInit( JNIEnv *env, jclass obj )
-{
-	static char __FUNC__[32] = "Mp_JniInit";
-	LOGV("%s()++", __FUNC__);
-	env->GetJavaVM( &gJavaVM );
+// Since android 4.0 garbage collector was changed. Now it moves object around during garbage collection,
+// which can cause a lot of problems. Imagine that you have a static variable pointing to an object,
+// and then this object gets moved by gc. Since android uses direct pointers for java objects,
+// this would mean that your static variable is now pointing to a random address in the memory,
+// unoccupied by any object or occupied by an object of different sort.
+// This will almost guarantee that you'll get EXC_BAD_ACCESS next time you use this variable.
+// So android gives you JNI ERROR (app bug) error to prevent you from getting undebugable EXC_BAD_ACCESS.
+// Now there are two ways to avoid this error. You can set targetSdkVersion in your manifest to version 11 or less.
+// This will enable JNI bug compatibility mode and prevent any problems altogether.
+// This is the reason why your old examples are working.
+// You can avoid using static variables pointing to java objects or
+// make jobject references global before storing them by calling env->NewGlobalRef(ref).
+// Perhaps on of the biggest examples here is keeping jclass objects.
+// Normally, you'll initialize static jclass variable during JNI_OnLoad,
+// since class objects remain in the memory as long as the application is running.
+//
+//--------------------------------------------------------------------------------
+// This code will lead to a crash:
+//
+// static jclass myClass;
+//
+// JNIEXPORT jint JNICALL JNI_OnLoad (JavaVM * vm, void * reserved) {
+//     myClass = env->FindClass("com/example/company/MyClass");
+//     return JNI_VERSION_1_6;
+// }
+//
+//--------------------------------------------------------------------------------
+// While this code will run fine:
+//
+// static jclass myClass;
+//
+// JNIEXPORT jint JNICALL JNI_OnLoad (JavaVM * vm, void * reserved) {
+//     jclass tmp = env->FindClass("com/example/company/MyClass");
+//     myClass = (jclass)env->NewGlobalRef(tmp);
+//     return JNI_VERSION_1_6;
+// }
 
-	if( !(gClass = env->FindClass( "com/example/nxplayerbasedfilter/PlayerActivity" )) ) {
-		LOGE("%s(): FindClass() failed.\n", __FUNC__);
+//------------------------------------------------------------------------------
+JNIEXPORT void JNICALL MP_JniInit( JNIEnv *env, jclass obj, jstring className, jstring callbackName )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+
+	const char *pClassName = env->GetStringUTFChars( className, 0 );
+	strcpy( gClassName, pClassName );
+	env->ReleaseStringUTFChars( className, pClassName );
+
+	const char *pCallbackName = env->GetStringUTFChars( callbackName, 0 );
+	strcpy( gCallbackName, pCallbackName );
+	env->ReleaseStringUTFChars( callbackName, pCallbackName );
+
+	env->GetJavaVM( &gJavaVM );
+	jclass findClass = env->FindClass( gClassName );
+	gClass = (jclass)env->NewGlobalRef( findClass );
+	
+	if( !gClass  ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): FindClass() failed.\n", __FUNCTION__);
 		return;
 	}
 
-	if( !(gMethodID = env->GetStaticMethodID( gClass, "EventHandler", "(II)V" )) ) {
-		LOGE("%s(): GetStaticMethodID() failed.\n", __FUNC__);
+	if( !(gMethodID = env->GetStaticMethodID( gClass, gCallbackName, "(II)V" )) ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): GetStaticMethodID() failed.\n", __FUNCTION__);
 	}
 
 	pthread_mutex_init( &hLock, NULL );
 
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 }
 
-JNIEXPORT void JNICALL Mp_JniDeinit( JNIEnv *env, jclass obj )
+//------------------------------------------------------------------------------
+JNIEXPORT void JNICALL MP_JniDeinit( JNIEnv *env, jclass obj )
 {
-	static char __FUNC__[32] = "Mp_JniDeinit";
-	LOGV("%s()++", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	
 	pthread_mutex_destroy( &hLock );
 	
-	LOGV("%s()--", __FUNC__);	
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 }
 
-JNIEXPORT jint JNICALL Mp_SetFileName( JNIEnv *env, jclass obj, jstring uri )
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_Open( JNIEnv *env, jclass obj, jstring uri )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
-
-	static char __FUNC__[32] = "Mp_SetFileName";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer != NULL ) {
-		LOGE("%s(): Error! Handle is already initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	
+	if( NULL != hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_VBS, "%s(): Error! Handle is already initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	const char *pBuf = env->GetStringUTFChars(uri, 0);
-	strcpy(gUriBuf, pBuf);
-	env->ReleaseStringUTFChars(uri, pBuf);
+	MP_RESULT mpResult = MP_ERR_NONE;
 
-	MP_RESULT mpResult = NX_MPSetFileName( &hMoviePlayer, gUriBuf, &gMediaInfo );
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPSetFileName() Failed! (ret = %d, uri = %s)", __FUNC__, mpResult, gUriBuf);
+	mpResult = NX_MPOpen( &hMoviePlayer, &EventCallback, NULL );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_VBS, "%s(): Error! NX_MPOpen() Failed! (ret = %d )", __FUNCTION__, mpResult);
+		return mpResult;
 	}
 
-	if( gMediaInfo.AudioTrackTotNum != 0 ) 	gAudioRequestTrackNum = 1;
-	else									gAudioRequestTrackNum = 0;
+	NxDbgMsg( NX_DBG_DEBUG, "%s(): hMoviePlayer( %p )\n", __FUNCTION__, hMoviePlayer );
 
-	MediaStreamInfo();
+	for( int i = 0; i < MAX_DISPLAY_CHANNEL; i++ ){
+		gpNativeWindow[i] = NULL;
+		gpDspConfig[i] = NULL;
+	}
 
-	LOGV("%s()--", __FUNC__);
+	const char *pBuf = env->GetStringUTFChars( uri, 0 );
+	strcpy( gUriBuf, pBuf );
+	env->ReleaseStringUTFChars( uri, pBuf );
+
+	NxDbgMsg( NX_DBG_INFO, "%s(): UriName:: %s", __FUNCTION__, gUriBuf );
+
+	mpResult = NX_MPSetUri( hMoviePlayer, gUriBuf );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPSetUri() Failed! (ret = %d, uri = %s)", __FUNCTION__, mpResult, gUriBuf );
+	}
+	else {
+		mpResult = NX_MPGetMediaInfo( hMoviePlayer, &gMediaInfo );
+		if( MP_ERR_NONE != mpResult ) {
+			NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPGetMediaInfo() Failed! (ret = %d)", __FUNCTION__, mpResult );
+		}
+	}
+
+	// PrintMediaInfo();
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return mpResult;
 }
 
-JNIEXPORT jstring JNICALL Mp_GetMediaInfo( JNIEnv *env, jclass obj )
+//------------------------------------------------------------------------------
+JNIEXPORT void JNICALL MP_Close( JNIEnv *env, jclass obj )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_GetMediaInfo";
-	LOGV("%s()++", __FUNC__);
+	MP_RESULT mpResult = NX_MPClearTrack( hMoviePlayer );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPClearTrack() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
 
-	char destBuf[1024], tempBuf[128];
-	memset(destBuf, 0x00, sizeof(destBuf));
+	for( int i = 0; i < MAX_DISPLAY_CHANNEL; i++ )
+	{
+		if( gpNativeWindow[i] ) {
+			ANativeWindow_release( gpNativeWindow[i] );
+		}
+		gpNativeWindow[i] = NULL;
 
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s: Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+		if( gpDspConfig[i] ) {
+			free( gpDspConfig[i] );
+		}
+		gpDspConfig[i] = NULL;
+	}
+	
+	if( hMoviePlayer ) {
+		NX_MPClose( hMoviePlayer );
+		hMoviePlayer = NULL;	
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+}
+
+//------------------------------------------------------------------------------
+static char *GetCodecId( int codecId )
+{
+	for( int i = 0; i < sizeof(gCodecType) / sizeof(gCodecType[0]); i++ )
+	{
+		if( gCodecType[i].CodecId == codecId )
+			return gCodecType[i].CodecString;
+	}
+
+	return NULL;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jstring JNICALL MP_GetMediaInfo( JNIEnv *env, jclass obj )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	// FIXME!!!!!!!!!!!
+	char destBuf[8192] = { 0x00, };
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return env->NewStringUTF(destBuf);
 	}
 
-	sprintf(tempBuf, "Media FileName\n: %s\n\n", gUriBuf);
-	strcat( destBuf, tempBuf );
+	int pos = 0;
+	pos += sprintf( destBuf + pos, "FileName :\n  %s\n\n", gUriBuf );
 
-	if( gMediaInfo.VideoTrackTotNum > 0 ) {
-		sprintf( tempBuf, "Video Infomation\n" );
-		strcat( destBuf, tempBuf );
+	for( int32_t i = 0; i < gMediaInfo.iProgramNum; i++ )
+	{
+		if( 1 < gMediaInfo.iProgramNum ) 
+			pos += sprintf( destBuf + pos, "*** Program #%d ***\n", i);
+		
+		if( 0 < gMediaInfo.ProgramInfo[i].iVideoNum )
+		{
+			int num = 0;
+			pos += sprintf( destBuf + pos, "[ Video Information ]\n" );
+			
+			for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+			{
+				MP_TRACK_INFO *pTrackInfo = &gMediaInfo.ProgramInfo[i].TrackInfo[j];
 
-		for( int i = 0; i < (int)gMediaInfo.VideoTrackTotNum; i++ ) {
-			sprintf( tempBuf, " Video Track #%d\n", (int)gMediaInfo.VideoInfo[i].VideoTrackNum + 1 );
-			strcat( destBuf, tempBuf );
+				if( MP_TRACK_VIDEO == pTrackInfo->iTrackType ) {
+					pos += sprintf( destBuf + pos, " Video Track #%d\n", num++ );
+					pos += sprintf( destBuf + pos, "  -. Track Index\t\t\t: %d\n", pTrackInfo->iTrackIndex );
+					char *pCodec = GetCodecId((int)pTrackInfo->iCodecId);
+					pos += sprintf( destBuf + pos, "  -. Codec Type\t\t\t: %s\n", (pCodec == NULL) ? "Unknown" : pCodec );
+					pos += sprintf( destBuf + pos, "  -. Resolution\t\t\t: %d x %d\n", pTrackInfo->iWidth, pTrackInfo->iHeight );
+					pos += sprintf( destBuf + pos, "  -. Duration\t\t\t\t: %lld ms\n\n", pTrackInfo->iDuration );
+				}	
+			}
+		}
 
-			sprintf( tempBuf, " -. Codec Type    : %s\n", VideoTypeString[gMediaInfo.VideoInfo[i].VCodecID - 1] );
-			strcat( destBuf, tempBuf );
+		if( 0 < gMediaInfo.ProgramInfo[i].iAudioNum )
+		{
+			int num = 0;
+			pos += sprintf( destBuf + pos, "[ Audio Information ]\n" );
 
-			sprintf( tempBuf, " -. Resolution    : %d x %d\n\n", (int)gMediaInfo.VideoInfo[i].Width, (int)gMediaInfo.VideoInfo[i].Height );
-			strcat( destBuf, tempBuf );
+			for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+			{
+				MP_TRACK_INFO *pTrackInfo = &gMediaInfo.ProgramInfo[i].TrackInfo[j];
+				if( MP_TRACK_AUDIO == pTrackInfo->iTrackType ) {
+					pos += sprintf( destBuf + pos, " Audio Track #%d\n", num++ );
+					pos += sprintf( destBuf + pos, "  -. Track Index\t\t\t: %d\n", pTrackInfo->iTrackIndex );
+					char *pCodec = GetCodecId((int)pTrackInfo->iCodecId);
+					pos += sprintf( destBuf + pos, "  -. Codec Type\t\t\t: %s\n", (pCodec == NULL) ? "Unknown" : pCodec );
+					pos += sprintf( destBuf + pos, "  -. Channels\t\t\t\t: %d\n", pTrackInfo->iChannels );
+					pos += sprintf( destBuf + pos, "  -. SampleRate\t\t: %d Hz\n", pTrackInfo->iSampleRate );
+					pos += sprintf( destBuf + pos, "  -. Bitrate\t\t\t\t\t: %d bps\n", pTrackInfo->iBitrate );
+					pos += sprintf( destBuf + pos, "  -. Duration\t\t\t\t: %lld ms\n\n", pTrackInfo->iDuration );
+				}					
+			}
 		}
 	}
 
-	if( gMediaInfo.AudioTrackTotNum > 0 ) {
-		sprintf( tempBuf, "Audio Infomation\n" );
-		strcat( destBuf, tempBuf );
-
-		for( int i = 0; i < (int)gMediaInfo.AudioTrackTotNum; i++ ) {
-			sprintf( tempBuf, " Audio Track #%d\n", (int)gMediaInfo.AudioInfo[i].AudioTrackNum + 1 );
-			strcat( destBuf, tempBuf );
-
-			sprintf( tempBuf, " -. Codec Type    : %s\n", AudioTypeString[gMediaInfo.AudioInfo[i].ACodecID - 0x1001]);
-			strcat( destBuf, tempBuf );
-
-			sprintf( tempBuf, " -. Sampling Rate : %d\n", (int)gMediaInfo.AudioInfo[i].samplerate );
-			strcat( destBuf, tempBuf );
-
-			sprintf( tempBuf, " -. Channels      : %d\n\n", (int)gMediaInfo.AudioInfo[i].channels );
-			strcat( destBuf, tempBuf );
-		}
-	}
-
-	if( gMediaInfo.DataTrackTotNum > 0 ) {
-		sprintf( tempBuf, "Valid Data Track\n" );
-		strcat( destBuf, tempBuf );
-	}
-
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return env->NewStringUTF(destBuf);
 }
 
-JNIEXPORT jint JNICALL Mp_GetVideoTrackNum( JNIEnv *env, jclass obj )
+//------------------------------------------------------------------------------
+static int GetTrackIndex( int trackType, int track )
 {
-	CNX_AutoLock lock( &hLock );
+	int index = -1, trackOrder = 0;
 
-	static char __FUNC__[32] = "Mp_GetVideoNumber";
-	LOGV("%s()++", __FUNC__);
+	for( int i = 0; i < gMediaInfo.iProgramNum; i++ )
+	{
+		for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+		{
+			if( trackType == gMediaInfo.ProgramInfo[i].TrackInfo[j].iTrackType )
+			{
+				if( track == trackOrder )
+				{
+					index = gMediaInfo.ProgramInfo[i].TrackInfo[j].iTrackIndex;
+					break;
+				}
+				trackOrder++;
+			}
+		}
 
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
-		return -1;
+		if( index != -1 )
+			break;
 	}
 
-	LOGV("%s()--", __FUNC__);
-	return gMediaInfo.VideoTrackTotNum;
+	// NxDbgMsg( NX_DBG_INFO, "[%s] Require Track( %d ), Stream Index( %d )", (trackType == MP_TRACK_AUDIO) ? "AUDIO" : "VIDEO", track, index );
+	return index;
 }
 
-//JNIEXPORT jint JNICALL Mp_GetVideoWidth( JNIEnv *env, jclass obj, int vidRequest )
-//{
-//	CNX_AutoLock lock( &hLock );
-//
-//	static char __FUNC__[32] = "Mp_GetVideoWidth";
-//	LOGV("%s()++", __FUNC__);
-//
-//	if( hMoviePlayer == NULL ) {
-//		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-//		LOGV("%s()--", __FUNC__);
-//		return -1;
-//	}
-//
-//	if( vidRequest <= 0 || vidRequest > gMediaInfo.VideoTrackTotNum ) {
-//		LOGE("%s(): Error! Illegal VideoRequestNumber(%d)!", __FUNC__, vidRequest);
-//		LOGV("%s()--", __FUNC__);
-//		return -1;
-//	}
-//
-//	LOGV("%s()--", __FUNC__);
-//	return gMediaInfo.VideoInfo[vidRequest-1].Width;
-//}
-//
-//JNIEXPORT jint JNICALL Mp_GetVideoHeight( JNIEnv *env, jclass obj, int vidRequest )
-//{
-//	CNX_AutoLock lock( &hLock );
-//
-//	static char __FUNC__[32] = "Mp_GetVideoHeight";
-//	LOGV("%s()++", __FUNC__);
-//
-//	if( hMoviePlayer == NULL ) {
-//		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-//		LOGV("%s()--", __FUNC__);
-//		return -1;
-//	}
-//
-//	if( vidRequest <= 0 || vidRequest > gMediaInfo.VideoTrackTotNum ) {
-//		LOGE("%s(): Error! Illegal VideoRequestNumber(%d)!", __FUNC__, vidRequest);
-//		LOGV("%s()--", __FUNC__);
-//		return -1;
-//	}
-//
-//	LOGV("%s()--", __FUNC__);
-//	return gMediaInfo.VideoInfo[vidRequest-1].Height;
-//}
-
-JNIEXPORT jint JNICALL Mp_Open( JNIEnv *env, jclass obj, jobject jSurface1, jobject jSurface2, int vidRequest, jboolean pipOn )
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_GetVideoWidth( JNIEnv *env, jclass obj, jint track )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_Open";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	if( jSurface1 != NULL )	pNativeWindow1 = ANativeWindow_fromSurface( env, jSurface1 );
-	if( jSurface2 != NULL ) pNativeWindow2 = ANativeWindow_fromSurface( env, jSurface2 );
-
-	LOGI("pNativeWindow1(%p), pNativeWindow(%p), videoChannel(%d), pipOn(%d)", pNativeWindow1, pNativeWindow2, vidRequest, pipOn);
-
-	MP_RESULT mpResult = NX_MPOpen( hMoviePlayer, gAudioRequestTrackNum, vidRequest, (int)pipOn, (void*)pNativeWindow1, (void*)pNativeWindow2, NULL, &EventCallback, (void*)hMoviePlayer );
-	if( ERROR_NONE != mpResult ) {
- 		LOGE("%s(): Error! NX_MPOpen() Failed! (ret = %d)", __FUNC__, mpResult);
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
 	}
 
-	LOGV("%s()--", __FUNC__);
+	int ret = -1, trackOrder = 0;
+
+	for( int i = 0; i < gMediaInfo.iProgramNum; i++ )
+	{
+		for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+		{
+			if( MP_TRACK_VIDEO == gMediaInfo.ProgramInfo[i].TrackInfo[j].iTrackType )
+			{
+				if( track == trackOrder )
+				{
+					ret = gMediaInfo.ProgramInfo[i].TrackInfo[j].iWidth;
+					break;
+				}
+				trackOrder++;
+			}
+		}
+	}
+
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_GetVideoHeight( JNIEnv *env, jclass obj, jint track )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	int ret = -1, trackOrder = 0;
+
+	for( int i = 0; i < gMediaInfo.iProgramNum; i++ )
+	{
+		for( int j = 0; j < gMediaInfo.ProgramInfo[i].iVideoNum + gMediaInfo.ProgramInfo[i].iAudioNum; j++ )
+		{
+			if( MP_TRACK_VIDEO == gMediaInfo.ProgramInfo[i].TrackInfo[j].iTrackType )
+			{
+				if( track == trackOrder )
+				{
+					ret = gMediaInfo.ProgramInfo[i].TrackInfo[j].iHeight;
+					break;
+				}
+				trackOrder++;
+			}
+		}
+	}
+
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_GetVideoTrackNum( JNIEnv *env, jclass obj )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return gMediaInfo.iVideoTrackNum;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_GetAudioTrackNum( JNIEnv *env, jclass obj )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return gMediaInfo.iAudioTrackNum;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_AddVideoTrack( JNIEnv *env, jclass obj, jint track, jobject jSurface )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	int index = GetTrackIndex( MP_TRACK_VIDEO, track );
+	if( 0 > index ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Get Video Index. ( track = %d )", __FUNCTION__, track );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( NULL != jSurface ) {
+		if( NULL != gpNativeWindow[track] ) {
+			NxDbgMsg( NX_DBG_ERR, "%s(): Error! ANativeBuffer Slot is not empty.", __FUNCTION__ );
+			NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+			return -1;
+		}
+
+		gpNativeWindow[track] = ANativeWindow_fromSurface( env, jSurface );
+	}
+	else {
+		if( NULL == gpDspConfig[track] ) {
+			NxDbgMsg( NX_DBG_ERR, "%s(): Error! Invalid VideoConfig.", __FUNCTION__ );
+			NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+			return -1;
+		}
+	}
+
+	MP_RESULT mpResult = NX_MPAddTrack( hMoviePlayer, index, gpNativeWindow[track], gpDspConfig[track] );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPAddTrack() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return mpResult;
 }
 
-JNIEXPORT jint JNICALL Mp_Close(JNIEnv *env, jclass obj)
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_AddVideoConfig( JNIEnv *env, jclass obj, jint track, jint port, jint module, jint srcX, jint srcY, jint srcWidth, jint srcHeight, jint dstX, jint dstY, jint dstWidth, jint dstHeight )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_Close";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s: Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	// Media Player Close
-	NX_MPClose( hMoviePlayer );
-	hMoviePlayer = NULL;
-
-	// Native Window Release
-	if( pNativeWindow1 ) {
-		ANativeWindow_release( pNativeWindow1 );
-		pNativeWindow1 = NULL;
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
 	}
 
-	if( pNativeWindow2 ) {
-		ANativeWindow_release( pNativeWindow2 );
-		pNativeWindow2 = NULL;
+	if( NULL != gpDspConfig[track] )
+	{
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! VideoConfig Slot is not empty.", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
 	}
 
-	LOGV("%s()--", __FUNC__);
+	gpDspConfig[track] = (MP_DSP_CONFIG*)malloc( sizeof(MP_DSP_CONFIG) );
+	gpDspConfig[track]->iPort			= port;
+	gpDspConfig[track]->iModule			= module;
+
+	gpDspConfig[track]->srcRect.iX		= srcX;
+	gpDspConfig[track]->srcRect.iY		= srcY;
+	gpDspConfig[track]->srcRect.iWidth	= srcWidth;
+	gpDspConfig[track]->srcRect.iHeight	= srcHeight;
+
+	gpDspConfig[track]->dstRect.iX		= dstX;
+	gpDspConfig[track]->dstRect.iY		= dstY;
+	gpDspConfig[track]->dstRect.iWidth	= dstWidth;
+	gpDspConfig[track]->dstRect.iHeight	= dstHeight;
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return 0;
 }
 
-JNIEXPORT jint JNICALL Mp_Play(JNIEnv *env, jclass obj)
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_SetVideoCrop( JNIEnv *env, jclass obj, jint track, jint x, jint y, jint width, jint height )\
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_Play";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s: Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	MP_RESULT mpResult = NX_MPPlay( hMoviePlayer, 1.0 );
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPPlay() Failed! (ret = %d)", __FUNC__, mpResult);
-	}
-
-	bIsPlay = true;
-
-	LOGV("%s()--", __FUNC__);
-	return mpResult;
-}
-
-JNIEXPORT jint JNICALL Mp_Pause(JNIEnv *env, jclass obj)
-{
-	CNX_AutoLock lock( &hLock );
-
-	static char __FUNC__[32] = "Mp_Pause";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s: Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	MP_RESULT mpResult = NX_MPPause( hMoviePlayer );
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPPause() Failed! (ret = %d)", __FUNC__, mpResult);
+	MP_DSP_RECT rect;
+	rect.iX		= x;
+	rect.iY		= y;
+	rect.iWidth	= width;
+	rect.iHeight= height;
+
+	MP_RESULT mpResult = NX_MPSetDspCrop( hMoviePlayer, track, &rect );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPSetDspPosition() Failed! (ret = %d)", __FUNCTION__, mpResult);
 	}
 
-	bIsPlay = false;
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return 0;
+}
 
-	LOGV("%s()--", __FUNC__);
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_SetVideoPosition( JNIEnv *env, jclass obj, jint track, jint x, jint y, jint width, jint height )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	MP_DSP_RECT rect;
+	rect.iX		= x;
+	rect.iY		= y;
+	rect.iWidth	= width;
+	rect.iHeight= height;
+
+	MP_RESULT mpResult = NX_MPSetDspPosition( hMoviePlayer, track, &rect );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPSetDspPosition() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return 0;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_SetVideoLayerPriority( JNIEnv *env, jclass obj, jint track, jint module, jint priority )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+	
+	MP_RESULT mpResult = NX_MPSetVideoLayerPriority( hMoviePlayer, track, module, priority );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPSetVideoLayerPriority() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return 0;	
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_AddSubDisplay( JNIEnv *env, jclass obj, jint track, jint port, jint module, jint srcX, jint srcY, jint srcWidth, jint srcHeight, jint dstX, jint dstY, jint dstWidth, jint dstHeight )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	MP_DSP_CONFIG config;
+	config.iPort			= port;
+	config.iModule			= module;
+	
+	config.srcRect.iX		= srcX;
+	config.srcRect.iY		= srcY;
+	config.srcRect.iWidth	= srcWidth;
+	config.srcRect.iHeight	= srcHeight;
+
+	config.dstRect.iX		= dstX;
+	config.dstRect.iY		= dstY;
+	config.dstRect.iWidth	= dstWidth;
+	config.dstRect.iHeight	= dstHeight;
+
+	MP_RESULT mpResult = NX_MPAddSubDisplay( hMoviePlayer, track, &config );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPAddSubDisplay() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return mpResult;
 }
 
-JNIEXPORT jint JNICALL Mp_Stop(JNIEnv *env, jclass obj)
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_ClearSubDisplay( JNIEnv *env, jclass obj, jint track )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_Stop";
-	LOGV("%s()++", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
 
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s: Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( track >= gMediaInfo.iVideoTrackNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / videoTrack = %d)\n", __FUNCTION__, track, gMediaInfo.iVideoTrackNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	MP_RESULT mpResult = NX_MPClearSubDisplay( hMoviePlayer, track );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPClearSubDisplay() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return mpResult;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_AddAudioTrack( JNIEnv *env, jclass obj, jint track )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	if( track >= gMediaInfo.ProgramInfo[0].iAudioNum ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Track Number. (track = %d / audioTrack = %d)\n", __FUNCTION__, track, gMediaInfo.ProgramInfo[0].iAudioNum );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	int index = GetTrackIndex( MP_TRACK_AUDIO, track );
+	if( 0 > index ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Get Audio Index. ( track = %d )", __FUNCTION__, track );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	MP_RESULT mpResult = NX_MPAddTrack( hMoviePlayer, index, NULL, NULL );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPAddTrack() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return mpResult;	
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_ClearTrack( JNIEnv *env, jclass obj )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	MP_RESULT mpResult = NX_MPClearTrack( hMoviePlayer );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPClearTrack() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	for( int i = 0; i < MAX_DISPLAY_CHANNEL; i++ )
+	{
+		if( gpNativeWindow[i] ) {
+			ANativeWindow_release( gpNativeWindow[i] );
+		}
+		gpNativeWindow[i] = NULL;
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return 0;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_Play(JNIEnv *env, jclass obj)
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	MP_RESULT mpResult = NX_MPPlay( hMoviePlayer );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPPlay() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	bPlay = true;
+	bPause = false;
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return mpResult;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_Stop(JNIEnv *env, jclass obj)
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
 	MP_RESULT mpResult = NX_MPStop( hMoviePlayer );
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPStop() Failed! (ret = %d)", __FUNC__, mpResult);
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPStop() Failed! (ret = %d)", __FUNCTION__, mpResult);
 	}
 
-	bIsPlay = false;
+	bPlay = false;
+	bPause = false;
 
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return mpResult;
 }
 
-JNIEXPORT jint JNICALL Mp_IsPlay( JNIEnv *env, jclass obj )
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_Pause(JNIEnv *env, jclass obj)
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_IsPlay";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s: Error! Handle is not initialized!", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	LOGV("%s()--", __FUNC__);
-	return bIsPlay;
+	MP_RESULT mpResult = NX_MPPause( hMoviePlayer );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPPause() Failed! (ret = %d)", __FUNCTION__, mpResult);
+	}
+
+	bPlay = false;
+	bPause = true;
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return mpResult;
 }
 
-JNIEXPORT jint JNICALL Mp_Seek( JNIEnv *env, jclass obj, jint seekTime )
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_Seek( JNIEnv *env, jclass obj, jint seekTime )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_Seek";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Handle is not initialized!", __FUNCTION__);
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
 	MP_RESULT mpResult = NX_MPSeek( hMoviePlayer, seekTime );
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPSeek() Failed! (ret = %d)", __FUNC__, mpResult);
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPSeek() Failed! (ret = %d)", __FUNCTION__, mpResult);
 	}
 
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return mpResult;
 }
 
-JNIEXPORT jint JNICALL Mp_GetCurDuration( JNIEnv *env, jclass obj )
+//------------------------------------------------------------------------------
+JNIEXPORT jlong JNICALL MP_GetDuration( JNIEnv *env, jclass obj )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_GetCurDuration";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Handle is not initialized!", __FUNCTION__);
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	unsigned int duration = 0;
-	MP_RESULT mpResult = NX_MPGetCurDuration( hMoviePlayer, &duration );
-
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPGetCurDuration() Failed! (ret = %d)", __FUNC__, mpResult);
+	long long duration;
+	MP_RESULT mpResult = NX_MPGetDuration( hMoviePlayer, &duration );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPGetDuration() Failed! (ret = %d)", __FUNCTION__, mpResult);
 	}
 
-	LOGV("%s()--", __FUNC__);
-	return (jint)duration;
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return duration;
 }
 
-JNIEXPORT jint JNICALL Mp_GetCurPosition( JNIEnv *env, jclass obj )
+//------------------------------------------------------------------------------
+JNIEXPORT jlong JNICALL MP_GetPosition( JNIEnv *env, jclass obj )
 {
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 	CNX_AutoLock lock( &hLock );
 
-	static char __FUNC__[32] = "Mp_GetCurPosition";
-	LOGV("%s()++", __FUNC__);
-
-	if( hMoviePlayer == NULL ) {
-		LOGE("%s(): Error! Handle is not initialized!", __FUNC__);
-		LOGV("%s()--", __FUNC__);
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Handle is not initialized!", __FUNCTION__);
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 		return -1;
 	}
 
-	unsigned int position = 0;
-	MP_RESULT mpResult = NX_MPGetCurPosition( hMoviePlayer, &position );
-
-	if( ERROR_NONE != mpResult ) {
-		LOGE("%s(): Error! NX_MPGetCurPosition() Failed! (ret = %d)", __FUNC__, mpResult);
+	long long position;
+	MP_RESULT mpResult = NX_MPGetPosition( hMoviePlayer, &position );
+	if( MP_ERR_NONE != mpResult ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! NX_MPGetPosition() Failed! (ret = %d)", __FUNCTION__, mpResult);
 	}
 
-	LOGV("%s()--", __FUNC__);
-	return (jint)position;
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return position;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+JNIEXPORT jboolean JNICALL MP_IsPlay( JNIEnv *env, jclass obj )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( NULL == hMoviePlayer ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Handle is not initialized!", __FUNCTION__);
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+		return -1;
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return bPlay;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_MakeThumbnail( JNIEnv *env, jclass obj, jstring inUri, jstring outUri, jint outWidth, jint outHeight )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	const char *pInFile		= env->GetStringUTFChars( inUri, 0 );
+	const char *pOutFile	= env->GetStringUTFChars( outUri, 0 );
+
+	int ret = NX_MPMakeThumbnail( pInFile, pOutFile, 320, 320, 10 );
+
+	env->ReleaseStringUTFChars( inUri, pInFile );
+	env->ReleaseStringUTFChars( outUri, pOutFile );
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return ret;
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT jint JNICALL MP_GetVersion( JNIEnv *env, jclass obj )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+	return NX_MPGetVersion();
+}
+
+//------------------------------------------------------------------------------
+JNIEXPORT void JNICALL MP_ChgDebugLevel( JNIEnv *env, jclass obj, jint level )
+{
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
+	CNX_AutoLock lock( &hLock );
+
+	if( level < 0 || level > 5 ) {
+		NxDbgMsg( NX_DBG_ERR, "%s(): Error! Unknown Debug level!\n", __FUNCTION__ );
+		NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );	
+	}
+	else {
+		NX_MPChgDebugLevel( level );
+	}
+
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
+}
+
+//------------------------------------------------------------------------------
 //
 //	Implementation JNI_OnLoad()
 //
 static JNINativeMethod sMethods[] = {
-	//	Native Function Name,		Sigunature, 				C++ Function Name
-	{ "Mp_JniInit",				"()V",						(void*)Mp_JniInit },
-	{ "Mp_JniDeinit", 			"()V",						(void*)Mp_JniDeinit },
-	{ "Mp_SetFileName",			"(Ljava/lang/String;)I",	(void*)Mp_SetFileName },
-	{ "Mp_GetMediaInfo",		"()Ljava/lang/String;",		(void*)Mp_GetMediaInfo },
-	{ "Mp_GetVideoTrackNum",	"()I",						(void*)Mp_GetVideoTrackNum },
-//	{ "Mp_GetVideoWidth",		"(I)I",						(void*)Mp_GetVideoWidth },
-//	{ "Mp_GetVideoHeight",		"(I)I",						(void*)Mp_GetVideoHeight },
-	{ "Mp_Open", 				"(Landroid/view/Surface;Landroid/view/Surface;IZ)I",	(void*)Mp_Open },
-	{ "Mp_Close", 				"()I",						(void*)Mp_Close },
-	{ "Mp_Play", 				"()I",						(void*)Mp_Play },
-	{ "Mp_Pause", 				"()I",						(void*)Mp_Pause },
-	{ "Mp_Stop", 				"()I",						(void*)Mp_Stop },
-	{ "Mp_IsPlay",				"()I",						(void*)Mp_IsPlay },
-	{ "Mp_Seek", 				"(I)I",						(void*)Mp_Seek },
-	{ "Mp_GetCurDuration", 		"()I",						(void*)Mp_GetCurDuration },
-	{ "Mp_GetCurPosition", 		"()I",						(void*)Mp_GetCurPosition },
+	//	Native Function Name,			Sigunature, 						C++ Function Name
+	{ "MP_JniInit",			"(Ljava/lang/String;Ljava/lang/String;)V", 		(void*)MP_JniInit 				},
+	{ "MP_JniDeinit",					"()V",								(void*)MP_JniDeinit				},
+	{ "MP_Open",						"(Ljava/lang/String;)I",			(void*)MP_Open					},
+	{ "MP_Close",						"()V",								(void*)MP_Close					},
+	{ "MP_GetMediaInfo",				"()Ljava/lang/String;", 			(void*)MP_GetMediaInfo			},
+	{ "MP_GetVideoWidth",				"(I)I",								(void*)MP_GetVideoWidth			},
+	{ "MP_GetVideoHeight",				"(I)I",								(void*)MP_GetVideoHeight		},
+	{ "MP_GetVideoTrackNum",			"()I",								(void*)MP_GetVideoTrackNum		},
+	{ "MP_GetAudioTrackNum",			"()I",								(void*)MP_GetAudioTrackNum		},
+	{ "MP_AddVideoTrack",				"(ILandroid/view/Surface;)I", 		(void*)MP_AddVideoTrack			},
+	{ "MP_AddVideoConfig",				"(IIIIIIIIIII)I",					(void*)MP_AddVideoConfig		},
+	{ "MP_SetVideoCrop",				"(IIIII)I",							(void*)MP_SetVideoCrop			},
+	{ "MP_SetVideoPosition",			"(IIIII)I",							(void*)MP_SetVideoPosition		},
+	{ "MP_SetVideoLayerPriority",		"(III)I",							(void*)MP_SetVideoLayerPriority	},
+	{ "MP_AddSubDisplay",				"(IIIIIIIIIII)I",					(void*)MP_AddSubDisplay			},
+	{ "MP_ClearSubDisplay",				"(I)I",								(void*)MP_ClearSubDisplay		},
+	{ "MP_AddAudioTrack",				"(I)I",								(void*)MP_AddAudioTrack			},
+	{ "MP_ClearTrack",					"()I",								(void*)MP_ClearTrack			},
+	{ "MP_Play",						"()I",								(void*)MP_Play					},
+	{ "MP_Stop",						"()I",								(void*)MP_Stop					},
+	{ "MP_Pause",						"()I",								(void*)MP_Pause					},
+	{ "MP_Seek",						"(I)I",								(void*)MP_Seek					},
+	{ "MP_GetDuration",					"()J",								(void*)MP_GetDuration			},
+	{ "MP_GetPosition",					"()J",								(void*)MP_GetPosition			},
+	{ "MP_IsPlay",						"()Z",								(void*)MP_IsPlay				},
+	{ "MP_MakeThumbnail",	"(Ljava/lang/String;Ljava/lang/String;II)I", 	(void*)MP_MakeThumbnail			},
+	{ "MP_GetVersion",					"()I",								(void*)MP_GetVersion			},
+	{ "MP_ChgDebugLevel",				"(I)V",								(void*)MP_ChgDebugLevel			},
 };
 
+//------------------------------------------------------------------------------
 static int RegisterNativeMethods( JNIEnv *env, const char *className, JNINativeMethod *gMethods, int numMethods )
 {
-	static char __FUNC__[32] = "RegisterNativeMethods";
-	LOGV("%s()++", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 
 	jclass clazz;
 	int result = JNI_FALSE;
 
 	clazz = env->FindClass( className );
 	if( clazz == NULL ) {
-		LOGE("%s(): Native registeration unable to find class '%s'\n", __FUNC__, className);
+		NxDbgMsg( NX_DBG_ERR, "%s(): Native registration unable to find class '%s'", __FUNCTION__, className );
 		goto FAIL;
 	}
 
 	if( env->RegisterNatives( clazz, gMethods, numMethods) < 0 ) {
-		LOGE("%s(): RegisterNatives failed for '%s'\n", __FUNC__, className);
+		NxDbgMsg( NX_DBG_ERR, "%s(): RegisterNatives failed for '%s'", __FUNCTION__, className);
 		goto FAIL;
 	}
 
 	result = JNI_TRUE;
 
 FAIL:
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return result;
 }
 
+//------------------------------------------------------------------------------
 jint JNI_OnLoad( JavaVM *vm, void *reserved )
 {
-	static char __FUNC__[32] = "JNI_OnLoad";
-	LOGV("%s()++", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 
 	jint result = -1;
 	JNIEnv *env = NULL;
 
 	if( vm->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK ) {
-		LOGE("%s(): GetEnv failed!\n", __FUNC__);
+		NxDbgMsg( NX_DBG_ERR, "%s(): GetEnv failed!\n", __FUNCTION__ );
 		goto FAIL;
 	}
 
 	if( RegisterNativeMethods(env, "com/example/nxplayerbasedfilter/MoviePlayer", sMethods, sizeof(sMethods) / sizeof(sMethods[0]) ) != JNI_TRUE ) {
-		LOGE("%s(): RegisterNativeMethods failed!\n", __FUNC__);
+		NxDbgMsg( NX_DBG_ERR, "%s(): RegisterNativeMethods failed!", __FUNCTION__ );
 		goto FAIL;
 	}
 
 	result = JNI_VERSION_1_4;
 
 FAIL:
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 	return result;
 }
 
-void JNI_OnUnload(JavaVM *vm, void *reserved)
+//------------------------------------------------------------------------------
+void JNI_OnUnload( JavaVM *vm, void *reserved )
 {
-	static char __FUNC__[32] = "JNI_OnUnload";
-	LOGV("%s()++", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()++", __FUNCTION__ );
 
 	JNIEnv *env = NULL;
 
 	if( vm->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK ) {
-		LOGE("%s(): GetEnv failed!\n", __FUNC__);
+		NxDbgMsg( NX_DBG_ERR, "%s(): GetEnv failed!", __FUNCTION__ );
 		goto FAIL;
 	}
 
 FAIL:
-	LOGV("%s()--", __FUNC__);
+	NxDbgMsg( NX_DBG_VBS, "%s()--", __FUNCTION__ );
 }

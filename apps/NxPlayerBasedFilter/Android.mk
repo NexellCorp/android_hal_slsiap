@@ -28,6 +28,8 @@ LOCAL_JNI_SHARED_LIBRARIES :=	\
 	libswresample-2.1.4		\
 	libswscale-2.1.4		\
 	libNX_FILTER			\
+	libNX_FILTERHELPER		\
+	libNX_MPMANAGER			\
 	libnxmovieplayer
 
 include $(BUILD_PACKAGE)

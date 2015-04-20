@@ -1,3 +1,5 @@
+// THIS IS FITLER NEW VERSION
+
 //------------------------------------------------------------------------------
 //
 //	Copyright (C) 2014 Nexell Co. All Rights Reserved
@@ -19,8 +21,8 @@
 
 package com.example.nxplayerbasedfilter;
 
-import android.app.AlertDialog;
 import android.os.Build;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -59,24 +61,37 @@ import android.widget.RelativeLayout;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 
-public class MainActivity extends ListActivity {
-	private static final boolean SUPPORT_THUMBNAIL = false;
-	
-	private static final String DBG_TAG = "NxPlayerBasedFilter.MainActivity";
-	private static final String THUMBNAIL_PATH = "/storage/sdcard1/thumbnail/";
-		
-	private static final int 	THUMBNAIL_WIDTH	= 160 * 3 / 4;
-	private static final int 	THUMBNAIL_HEIGHT=  90 * 3 / 4;
+import android.os.Handler;
+import android.os.Message;
 
-	private static final String[] STORAGE_PATH = {
+import java.io.BufferedWriter;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class MainActivity extends ListActivity {
+	private static final String DBG_TAG = "MainActivity";
+
+	private static final boolean SUPPORT_THUMBNAIL	= true;
+	private static final boolean DEBUG_ISTVOUT		= false;
+
+	private static final String[] STORAGE_PATH 		= {
 		"/storage/sdcard0",
 		"/storage/sdcard1",
 	};
+
+	private static final String THUMBNAIL_PATH		= "/storage/sdcard0/.nxthumbnail/";
+	private static final int 	THUMBNAIL_WIDTH		= 128;
+	private static final int 	THUMBNAIL_HEIGHT	=  72;
+
+	private static final String TVOUT_STATUS_FILE	= "/sys/class/switch/tvout/state";
+	private static final String TVOUT_CONTROL_FILE	= "/sys/devices/platform/tvout/enable";
 	
 	private static final String[] VIDEO_EXTENSION = { 
 		".avi",		".wmv",		".wmp",		".wm",		".asf",
 		".mpg",		".mpeg",	".mpe",		".m1v",		".m2v",
-		".mpv2",	".mp2v",	".dat",		".ts",		".tp",
+		".mpv2",	".mp2v",	/*".dat",*/	".ts",		".tp",
 		".tpr",		".trp", 	".vob", 	".ifo", 	".ogm",
 		".ogv",		".mp4",		".m4v",		".m4p",		".m4b",
 		".3gp",		".3gpp",	".3g2",		".3gp2",	".mkv",
@@ -99,19 +114,29 @@ public class MainActivity extends ListActivity {
 	
 	ArrayList<MediaInfo> mMediaInfo;
 	static int	mItemPos;
-	
+
 	String 	mNetworkStreamName;
 	boolean mNetworkStream;
 	
 	static boolean bVisibleVersion = false;
 	
+	// boolean mScroll		= false;
+	int		mViewItemHeadPos = 0;
+	int		mViewItemTailPos = 0;
+
+	ThumbnailThread mThumbnailThread;
+	MediaInfoAdapter mAdapter;
+
+	private Handler	mHandler;
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 
 	// Overriding Function
 	//
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		//Log.v(DBG_TAG, "onCreate()++");
+		FUNCIN();
+		
 		super.onCreate(savedInstanceState);
 		setContentView( R.layout.activity_main );
 		
@@ -134,20 +159,43 @@ public class MainActivity extends ListActivity {
 		mContext = this;
 		mMediaInfo = new ArrayList<MediaInfo>();
 
-		File dir;
 		for( int i = 0; i < STORAGE_PATH.length; i++ ) {
-			dir = new File( STORAGE_PATH[i] );
+			File dir = new File( STORAGE_PATH[i] );
 			if( dir.isDirectory() )
 				UpdateFileList( STORAGE_PATH[i] );
 		}
-			
+
 		Collections.sort( mMediaInfo , mComparator );
+
+		if( SUPPORT_THUMBNAIL )
+		{
+		 	// Check Thumbnail Directory
+		 	File dirThumbnail = new File( THUMBNAIL_PATH );
+		 	if( !dirThumbnail.exists() )
+		 	{
+		 		Log.v( DBG_TAG, "Create Thumbnail directory : " + THUMBNAIL_PATH );
+		 		dirThumbnail.mkdir();
+		 	}
+		}
 		
-		MediaInfoAdapter adapter = new MediaInfoAdapter( this, R.layout.listview_row, mMediaInfo );
-		setListAdapter( adapter );
+		mAdapter = new MediaInfoAdapter( this, R.layout.listview_row, mMediaInfo );
+		setListAdapter( mAdapter );
 		setSelection( mItemPos );
-		
-		//Log.v(DBG_TAG, "onCreate()--");
+
+		if( SUPPORT_THUMBNAIL )
+		{
+			mHandler = new Handler() {
+				public void handleMessage( Message msg )
+				{
+					mAdapter.notifyDataSetChanged();
+				}
+			};
+
+			mThumbnailThread = new ThumbnailThread();
+			mThumbnailThread.start();
+		}
+
+		FUNCOUT();
 	}
 
 	private final static Comparator<MediaInfo> mComparator = new Comparator<MediaInfo>() {
@@ -169,7 +217,15 @@ public class MainActivity extends ListActivity {
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
-
+	
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		boolean enable = IsTVOut(); 
+		menu.findItem(R.id.main_tvout).setChecked(enable);
+		
+		return true;
+	}
+	
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		// Handle action bar item clicks here. The action bar will
@@ -191,9 +247,19 @@ public class MainActivity extends ListActivity {
 						mNetworkStreamName = editText.getText().toString().trim();
 						if( mNetworkStreamName.isEmpty() != true ) {
 							mNetworkStream = true;
-							
+
+							if( SUPPORT_THUMBNAIL )
+							{
+								if( mThumbnailThread.isAlive() ){
+									mThumbnailThread.interrupt();
+									try {  
+										mThumbnailThread.join();
+									} catch(InterruptedException e) {
+									}
+								}
+							}
+
 							Toast.makeText(MainActivity.this, mNetworkStreamName, Toast.LENGTH_SHORT).show();
-							
 							Intent intent = new Intent( MainActivity.this, PlayerActivity.class);
 							startActivity(intent);
 							finish();
@@ -213,35 +279,51 @@ public class MainActivity extends ListActivity {
 			alertDlg.show();
 			return true;
 		}
+		else if( id == R.id.main_tvout ) {
+			boolean enable = !IsTVOut(); 
+			EnableTVOut( enable );
+			return true;
+		}
 		return super.onOptionsItemSelected(item);
 	}
 
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id) {
 		// TODO Auto-generated method stub
-		//Log.v(DBG_TAG, "OnItemClickListener()++");
+		FUNCIN();
 		
 		mItemPos = position;
 		mNetworkStream = false;
 
+		if( SUPPORT_THUMBNAIL )
+		{
+			if( mThumbnailThread.isAlive() ){
+				mThumbnailThread.interrupt();
+				try {  
+					mThumbnailThread.join();
+				} catch(InterruptedException e) {
+				}
+			}
+		}
+
 		Toast.makeText(MainActivity.this, mMediaInfo.get(position).GetFilePath(), Toast.LENGTH_SHORT).show();
 		
-		Intent intent = new Intent( MainActivity.this, PlayerActivity.class);
+		Intent intent = new Intent( MainActivity.this, PlayerActivity.class );
 		startActivity(intent);
 		finish();
-		//Log.v(DBG_TAG, "OnItemClickListener()--");
+		
+		FUNCOUT();
 	}
 	
 	@Override
 	protected void onDestroy() {
-		//Log.v(DBG_TAG, "onDestroy()++");
-		
 		// TODO Auto-generated method stub
 		super.onDestroy();
-		
-		//Log.v(DBG_TAG, "onDestroy()--");
+		FUNCIN();
+		FUNCOUT();
 	}
 	
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	//
 	//	FileList
@@ -257,6 +339,10 @@ public class MainActivity extends ListActivity {
 		
 		if( rootFile.isDirectory() ) {
 			String[] rootList = rootFile.list();
+			
+			if( null == rootList )
+				return ;
+
 			for( int i = 0; i < rootList.length; i++ )
 			{
 				String subPath = rootPath + "/" + rootList[i];
@@ -272,12 +358,10 @@ public class MainActivity extends ListActivity {
 				}
 				else {
 					if( isVideo(subPath) ) {
-						//Log.v(DBG_TAG, "[VIDEO] " + subPath);
 						MediaInfo info = new MediaInfo( subPath, subFile.getName(), null, MEDIA_TAG.VIDEO );
 						mMediaInfo.add(info);
 					}
 					else if( isAudio(subPath) ) {
-						//Log.v(DBG_TAG, "[AUDIO] " + subPath);
 						MediaInfo info = new MediaInfo( subPath, subFile.getName(), null, MEDIA_TAG.AUDIO );
 						mMediaInfo.add(info);
 					}
@@ -286,12 +370,10 @@ public class MainActivity extends ListActivity {
 		}
 		else {
 			if( isVideo(rootPath) ) {
-				//Log.v(DBG_TAG, "[VIDEO] " + rootPath);
 				MediaInfo info = new MediaInfo( rootPath, rootFile.getName(), null, MEDIA_TAG.VIDEO );
 				mMediaInfo.add(info);
 			}
 			else if( isAudio(rootPath) ) {
-				//Log.v(DBG_TAG, "[AUDIO] " + rootPath);
 				MediaInfo info = new MediaInfo( rootPath, rootFile.getName(), null, MEDIA_TAG.AUDIO );
 				mMediaInfo.add(info);
 			}
@@ -319,24 +401,31 @@ public class MainActivity extends ListActivity {
 				return true;
 			}
 		}
-		return false;	
+		return false;
 	}
 	
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	//
 	//	Interface Function
 	//
 	public String GetFileName() {
 		if( mNetworkStream )
+		{
+			// Log.i(DBG_TAG, "Network( " + mNetworkStreamName +" )" );
 			return mNetworkStreamName;
+		}
 		else
+		{
+			// Log.i(DBG_TAG, "Pos( " + String.valueOf(mItemPos) + " ), File( " + mMediaInfo.get( mItemPos ).GetFilePath() +" )" );
 			return mMediaInfo.get( mItemPos ).GetFilePath();
+		}
 	}
 
 	public String GetNextFileName() {
 		mItemPos++;
 		if( mItemPos >= mMediaInfo.size() ) mItemPos = 0;
-		
+
 		return mMediaInfo.get( mItemPos ).GetFilePath();
 	}
 	
@@ -352,6 +441,51 @@ public class MainActivity extends ListActivity {
 		return mNetworkStream;
 	}
 	
+	public boolean IsTVOut()
+	{
+		if( DEBUG_ISTVOUT )
+		{
+		}
+		else
+		{
+			File file = new File( TVOUT_STATUS_FILE );
+			if( !file.exists() )
+				return false;
+
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(TVOUT_STATUS_FILE));
+				String line = br.readLine();
+				br.close();
+				if ("1".equals(line)) {
+					return true;
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return false;
+		}
+
+		return true;
+	}
+
+	public void EnableTVOut( boolean enable )
+	{
+		File file = new File( TVOUT_CONTROL_FILE );
+		if( !file.exists() ) {
+			Log.w(DBG_TAG, "Not Support TVOut.\n");
+			return;
+		}
+
+		try {
+			BufferedWriter bw = new BufferedWriter(new FileWriter(TVOUT_CONTROL_FILE));
+			bw.write( enable ? "1" : "0" );
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}		
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	//
 	//	Adapter of Media Information
@@ -361,7 +495,7 @@ public class MainActivity extends ListActivity {
 		
 		public MediaInfoAdapter(Context context, int textViewResourceId, ArrayList<MediaInfo> items) {
 			super(context, textViewResourceId, items);
-			this.mItems = items;
+			mItems = items;
 		}
 		
 		@Override
@@ -380,26 +514,28 @@ public class MainActivity extends ListActivity {
 			{
 				ImageView imageView1 = (ImageView)convertView.findViewById(R.id.imageView1);
 				TextView textView1 = (TextView)convertView.findViewById(R.id.textView1);
-				
-				if( imageView1 != null ) {
-if( SUPPORT_THUMBNAIL )
-{
-					if( Build.VERSION.SDK_INT>=Build.VERSION_CODES.HONEYCOMB ) {
-						new ThumbnailTask(imageView1, mediaInfo).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-					} else {
-						new ThumbnailTask(imageView1, mediaInfo).execute();
+			
+				if( imageView1 != null )
+				{
+					if( SUPPORT_THUMBNAIL )
+					{
+						if( Build.VERSION.SDK_INT>=Build.VERSION_CODES.HONEYCOMB ) {
+							new ThumbnailTask(imageView1, mediaInfo, position).executeOnExecutor( AsyncTask.THREAD_POOL_EXECUTOR );
+						} else {
+							new ThumbnailTask(imageView1, mediaInfo, position).execute();
+						}
 					}
-}
-else {
-	RelativeLayout.LayoutParams param  = new RelativeLayout.LayoutParams(0, 40);
-	imageView1.setLayoutParams( param);
-	Drawable alpha = imageView1.getDrawable();
-	alpha.setAlpha(0);
-}
+					else
+					{
+						RelativeLayout.LayoutParams param  = new RelativeLayout.LayoutParams( 0, 40 );
+						imageView1.setLayoutParams( param );
+						Drawable alpha = imageView1.getDrawable();
+						alpha.setAlpha( 0 );
+					}
 				}
 
 				if( textView1 != null ) {
-					textView1.setText(mediaInfo.GetFileName());
+					textView1.setText( mediaInfo.GetFileName() );
 				}
 			}
 
@@ -408,10 +544,10 @@ else {
 	}
 
 	private class ThumbnailTask extends AsyncTask<Void, Void, Bitmap> {
-		private ImageView mImgView;
-		private MediaInfo mMediaInfo;
+		private ImageView 	mImgView;
+		private MediaInfo 	mMediaInfo;
 		
-		public ThumbnailTask(ImageView imgView, MediaInfo mediaInfo) {
+		public ThumbnailTask(ImageView imgView, MediaInfo mediaInfo, int position) {
 			mImgView 	= imgView;
 			mMediaInfo	= mediaInfo;
 		}
@@ -428,14 +564,14 @@ else {
 
 				String uriPath = THUMBNAIL_PATH + mMediaInfo.GetFileName() + ".jpg";
 				File file = new File( uriPath );
-				if( file.exists() == true ) {
+				if( file.exists() == true )
+				{
 					srcBitmap = BitmapFactory.decodeFile( uriPath );
 					dstBitmap = Bitmap.createScaledBitmap(srcBitmap, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, true);
 				}
-				else {
-					// Thumbnail creation : thumbnail_init
-					// Temperary code.
-					Resources res = mContext.getResources();
+				else
+				{
+					Resources res = mContext.getResources();	
 					srcBitmap = BitmapFactory.decodeResource(res, R.drawable.thumbnail_init);
 					dstBitmap = Bitmap.createScaledBitmap(srcBitmap, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, true);
 				}
@@ -461,6 +597,40 @@ else {
 		}
 	}
 	
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	// Thumbnail Thread
+	//	
+	class ThumbnailThread extends Thread {
+		public void run() {
+			MoviePlayer moviePlayer = MoviePlayer.GetInstance();
+
+			for( int i = 0; i < mMediaInfo.size(); i++ )
+			{
+				if( mMediaInfo.get(i).GetFileTag() == MEDIA_TAG.VIDEO ) {
+					String uriPath = THUMBNAIL_PATH + mMediaInfo.get(i).GetFileName() + ".jpg";
+					File file = new File( uriPath );
+
+					if( !file.exists() )
+					{
+						if( 0 > moviePlayer.MakeThumbnail( mMediaInfo.get(i).GetFilePath(), uriPath, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT ) )
+							Log.e(DBG_TAG, "Fail, Create Thumbnail. (" + uriPath + ")" );	
+						else {
+							//Log.e(DBG_TAG, "Create Thumbnail Done. (" + uriPath + ")" );
+							Message msg = mHandler.obtainMessage();
+							mHandler.sendMessage(msg);
+						}
+					}
+				}
+
+				if( Thread.currentThread().isInterrupted() )
+					break;
+			}
+		}
+	}
+
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	//
 	//	Data of Media Information
@@ -492,4 +662,21 @@ else {
 			return mFileTag;
 		}
 	}	
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//
+	//	Log Message : Function IN / OUT 
+	//
+	private void FUNCIN() {
+		// java.lang.Exception e = new java.lang.Exception();
+		// StackTraceElement trace[] = e.getStackTrace();
+		// Log.v( DBG_TAG, trace[1].getMethodName() + "()++" );
+	}
+
+	private void FUNCOUT() {
+		// java.lang.Exception e = new java.lang.Exception();
+		// StackTraceElement trace[] = e.getStackTrace();
+		// Log.v( DBG_TAG, trace[1].getMethodName() + "()--" );
+	}
 }

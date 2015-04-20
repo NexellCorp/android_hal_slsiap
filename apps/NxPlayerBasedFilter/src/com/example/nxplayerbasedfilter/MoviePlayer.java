@@ -1,3 +1,5 @@
+// THIS IS FITLER NEW VERSION
+
 //------------------------------------------------------------------------------
 //
 //	Copyright (C) 2014 Nexell Co. All Rights Reserved
@@ -22,20 +24,60 @@ package com.example.nxplayerbasedfilter;
 import android.view.Surface;
 import android.util.Log;
 
+enum DISPLAY_PORT		{ LCD, HDMI }
+enum DISPLAY_MODULE		{ MLC0, MLC1 }
+
+class NX_CDisplayRect {
+	public int x		= 0;
+	public int y		= 0;
+	public int width	= 0;
+	public int height	= 0;
+
+	public NX_CDisplayRect() {
+	}
+}
+
+class NX_CDisplayConfig {
+	public int				port;
+	public int				module;
+	public NX_CDisplayRect	srcRect;
+	public NX_CDisplayRect	dstRect;
+
+	public NX_CDisplayConfig() {
+	}
+}
+
 public class MoviePlayer {
-	private static final String DBG_TAG = "NxPlayerBasedFilter.MoviePlayer";
-	
+	private static final String DBG_TAG = "MoviePlayer";
+
+	private static final int NX_DBG_VBS		= 0;
+	private static final int NX_DBG_DEBUG	= 1;
+	private static final int NX_DBG_INFO	= 2;
+	private static final int NX_DBG_WARN	= 3;
+	private static final int NX_DBG_ERR		= 4;
+	private static final int NX_DBG_DISABLE = 5;
+		
 	private static MoviePlayer mInstance;
-	private static int mWorkingCount;
+	private static boolean mRun = true;
+
+	private static int mRunCount = 0;
 
 	private MoviePlayer() {
-		Mp_JniInit();
+		MP_JniInit( "com/example/nxplayerbasedfilter/PlayerActivity", "EventHandler" );
+
+		int version = MP_GetVersion();
+		int major	= ( version & 0xFF000000 ) >> 24;
+		int minor	= ( version & 0x00FF0000 ) >> 16;
+		int revision= ( version & 0x0000FF00 ) >> 8;
+		Log.i( DBG_TAG, "Filter Version : " + String.valueOf(major) + "." + String.valueOf(minor) + "." + String.valueOf(revision) );
+
+		MP_ChgDebugLevel( NX_DBG_INFO );
 	}
 	
 	@Override
 	protected void finalize() throws Throwable {
 		// TODO Auto-generated method stub
-		Mp_JniDeinit();
+		MP_JniDeinit();
 	}
 	
 	public static synchronized MoviePlayer GetInstance() {
@@ -45,95 +87,177 @@ public class MoviePlayer {
 		return mInstance;
 	}
 	
-	public synchronized int SetFileName( String uri )
+	public synchronized int Open( String uri )
 	{
-		Log.i(DBG_TAG, "[" + String.valueOf(++mWorkingCount) + "]" + "SetFileName : " + uri);
-		return Mp_SetFileName( uri );
+		String strTemp = "[ " + String.valueOf(++mRunCount) + " ] uri : " + uri;
+		Log.i( DBG_TAG, strTemp );
+
+		return MP_Open( uri );
 	}
 	
-	public synchronized int GetVideoTrackNum()
+	public synchronized void Close()
 	{
-		return Mp_GetVideoTrackNum();
+		MP_Close();
 	}
-	
-//	public synchronized int GetVideoWidth( int vidRequest )
-//	{
-//		return Mp_GetVideoWidth( vidRequest );
-//	}
-//
-//	public synchronized int GetVideoHeight( int vidRequest )
-//	{
-//		return Mp_GetVideoHeight( vidRequest );
-//	}
 
 	public synchronized String GetMediaInfo()
 	{
-		return Mp_GetMediaInfo();
+		return MP_GetMediaInfo();
 	}
-	
-	public synchronized int Open( Surface sf1, Surface sf2, int vidRequest, boolean pipOn )
+
+	public synchronized int GetVideoWidth( int track )
 	{
-		return Mp_Open( sf1, sf2, vidRequest, pipOn );
+		return MP_GetVideoWidth( track );
 	}
-	
-	public synchronized int Close()
+
+	public synchronized int GetVideoHeight( int track )
 	{
-		return Mp_Close();
+		return MP_GetVideoHeight( track );
+	}
+
+	public synchronized int GetVideoTrackNum()
+	{
+		return MP_GetVideoTrackNum();
 	}
 	
+	public synchronized int GetAudioTrackNum()
+	{
+		return MP_GetAudioTrackNum();
+	}
+
+	public synchronized int AddVideoTrack( int track, Surface sf )
+	{
+		return MP_AddVideoTrack( track, sf );
+	}
+
+	public synchronized int AddAudioTrack( int track )
+	{
+		return MP_AddAudioTrack( track );
+	}
+
+	public synchronized int ClearTrack()
+	{
+		return MP_ClearTrack();
+	}
+
+	public synchronized int AddVideoConfig( int track, DISPLAY_PORT port, DISPLAY_MODULE module, NX_CDisplayRect srcRect, NX_CDisplayRect dstRect )
+	{
+		int iPort	= (port == DISPLAY_PORT.LCD)		? 0 : 1;
+		int iModule = (module == DISPLAY_MODULE.MLC0)	? 0 : 1;
+
+		return MP_AddVideoConfig( track, iPort, iModule, srcRect.x, srcRect.y, srcRect.width, srcRect.height, dstRect.x, dstRect.y, dstRect.width, dstRect.height );
+	}
+
+	public synchronized int AddSubDisplay( int track, DISPLAY_PORT port, DISPLAY_MODULE module, NX_CDisplayRect srcRect, NX_CDisplayRect dstRect )
+	{
+		int iPort	= (port == DISPLAY_PORT.LCD)		? 0 : 1;
+		int iModule = (module == DISPLAY_MODULE.MLC0)	? 0 : 1;
+
+		return MP_AddSubDisplay( track, iPort, iModule, srcRect.x, srcRect.y, srcRect.width, srcRect.height, dstRect.x, dstRect.y, dstRect.width, dstRect.height );
+	}
+
+	public synchronized int ClearSubDisplay( int track )
+	{
+		return MP_ClearSubDisplay( track );
+	}
+	
+	public synchronized int SetVideoPosition( int track, NX_CDisplayRect rect )
+	{
+		return MP_SetVideoPosition( track, rect.x, rect.y, rect.width, rect.height );
+	}
+
+	public synchronized int SetVideoCrop( int track, NX_CDisplayRect rect )
+	{
+		return MP_SetVideoCrop( track, rect.x, rect.y, rect.width, rect.height );
+	}
+
+	public synchronized int SetVideoLayerPriority( int track, DISPLAY_MODULE module, int priority )
+	{
+		int iModule = (module == DISPLAY_MODULE.MLC0)	? 0 : 1;
+
+		return MP_SetVideoLayerPriority( track, iModule, priority ); 
+	}
+
 	public synchronized int Play()
 	{
-		return Mp_Play();
+		return MP_Play();
 	}
-	
-	public synchronized int Pause()
-	{
-		return Mp_Pause();
-	}
-	
+
 	public synchronized int Stop()
 	{
-		return Mp_Stop();
+		return MP_Stop();
+	}
+
+	public synchronized int Pause()
+	{
+		return MP_Pause();
 	}
 	
 	public synchronized int Seek( int seekTime )
 	{
-		return Mp_Seek( seekTime );
+		return MP_Seek( seekTime );
 	}
 	
-	public synchronized int GetDuration()
+	public synchronized long GetDuration()
 	{
-		return Mp_GetCurDuration();
+		return MP_GetDuration();
 	}
 	
-	public synchronized int GetCurPosition()
+	public synchronized long GetPosition()
 	{
-		return Mp_GetCurPosition();
+		return MP_GetPosition();
 	}
 	
-	public synchronized int IsPlay()
+	public synchronized boolean IsPlay()
 	{
-		return Mp_IsPlay();
+		return MP_IsPlay();
 	}
 	
+	public synchronized int MakeThumbnail( String inUri, String outUri, int outWidth, int outHeight )
+	{
+		return MP_MakeThumbnail( inUri, outUri, outWidth, outHeight );
+	}
+
+	public synchronized int GetVersion()
+	{
+		return MP_GetVersion();
+	}
+
+	public synchronized void ChgDebugLevel( int level )
+	{
+		MP_ChgDebugLevel( level );
+	}
+
 	static {
 		System.loadLibrary("nxmovieplayer");
 	}
 	
-	public native void	Mp_JniInit();
-	public native void	Mp_JniDeinit();
-	public native int	Mp_SetFileName( String uri );
-	public native String Mp_GetMediaInfo();
-	public native int 	Mp_GetVideoTrackNum();
-//	public native int 	Mp_GetVideoWidth( int vidRequest );
-//	public native int	Mp_GetVideoHeight( int vidRequest );
-	public native int 	Mp_Open( Surface sf1, Surface sf2, int vidRequest, boolean pipOn );
-	public native int 	Mp_Close();
-	public native int 	Mp_Play();
-	public native int 	Mp_Pause();
-	public native int 	Mp_Stop();
-	public native int 	Mp_IsPlay();
-	public native int 	Mp_Seek( int seekTime );
-	public native int 	Mp_GetCurDuration();
-	public native int 	Mp_GetCurPosition();
+	public native void		MP_JniInit( String className, String callbackName );
+	public native void		MP_JniDeinit();
+	public native int		MP_Open( String uri );
+	public native void		MP_Close();
+	public native String	MP_GetMediaInfo();
+	public native int		MP_GetVideoWidth( int track );
+	public native int		MP_GetVideoHeight( int track );
+	public native int		MP_GetVideoTrackNum();
+	public native int		MP_GetAudioTrackNum();
+	public native int		MP_AddVideoTrack( int track, Surface sf );
+	public native int		MP_AddAudioTrack( int track );
+	public native int		MP_ClearTrack();
+	public native int		MP_AddSubDisplay( int track, int port, int module, int srcX, int srcY, int srcWidth, int srcHeight, int dstX, int dstY, int dstWidth, int dstHeight );
+	public native int		MP_ClearSubDisplay( int track );
+	public native int		MP_AddVideoConfig( int track, int port, int module, int srcX, int srcY, int srcWidth, int srcHeight, int dstX, int dstY, int dstWidth, int dstHeight );
+	public native int		MP_SetVideoCrop( int track, int x, int y, int width, int height );
+	public native int		MP_SetVideoPosition( int track, int x, int y, int width, int height );
+	public native int		MP_SetVideoLayerPriority( int track, int module, int priority );
+	public native int		MP_Play();
+	public native int		MP_Stop();
+	public native int		MP_Pause();
+	public native int		MP_Seek( int seekTime );
+	public native long		MP_GetDuration();
+	public native long		MP_GetPosition();
+	public native boolean	MP_IsPlay();
+	public native int		MP_MakeThumbnail( String inUri, String outUri, int outWidth, int outHeight );
+	public native int		MP_GetVersion();
+	public native void		MP_ChgDebugLevel( int level );
 }

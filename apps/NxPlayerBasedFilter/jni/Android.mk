@@ -50,6 +50,16 @@ LOCAL_SRC_FILES := libs/libswscale-2.1.4.so
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := libNX_MPMANAGER
+LOCAL_SRC_FILES := libs/libNX_MPMANAGER.so
+include $(PREBUILT_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := libNX_FILTERHELPER
+LOCAL_SRC_FILES := libs/libNX_FILTERHELPER.so
+include $(PREBUILT_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_MODULE := libNX_FILTER
 LOCAL_SRC_FILES := libs/libNX_FILTER.so
 include $(PREBUILT_SHARED_LIBRARY)
@@ -77,7 +87,10 @@ LOCAL_LDFLAGS	+= \
 	-lavutil-2.1.4			\
 	-lswresample-2.1.4		\
 	-lswscale-2.1.4			\
+	-lNX_MPMANAGER			\
+	-lNX_FILTERHELPER		\
 	-lNX_FILTER
+	
 
 LOCAL_SHARED_LIBRARIES	:=	\
 	liblog					\

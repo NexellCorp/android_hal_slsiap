@@ -1,0 +1,69 @@
+//------------------------------------------------------------------------------
+//	Revision History
+//
+
+//------------------------------------------------------------------------------
+-. Directory Architecture
+
+NxPlayerBasedFilter
+ |
+ +--+-- bin                            : for Eclipse
+    |
+    +-- doc                            : Document Directory
+    |
+    +-- gen                            : for Eclipse 
+    |
+    +-- jni --+-- include              : MoviePlayer Include File
+    |         |
+    |         +-- libs                 : MoviePlayer Library File ( FFMPEG & Core Library )
+    |         |
+    |         +-- Android.mk           : NDK Build Rules
+    |         |
+    |         +-- nxmovideplayer.cpp   : MoviePlayer Native Code
+    |
+    +-- libs                           : Library Directory for Eclipse
+    |
+    +-- obj                            : for Eclipse 
+    |
+    +-- src                            : MoviePlayer Source Code
+    |
+    +-- Android.mk                     : Application Build Rules
+    |
+    +-- AndrodidManifest.xml           : Android Manifest File
+    |
+    +-- ...
+
+//------------------------------------------------------------------------------
+-. Revision History
+
+2015.04.13 : App(v0.90.2) / Library(v0.90.1)
+
+* 개선사항.
+  1. MediaController 관련 transaction 안정화.
+  2. Pause 상태에서 Seek 동작 개선.
+  3. Audio Contents 호환성 개선. ( MP3 )
+  4. mono 오디오 재생 기능 개선.
+
+* Known Issue
+  1. 일부 Video Codec에서 영상 재생이 원할하지 않음. (Theora 1920x1080)
+
+
+2015.04.08 : App(v0.90.1) / Library(v0.90.0)
+
+* 개선사항.
+  1. Background 전환 기능 개선.
+  2. Thumbnail 기능 개선. (rmvb 지원)
+  3. TVout 기능 지원.
+  4. Application 안정화.
+
+* Known Issue.
+  1. 일부 Video Codec에서 영상 재생이 원할하지 않음. (Theora 1920x1080)
+  2. Pause 상태에서 Seek 동작 시 오동작 발생.
+  3. mono 오디오 재생시 오작동 발생.
+  4. 일부 MP3에서 지원되지 않는 영상으로 인식.
+  5. MediaController에서 연속적인 transaction시에 오동작 발생. ( Previous / Next / Seek )
+
+
+2015.04.03 : App(v0.90.1) / Library(v0.90.0)
+
+* First Release
