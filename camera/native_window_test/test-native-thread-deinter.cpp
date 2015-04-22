@@ -49,14 +49,18 @@ static int camera_init(int module, int width, int height, bool is_mipi)
     int clipper_id = module == 0 ? nxp_v4l2_clipper0 : nxp_v4l2_clipper1;
     int sensor_id = module == 0 ? nxp_v4l2_sensor0 : nxp_v4l2_sensor1;
 
-    if (module == 0)
+    if (module == 0) {
         CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420));
-    else
-        CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420M));
-    CHECK_COMMAND(v4l2_set_crop(clipper_id, 0, 0, width, height));
-    CHECK_COMMAND(v4l2_set_format(sensor_id, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
+        CHECK_COMMAND(v4l2_set_crop(clipper_id, 0, 0, width, height));
+        CHECK_COMMAND(v4l2_set_format(sensor_id, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
+    } else {
+        CHECK_COMMAND(v4l2_set_format(clipper_id, 720, height, V4L2_PIX_FMT_YUV420M));
+        CHECK_COMMAND(v4l2_set_crop(clipper_id, 8, 0, width, height));
+        CHECK_COMMAND(v4l2_set_format(sensor_id, 720, height, V4L2_MBUS_FMT_YUYV8_2X8));
+    }
     if (is_mipi)
-        CHECK_COMMAND(v4l2_set_format(nxp_v4l2_mipicsi, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
+        //CHECK_COMMAND(v4l2_set_format(nxp_v4l2_mipicsi, width, height, V4L2_MBUS_FMT_YUYV8_2X8));
+        CHECK_COMMAND(v4l2_set_format(nxp_v4l2_mipicsi, 720, height, V4L2_MBUS_FMT_YUYV8_2X8));
     CHECK_COMMAND(v4l2_reqbuf(clipper_id, BUFFER_COUNT));
     return 0;
 }
@@ -154,7 +158,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         }
     } else {
 
-				
+
         class NXDeinterlacerManager *manager = new NXDeinterlacerManager(width, height/2);
 
         // module 1 : deinterlace camera input to native window
@@ -207,7 +211,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
             }
 
             buf = &camera_buffer[capture_index];
-            manager->qSrcBuf(capture_index, buf); 
+            manager->qSrcBuf(capture_index, buf);
             if (manager->run()) {
 
                 for (int i = 0; i < manager->getRunCount(); i++) {
@@ -352,7 +356,8 @@ int main(int argc, char *argv[])
 #endif
 
     s_thread_data1.module = 1;
-    s_thread_data1.width = 720;
+    //s_thread_data1.width = 720;
+    s_thread_data1.width = 704;
     s_thread_data1.height = 480;
     s_thread_data1.is_mipi = true;
     s_thread_data1.client = client.get();
