@@ -16,9 +16,12 @@ LOCAL_SRC_FILES := \
 	SP0838.cpp \
 	SP0A19.cpp \
 	SP2518.cpp \
-	GC2035.cpp\
+	GC2035.cpp \
 	GC0308.cpp \
+	MT9D111.cpp \
+	THP7212.cpp \
 	HM2057.cpp	
+	
 
 ifeq ($(TARGET_CPU_VARIANT2),s5p4418)
 LOCAL_CFLAGS += -DS5P4418
