@@ -3,47 +3,8 @@
 
 #include <nx_camera_board.h>
 
-#define V4L2_CID_CAMERA_SCENE_MODE		(V4L2_CTRL_CLASS_CAMERA | 0x1001)
-#define V4L2_CID_CAMERA_ANTI_SHAKE		(V4L2_CTRL_CLASS_CAMERA | 0x1002)
-#define V4L2_CID_CAMERA_MODE_CHANGE		(V4L2_CTRL_CLASS_CAMERA | 0x1003)
-
-enum {
-    WB_AUTO = 0,
-    WB_DAYLIGHT,
-    WB_CLOUDY,
-    WB_FLUORESCENT,
-    WB_INCANDESCENT,
-    WB_MAX
-};
-
-enum {
-    COLORFX_NONE = 0,
-    COLORFX_SEPIA,
-    COLORFX_AQUA,
-    COLORFX_MONO,
-    COLORFX_NEGATIVE,
-    COLORFX_SKETCH,
-    COLORFX_MAX
-};
-
-#define MIN_EXPOSURE    -4
-#define MAX_EXPOSURE     4
-
-enum {
-    SCENE_OFF = 0,
-    SCENE_PORTRAIT,
-    SCENE_LANDSCAPE,
-    SCENE_SPORTS,
-    SCENE_NIGHTSHOT,
-    SCENE_MAX
-};
-
-enum {
-    ANTI_SHAKE_OFF = 0,
-    ANTI_SHAKE_50Hz,
-    ANTI_SHAKE_60Hz,
-    ANTI_SHAKE_MAX
-};
+#define V4L2_CID_CAMERA_SCENE_EXPOSURE      (V4L2_CTRL_CLASS_CAMERA | 0x1001)
+#define V4L2_CID_PRIVATE_PREV_CAPT          (V4L2_CTRL_CLASS_CAMERA | 0x1002)
 
 namespace android {
 
@@ -63,6 +24,7 @@ public:
     virtual void setExposure(int32_t exposure);
     virtual uint32_t getZoomFactor(void);
     virtual status_t setZoomCrop(uint32_t left, uint32_t top, uint32_t width, uint32_t height);
+    virtual int setFormat(int width, int height, int format);
 
 private:
     void init();
