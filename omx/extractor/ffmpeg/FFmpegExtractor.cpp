@@ -995,13 +995,11 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			}
 			break;
 		case AV_CODEC_ID_MPEG2VIDEO:
-			ALOGV("MPEG2VIDEO");
+			ALOGV("MPEG2VIDEO(ExtraSize = %d)\n", avctx->extradata_size);
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_MPEG2);
+			if( avctx->extradata_size>0 )
 			{
-				sp<ABuffer> csd = new ABuffer(avctx->extradata_size);
-				memcpy(csd->data(), avctx->extradata, avctx->extradata_size);
-				sp<ABuffer> esds = MakeMPEGVideoESDS(csd);
-				meta->setData(kKeyESDS, kTypeESDS, esds->data(), esds->size());
+				meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 			}
 			break;
 		case AV_CODEC_ID_VC1:

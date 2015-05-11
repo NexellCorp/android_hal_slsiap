@@ -31,71 +31,58 @@ pthread_mutex_t gstOMXCoreMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 //	Debug Message
-static OMX_ERRORTYPE NX_OMXRegisterComponent( const OMX_STRING Name, const OMX_STRING Role, OMX_ERRORTYPE (*ComponentInit)( OMX_IN OMX_HANDLETYPE hComponent ) )
+static OMX_ERRORTYPE NX_OMXRegisterComponent( const OMX_STRING Name, const OMX_STRING SoName, const OMX_STRING Role ,OMX_ERRORTYPE (*ComponentInit)( OMX_IN OMX_HANDLETYPE hComponent ) )
 {
 	if( strlen(Name) > OMX_MAX_STRINGNAME_SIZE-1 )
 		return OMX_ErrorBadParameter;
 	if( strlen(Role) > OMX_MAX_STRINGNAME_SIZE-1 )
 		return OMX_ErrorBadParameter;
+	if( strlen(SoName) > OMX_MAX_STRINGNAME_SIZE-1 )
+		return OMX_ErrorBadParameter;
 
 	gstCompRegInfo[gstNumRegInfo].CompName = strdup(Name);
 	gstCompRegInfo[gstNumRegInfo].CompRole = strdup(Role);
+	gstCompRegInfo[gstNumRegInfo].CompSoName = strdup(SoName);
 
 	gstCompRegInfo[gstNumRegInfo].ComponentInit = ComponentInit;
 	gstNumRegInfo++;
 	return OMX_ErrorNone;
 }
 
-#if 0
-
-#define NX_ADD_COMPONENT(Name,Role,InitFunc) \
-{	extern OMX_ERRORTYPE (##InitFunc##_ComponentInit)( OMX_IN OMX_HANDLETYPE hComponent );\
-	NX_OMXRegisterComponent(Name,Role,##InitFunc##_ComponentInit);}
-
-//	Static loader
-static OMX_ERRORTYPE RegisterAllComponents()
-{
-	NX_ADD_COMPONENT("OMX.NX.VIDEO.Template",	"video_decoder.template",	NX_TransT);
-	NX_ADD_COMPONENT("OMX.NX.AUDIO.MP3Dec",		"audio_decoder.mp3",		NX_AudioDecoderMp3);
-	NX_ADD_COMPONENT("OMX.NX.AUDIO.AACDec",		"audio_decoder.aac",		NX_AudioDecoderAac);
-	NX_ADD_COMPONENT("OMX.NX.PARSER.TDMB",		"parser.tdmb",				NX_TDMBParser);
-	return OMX_ErrorNone;
-}
-
-#else
 
 //
 static OMX_ERRORTYPE RegisterAllComponents()
 {
 #ifdef USE_AUDIO_COMPONENT
-	//NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.mpeg",NULL);
-	//NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.mp1",NULL);
-	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.mp2",NULL);
-	//NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.mp3",NULL);
-	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.ac3",NULL);
-	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.ra",NULL);
-	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.x-ms-wma",NULL);
-	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.dts",NULL);
-	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",	"audio_decoder.flac",NULL);
+	//NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG",		"audio_decoder.mpeg",NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.mpeg",		"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.mpeg",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.mpegl1",	"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.mp1",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.mpegl2",	"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.mp2",		NULL);
+	//NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.mp3",	"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.mp3",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.ac3",		"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.ac3",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.ra",		"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.ra",			NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.wma",		"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.x-ms-wma",	NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.dts",		"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.dts",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.AUDIO_DECODER.FFMPEG.flac",		"libNX_OMX_AUDIO_DECODER_FFMPEG",	"audio_decoder.flac",		NULL);
 #endif
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.avc",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.mpeg4",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.mpeg2",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.h263",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.3gpp",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.mp43",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.x-flv",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.x-ms-wmv",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.wvc1",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.vc1",NULL);
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER",			"video_decoder.x-pn-realvideo",NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.avc",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.avc",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.mpeg4",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.mpeg4",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.mpeg2",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.mpeg2",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.3gpp",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.h263",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.3gpp",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.3gpp",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.mp43",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.mp43",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.flv",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.x-flv",		NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.wmv",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.x-ms-wmv",	NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.wvc1",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.x-ms-wmv",	NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.vc1",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.x-ms-wmv",	NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.rv",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.x-pn-realvideo",NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.vp8",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.vp8",		NULL);
 
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER",			"video_encoder.avc",NULL);			// modified by kshblue(14.07.04)
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER",			"video_encoder.mpeg4",NULL);		// modified by kshblue(14.11.05)
-	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER",			"video_encoder.h263",NULL);
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER.avc",				"libNX_OMX_VIDEO_ENCODER",			"video_encoder.avc",		NULL);			// modified by kshblue(14.07.04)
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER.mpeg4",			"libNX_OMX_VIDEO_ENCODER",			"video_encoder.mpeg4",		NULL);		// modified by kshblue(14.11.05)
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER.3gpp",			"libNX_OMX_VIDEO_ENCODER",			"video_encoder.h263",		NULL);
 	return OMX_ErrorNone;
 }
-#endif
 
 
 static OMX_ERRORTYPE	NX_OMXBuildComponentTable()
@@ -136,8 +123,9 @@ static OMX_ERRORTYPE	NX_OMXBuildComponentTable()
 
 		//	Add New Components
 		if( regComps == j ){
-			gstOMXComponentList[regComps].strName = gstCompRegInfo[i].CompName;
-			gstOMXComponentList[regComps].nRoles = 1;
+			gstOMXComponentList[regComps].strName   = gstCompRegInfo[i].CompName;
+			gstOMXComponentList[regComps].strSoName = gstCompRegInfo[i].CompSoName;
+			gstOMXComponentList[regComps].nRoles    = 1;
 			gstOMXComponentList[regComps].pRoles[0] = gstCompRegInfo[i].CompRole;
 			gstOMXComponentList[regComps].handle[0] = NULL;
 			gstOMXComponentList[regComps].nRefCount = 0;
@@ -168,6 +156,9 @@ void NX_OMXDestroyComponentTable()
 		}
 		if( gstCompRegInfo[i].CompRole ){
 			free( gstCompRegInfo[i].CompRole );
+		}
+		if( gstCompRegInfo[i].CompSoName ){
+			free( gstCompRegInfo[i].CompSoName );
 		}
 	}
 }
@@ -274,6 +265,7 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_GetHandle(
 	//	Dynamic Component Loader
 	//	The CompoentInit is not NULL in static loader.
 	if( NULL == pCompInfo->ComponentInit ){
+#if 0
 		//
 		static const char prefix[] = "libNX_OMX_";
 		static const char postfix[] = ".so";
@@ -284,24 +276,16 @@ OMX_API OMX_ERRORTYPE OMX_APIENTRY NX_OMX_GetHandle(
 		ConverteRoleName( role );
 		strcat( soname, role );	//	role
 		strcat( soname, postfix );
+#endif
+		char soname[512];
+		sprintf( soname, "%s.so", pCompInfo->strSoName);
 
 		if( pCompInfo->hModule == NULL ){
-#if 0
-			{
-				void *module;
-				LOGD("Test dlopen test(libstagefright_soft_g711dec.so)\n");
-				module = dlopen( "libstagefright_soft_g711dec.so", RTLD_NOW );
-				if( module ){
-					LOGD("Test dlopen succeed.\n", dlerror());
-					dlclose( module );
-				}
-			}
-#endif
 			pCompInfo->hModule = (OMX_HANDLETYPE)dlopen( soname, RTLD_NOW );
 			if( pCompInfo->hModule != NULL ){
 				ComponentInit = dlsym(pCompInfo->hModule, "OMX_ComponentInit");
 			}else{
-				NX_LOGE("\t Error : Cannot ldopen failed(%s)\n", dlerror() );
+				NX_LOGE("\t Error : Cannot ldopen failed(%s, soName=%s)\n", dlerror(), soname);
 			}
 		}
 	}else{
