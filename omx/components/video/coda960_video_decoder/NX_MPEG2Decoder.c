@@ -81,10 +81,23 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 	//	Step 2. Find First Key Frame & Do Initialize VPU
 	if( OMX_FALSE == pDecComp->bInitialized )
 	{
-		int initBufSize = inSize + pDecComp->codecSpecificDataSize;
-		unsigned char *initBuf = (unsigned char *)malloc( initBufSize );
-		memcpy( initBuf, pDecComp->codecSpecificData, pDecComp->codecSpecificDataSize );
-		memcpy( initBuf + pDecComp->codecSpecificDataSize, inData, inSize );
+		int initBufSize;
+		unsigned char *initBuf;
+
+		if( pDecComp->codecSpecificDataSize == 0 && pDecComp->nExtraDataSize>0 )
+		{
+			initBufSize = inSize + pDecComp->nExtraDataSize;
+			initBuf = (unsigned char *)malloc( initBufSize );
+			memcpy( initBuf, pDecComp->pExtraData, pDecComp->nExtraDataSize );
+			memcpy( initBuf + pDecComp->nExtraDataSize, inData, inSize );
+		}
+		else
+		{
+			initBufSize = inSize + pDecComp->codecSpecificDataSize;
+			initBuf = (unsigned char *)malloc( initBufSize );
+			memcpy( initBuf, pDecComp->codecSpecificData, pDecComp->codecSpecificDataSize );
+			memcpy( initBuf + pDecComp->codecSpecificDataSize, inData, inSize );
+		}
 
 		//	Initialize VPU
 		ret = InitializeCodaVpu(pDecComp, initBuf, initBufSize );
@@ -143,7 +156,7 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 		}
 		else
 		{
-			//if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType != PIC_TYPE_I )
+			//if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType[DECODED_FRAME] != PIC_TYPE_I )
 			//{
 			//	NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 			//	goto Exit;
