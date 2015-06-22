@@ -516,13 +516,14 @@ retry:
 		mediaBuffer->meta_data()->clear();
 		mediaBuffer->set_range(0, pkt.size);
 		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
-
+		/*
 		if(AVMEDIA_TYPE_VIDEO==mMediaType)
 		{
 			uint8_t *buf = pkt.data;
 			ALOGD("------------- Size(%6d) 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x\n",
 				pkt.size,buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7],buf[8],buf[9],buf[10],buf[11],buf[12],buf[13],buf[14],buf[15] );
 		}
+		*/
 	}
 
 	int64_t start_time = mStream->start_time != AV_NOPTS_VALUE ? mStream->start_time : 0;
