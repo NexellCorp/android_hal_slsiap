@@ -319,8 +319,12 @@ int NX_DecodeVC1Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 		}
 		else
 		{
-			if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType[DECODED_FRAME] != PIC_TYPE_I )
+			if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType[DECODED_FRAME] != PIC_TYPE_I &&
+				pDecComp->isOutIdr == OMX_FALSE && decOut.picType[DECODED_FRAME] != PIC_TYPE_VC1_BI )
 			{
+				OMX_TICKS timestamp;
+				OMX_U32 flag;
+				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
 				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 				goto Exit;
 			}
