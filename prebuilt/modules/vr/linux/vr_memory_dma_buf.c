@@ -113,6 +113,9 @@ static int vr_dma_buf_map(struct vr_dma_buf_attachment *mem, struct vr_session_d
 
 			vr_mmu_pagedir_update(pagedir, virt, phys, size, VR_MMU_FLAGS_DEFAULT);
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+			zb_add_dma_priv_mem(phys, size);
+#endif
 			virt += size;
 		}
 
@@ -122,6 +125,9 @@ static int vr_dma_buf_map(struct vr_dma_buf_attachment *mem, struct vr_session_d
 
 			guard_phys = sg_dma_address(mem->sgt->sgl);
 			vr_mmu_pagedir_update(pagedir, virt, guard_phys, VR_MMU_PAGE_SIZE, VR_MMU_FLAGS_DEFAULT);
+#ifdef CONFIG_FALINUX_ZEROBOOT
+			zb_add_dma_priv_mem(guard_phys, VR_MMU_PAGE_SIZE);
+#endif
 		}
 
 		mem->is_mapped = VR_TRUE;
@@ -149,6 +155,18 @@ static void vr_dma_buf_unmap(struct vr_dma_buf_attachment *mem)
 
 	VR_DEBUG_PRINT(5, ("Vr DMA-buf: unmap attachment %p, new map_ref = %d\n", mem, mem->map_ref));
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	{
+		int i;
+		struct scatterlist *sg;
+		for_each_sg(mem->sgt->sgl, sg, mem->sgt->nents, i) {	
+			u32 size = sg_dma_len(sg);
+			dma_addr_t phys = sg_dma_address(sg);
+			//zb_remove_dma_priv_mem(phys);
+		}
+	}
+#endif
+ 
 	if (0 == mem->map_ref) {
 		dma_buf_unmap_attachment(mem->attachment, mem->sgt, DMA_BIDIRECTIONAL);
 

@@ -145,6 +145,9 @@ static int vr_mem_os_alloc_pages(vr_mem_allocation *descriptor, u32 size)
 		dma_addr = dma_map_page(&vr_platform_device->dev, new_page,
 		                        0, _VR_OSK_VR_PAGE_SIZE, DMA_TO_DEVICE);
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		zb_add_dma_priv_mem(dma_addr, _VR_OSK_VR_PAGE_SIZE);
+#endif
 		/* Store page phys addr */
 		SetPagePrivate(new_page);
 		set_page_private(new_page, dma_addr);
@@ -181,6 +184,9 @@ static int vr_mem_os_vr_map(vr_mem_allocation *descriptor, struct vr_session_dat
 		u32 phys = page_private(page);
 		vr_mmu_pagedir_update(pagedir, virt, phys, VR_MMU_PAGE_SIZE, prop);
 		virt += VR_MMU_PAGE_SIZE;
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		zb_add_dma_priv_mem(phys, VR_MMU_PAGE_SIZE);
+#endif
 	}
 
 	return 0;
@@ -188,6 +194,14 @@ static int vr_mem_os_vr_map(vr_mem_allocation *descriptor, struct vr_session_dat
 
 static void vr_mem_os_vr_unmap(struct vr_session_data *session, vr_mem_allocation *descriptor)
 {
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	struct page *page;
+	list_for_each_entry(page, &descriptor->os_mem.pages, lru) {
+		u32 phys = page_private(page);
+		//zb_remove_dma_priv_mem(phys);
+	}
+#endif
+ 
 	vr_mem_vr_map_free(descriptor);
 }
 
@@ -339,6 +353,10 @@ void vr_mem_os_release_table_page(u32 phys, void *virt)
 static void vr_mem_os_free_page(struct page *page)
 {
 	BUG_ON(page_count(page) != 1);
+
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	//zb_remove_dma_priv_mem(page_private(page));
+#endif
 
 	dma_unmap_page(&vr_platform_device->dev, page_private(page),
 	               _VR_OSK_VR_PAGE_SIZE, DMA_TO_DEVICE);

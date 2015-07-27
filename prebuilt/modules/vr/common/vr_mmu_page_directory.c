@@ -295,6 +295,9 @@ void vr_mmu_pagedir_update(struct vr_page_directory *pagedir, u32 vr_address, u3
 		                                VR_MMU_PTE_ENTRY(vr_address) * sizeof(u32),
 		                                phys_address | permission_bits);
 	}
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	//zb_add_dma_priv_mem(phys_address,size);
+#endif
 }
 
 u32 vr_page_directory_get_phys_address(struct vr_page_directory *pagedir, u32 index)
@@ -434,3 +437,48 @@ _vr_osk_errcode_t _vr_ukk_dump_mmu_page_table( _vr_uk_dump_mmu_page_table_s * ar
 
 	VR_SUCCESS;
 }
+
+#ifdef CONFIG_FALINUX_ZEROBOOT
+//#define MMU_DUMP_BUFFER_LENGTH		(64*1024)
+//static char gTempMmuData[MMU_DUMP_BUFFER_LENGTH];
+
+static _vr_osk_errcode_t temp_vr_mmu_dump_page(vr_io_address page, u32 phys_addr)
+{
+	/* 4096 for the page and 4 bytes for the address */
+	//temp test
+	printk("%s: phys_addr(0x%x), page_size_in_bytes(0x%x)\n", __FUNCTION__, phys_addr, VR_MMU_PAGE_SIZE);
+	zb_add_dma_priv_mem(phys_addr, VR_MMU_PAGE_SIZE);
+	VR_SUCCESS;
+}
+
+static _vr_osk_errcode_t temp_dump_mmu_page_table(struct vr_page_directory *pagedir)
+{
+	VR_DEBUG_ASSERT_POINTER(pagedir);
+
+	if (NULL != pagedir->page_directory_mapped) {
+		int i;
+
+		VR_CHECK_NO_ERROR(
+		    temp_vr_mmu_dump_page(pagedir->page_directory_mapped, pagedir->page_directory)
+		);
+
+		for (i = 0; i < 1024; i++) {
+			if (NULL != pagedir->page_entries_mapped[i]) {
+				VR_CHECK_NO_ERROR(
+				    temp_vr_mmu_dump_page(pagedir->page_entries_mapped[i],
+				                       _vr_osk_mem_ioread32(pagedir->page_directory_mapped,
+				                               i * sizeof(u32)) & ~VR_MMU_FLAGS_MASK)
+				);
+			}
+		}
+	}
+
+	VR_SUCCESS;
+}
+
+void mem_dump(struct vr_session_data *session_data)
+{	
+	VR_CHECK_NO_ERROR(temp_dump_mmu_page_table(session_data->page_directory));
+}
+#endif
+

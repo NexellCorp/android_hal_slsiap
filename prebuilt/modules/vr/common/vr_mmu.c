@@ -337,6 +337,14 @@ static void vr_mmu_activate_address_space(struct vr_mmu_core *mmu, u32 page_dire
 	VR_DEBUG_ASSERT( 0 != ( vr_hw_core_register_read(&mmu->hw_core, VR_MMU_REGISTER_STATUS)
 	                          & (VR_MMU_STATUS_BIT_STALL_ACTIVE|VR_MMU_STATUS_BIT_PAGE_FAULT_ACTIVE) ) );
 	vr_hw_core_register_write(&mmu->hw_core, VR_MMU_REGISTER_DTE_ADDR, page_directory);
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	#if 0
+	/* nexell add 20150512 hyunjh */
+	printk("=============================================================\n");
+	printk("[MMU] at %s. DTE_ADDR(0x%08x)\n", __FUNCTION__, page_directory);
+	printk("=============================================================\n");
+	#endif
+#endif
 	vr_hw_core_register_write(&mmu->hw_core, VR_MMU_REGISTER_COMMAND, VR_MMU_COMMAND_ZAP_CACHE);
 
 }

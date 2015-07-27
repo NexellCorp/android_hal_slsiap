@@ -91,6 +91,10 @@ void vr_gp_stop_bus(struct vr_gp_core *core)
 	vr_hw_core_register_write(&core->hw_core, VRGP2_REG_ADDR_MGMT_CMD, VRGP2_REG_VAL_CMD_STOP_BUS);
 }
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+extern void vr_gp_print_registers(struct vr_pp_core *core);
+#endif
+
 _vr_osk_errcode_t vr_gp_stop_bus_wait(struct vr_gp_core *core)
 {
 	int i;
@@ -109,6 +113,9 @@ _vr_osk_errcode_t vr_gp_stop_bus_wait(struct vr_gp_core *core)
 
 	if (VR_REG_POLL_COUNT_FAST == i) {
 		VR_PRINT_ERROR(("Vr GP: Failed to stop bus on %s\n", core->hw_core.description));
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		vr_gp_print_registers(&core->hw_core);
+#endif
 		return _VR_OSK_ERR_FAULT;
 	}
 	return _VR_OSK_ERR_OK;
@@ -335,3 +342,15 @@ void vr_gp_update_performance_counters(struct vr_gp_core *core, struct vr_gp_job
 #endif
 	}
 }
+
+#ifdef CONFIG_FALINUX_ZEROBOOT
+void vr_gp_print_registers(struct vr_pp_core *core)
+{
+    printk("Vr GP: Register GP_CONTR_REG_STATUS = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, 0x68));
+    printk("Vr GP: Register GP_CONTR_REG_AXI_BUS_ERROR_STAT = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, 0x94));
+    printk("Vr GP: Register GP_CONTR_REG_VSCL_START_ADDR = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, 0));
+    printk("Vr GP: Register GP_CONTR_REG_PLBCL_START_ADDR = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, 0x8));
+    printk("Vr GP: Register GP_CONTR_REG_PLB_ALLOC_START_ADDR = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, 0x10));
+}
+#endif
+

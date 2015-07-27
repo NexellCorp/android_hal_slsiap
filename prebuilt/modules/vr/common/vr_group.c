@@ -1202,6 +1202,19 @@ static void vr_group_bottom_half_mmu(void * data)
 		                    mmu->hw_core.description));
 #endif
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		#if 0
+		/* nexell add 20150512 hyunjh */
+		{	
+			unsigned int dte_addr = vr_hw_core_register_read(&mmu->hw_core, VR_MMU_REGISTER_DTE_ADDR);
+
+			printk("=============================================================\n");
+			printk("[MMU] at %s. DTE_ADDR(0x%08x)\n", __FUNCTION__, dte_addr);
+			printk("=============================================================\n");
+		}	
+		#endif
+#endif
+
 		vr_group_mmu_page_fault_and_unlock(group);
 		return;
 	}
@@ -1501,6 +1514,10 @@ out:
 	return err;
 }
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+extern void vr_pp_print_registers(struct vr_pp_core *core);
+#endif
+
 static void vr_group_bottom_half_pp(void *data)
 {
 	struct vr_group *group = (struct vr_group *)data;
@@ -1580,6 +1597,9 @@ static void vr_group_bottom_half_pp(void *data)
 	if (0 != irq_errors) {
 		VR_PRINT_ERROR(("Vr PP: Unexpected interrupt 0x%08X from core %s, aborting job\n",
 		                  irq_readout, vr_pp_get_hw_core_desc(group->pp_core)));
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		vr_pp_print_registers(group->pp_core);
+#endif
 		group->core_timed_out = VR_FALSE;
 
 		vr_group_complete_pp_and_unlock(group, VR_FALSE, VR_FALSE);

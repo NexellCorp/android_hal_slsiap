@@ -505,9 +505,12 @@ static _vr_osk_errcode_t vr_pp_irq_probe_ack(void *data)
 	return _VR_OSK_ERR_FAULT;
 }
 
-
-#if 0
+#if 1
+#ifdef CONFIG_FALINUX_ZEROBOOT
+void vr_pp_print_registers(struct vr_pp_core *core)
+#else
 static void vr_pp_print_registers(struct vr_pp_core *core)
+#endif
 {
 	VR_DEBUG_PRINT(2, ("Vr PP: Register VR200_REG_ADDR_MGMT_VERSION = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, VR200_REG_ADDR_MGMT_VERSION)));
 	VR_DEBUG_PRINT(2, ("Vr PP: Register VR200_REG_ADDR_MGMT_CURRENT_REND_LIST_ADDR = 0x%08X\n", vr_hw_core_register_read(&core->hw_core, VR200_REG_ADDR_MGMT_CURRENT_REND_LIST_ADDR)));

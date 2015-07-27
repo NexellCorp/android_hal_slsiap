@@ -24,6 +24,11 @@
 extern "C" {
 #endif
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+extern void zb_add_dma_priv_mem(unsigned long phys, unsigned long len);
+extern void zb_remove_dma_priv_mem(unsigned long phys);
+#endif
+
 /**
  * @addtogroup uddapi Unified Device Driver (UDD) APIs
  *
@@ -408,6 +413,9 @@ u32 _vr_osk_atomic_xchg( _vr_osk_atomic_t *atom, u32 val );
  * @return On success, the zero-initialized buffer allocated. NULL on failure
  */
 void *_vr_osk_calloc( u32 n, u32 size );
+#ifdef CONFIG_FALINUX_ZEROBOOT
+void *_vr_osk_kzalloc( u32 size );
+#endif
 
 /** @brief Allocate memory.
  *
@@ -434,6 +442,9 @@ void *_vr_osk_calloc( u32 n, u32 size );
  * @return On success, the buffer allocated. NULL on failure.
  */
 void *_vr_osk_malloc( u32 size );
+#ifdef CONFIG_FALINUX_ZEROBOOT
+void *_vr_osk_malloc_with_arg( u32 size, u32 flag );
+#endif
 
 /** @brief Free memory.
  *

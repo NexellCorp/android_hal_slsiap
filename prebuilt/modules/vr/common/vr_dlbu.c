@@ -85,6 +85,9 @@ _vr_osk_errcode_t vr_dlbu_initialize(void)
 	VR_DEBUG_PRINT(2, ("Vr DLBU: Initializing\n"));
 
 	if (_VR_OSK_ERR_OK == vr_mmu_get_table_page(&vr_dlbu_phys_addr, &vr_dlbu_cpu_addr)) {
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		zb_add_dma_priv_mem(vr_dlbu_phys_addr, _VR_OSK_VR_PAGE_SIZE);
+#endif
 		VR_SUCCESS;
 	}
 
@@ -94,6 +97,10 @@ _vr_osk_errcode_t vr_dlbu_initialize(void)
 void vr_dlbu_terminate(void)
 {
 	VR_DEBUG_PRINT(3, ("Vr DLBU: terminating\n"));
+
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	zb_remove_dma_priv_mem(vr_dlbu_phys_addr);								
+#endif
 
 	vr_mmu_release_table_page(vr_dlbu_phys_addr, vr_dlbu_cpu_addr);
 }

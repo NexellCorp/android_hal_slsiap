@@ -132,6 +132,28 @@ struct vm_operations_struct vr_kernel_vm_ops = {
 	.fault = vr_kernel_memory_cpu_page_fault_handler
 };
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+//temp test
+enum vr_gp_slot_state {
+	VR_GP_SLOT_STATE_IDLE,
+	VR_GP_SLOT_STATE_WORKING,
+	VR_GP_SLOT_STATE_DISABLED,
+};
+
+struct vr_gp_slot {
+	struct vr_group *group;
+	/*
+	 * We keep track of the state here as well as in the group object
+	 * so we don't need to take the group lock so often (and also avoid clutter with the working lock)
+	 */
+	enum vr_gp_slot_state state;
+	u32 returned_cookie;
+};
+
+extern struct vr_gp_slot slot;
+#endif
+
+
 /** @note munmap handler is done by vma close handler */
 int vr_mmap(struct file *filp, struct vm_area_struct *vma)
 {
@@ -169,6 +191,9 @@ int vr_mmap(struct file *filp, struct vm_area_struct *vma)
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	vma->vm_ops = &vr_kernel_vm_ops; /* Operations used on any memory system */
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	//vr_mmu_invalidate_page(slot.group->mmu, vr_addr);
+#endif
 	descriptor = vr_mem_block_alloc(vr_addr, size, vma, session);
 	if (NULL == descriptor) {
 		descriptor = vr_mem_os_alloc(vr_addr, size, vma, session);

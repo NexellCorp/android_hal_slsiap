@@ -16,6 +16,10 @@
 
 struct block_info {
 	struct block_info *next;
+
+#ifdef CONFIG_FALINUX_ZEROBOOT
+	u32 phys_addr;
+#endif
 };
 
 typedef struct block_info block_info;
@@ -103,6 +107,9 @@ static void vr_mem_block_vr_map(vr_mem_allocation *descriptor, u32 phys, u32 vir
 	while (size) {
 		vr_mmu_pagedir_update(pagedir, virt + offset, phys + offset, VR_MMU_PAGE_SIZE, prop);
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		zb_add_dma_priv_mem(phys + offset, VR_MMU_PAGE_SIZE);
+#endif
 		size -= VR_MMU_PAGE_SIZE;
 		offset += VR_MMU_PAGE_SIZE;
 	}
@@ -200,6 +207,9 @@ vr_mem_allocation *vr_mem_block_alloc(u32 vr_addr, u32 size, struct vm_area_stru
 		last_allocated = block;
 
 		phys_addr = get_phys(info, block);
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		block->phys_addr = phys_addr;
+#endif
 
 		if (VR_BLOCK_SIZE < left) {
 			current_mapping_size = VR_BLOCK_SIZE;
@@ -213,6 +223,10 @@ vr_mem_allocation *vr_mem_block_alloc(u32 vr_addr, u32 size, struct vm_area_stru
 			while (last_allocated) {
 				/* This relinks every block we've just allocated back into the free-list */
 				block = last_allocated->next;
+
+#ifdef CONFIG_FALINUX_ZEROBOOT
+				//zb_remove_dma_priv_mem(block->phys_addr);
+#endif
 				last_allocated->next = info->first_free;
 				info->first_free = last_allocated;
 				last_allocated = block;
@@ -266,6 +280,9 @@ void vr_mem_block_release(vr_mem_allocation *descriptor)
 	while (block) {
 		VR_DEBUG_ASSERT(!((block < info->all_blocks) || (block > (info->all_blocks + info->num_blocks))));
 
+#ifdef CONFIG_FALINUX_ZEROBOOT
+		//zb_remove_dma_priv_mem(block->phys_addr);
+#endif
 		next = block->next;
 
 		/* relink into free-list */
