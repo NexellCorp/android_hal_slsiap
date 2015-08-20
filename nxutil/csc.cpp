@@ -54,6 +54,8 @@ void csc_ARGB8888_to_NV12(unsigned char *dstY, unsigned char *dstCbCr, unsigned 
 
 int cscARGBToNV21(char *src, char *dstY, char *dstCbCr, uint32_t srcWidth, uint32_t srcHeight, uint32_t cbFirst)
 {
+    // for 64bit
+#if 0
     if( cbFirst )
     {
 #if 1
@@ -66,6 +68,7 @@ int cscARGBToNV21(char *src, char *dstY, char *dstCbCr, uint32_t srcWidth, uint3
     {
         csc_ARGB8888_to_NV21_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
     }
+#endif
     return 0;
 }
 

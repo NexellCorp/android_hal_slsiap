@@ -328,12 +328,15 @@ bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsig
     } else {
 #ifdef USE_HW_JPEG
         ALOGV("jpeg src buf: 0x%x, 0x%x, 0x%x, dst virt 0x%x", srcYPhys, srcCBPhys, srcCRPhys, dstBase);
+        // psw0523 fix for armv64 compile
+#if 0
         jpegSize = NX_JpegHWEncoding((void *)(((uint32_t)dstBase) + dstOffset), dstSize,
                 width, height, FOURCC_MVS0,
                 srcYPhys, srcYVirt, width,
                 srcCBPhys, srcCBVirt, width >> 1,
                 srcCRPhys, srcCRVirt, width >> 1,
                 dstOffset == 0);
+#endif
 #else
         struct ycbcr_planar planar;
         planar.y = (unsigned char *)srcYVirt;
@@ -366,12 +369,17 @@ bool CaptureThread::capture(struct nxp_vid_buffer *srcBuf, private_handle_t cons
         ALOGE("%s: failed to getVirtForHandle %p", __func__, dstHandle);
         return false;
     }
+    // psw0523 fix for armv64 compile
+#if 0
     bool captured = capture((unsigned int)srcBuf->phys[0], (unsigned int)srcBuf->phys[1], (unsigned int)srcBuf->phys[2],
             (unsigned int)srcBuf->virt[0], (unsigned int)srcBuf->virt[1], (unsigned int)srcBuf->virt[2],
             //(void *)dstHandle->base, dstHandle->size, width, height, dstOffset);
             (void *)dstVirt, dstHandle->size, width, height, dstOffset);
     releaseVirtForHandle(dstHandle, dstVirt);
     return captured;
+#else
+    return false;
+#endif
 }
 
 bool CaptureThread::capture(private_handle_t const *srcHandle, private_handle_t const *dstHandle, int width, int height, uint32_t dstOffset)

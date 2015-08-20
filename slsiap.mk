@@ -57,6 +57,10 @@ endif
 	#libGLESv2_vr \
 	#libEGL_vr
 
+# for ogl 64bit
+PRODUCT_PACKAGES += \
+	libGLES_mali
+
 # haptic HAL
 ifeq ($(BOARD_HAS_HAPTIC),true)
 PRODUCT_PACKAGES += \

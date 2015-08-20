@@ -182,6 +182,8 @@ bool NXExifProcessor::scaleDown()
 
 bool NXExifProcessor::encodeThumb()
 {
+    // psw0523 fix for compile armv64
+#if 0
     int jpegSize = NX_JpegHWEncoding(ThumbnailBuffer, Exif->widthThumb * Exif->heightThumb * 4,
             Exif->widthThumb, Exif->heightThumb, FOURCC_MVS0,
             ScaleBuffer->phys[0], reinterpret_cast<unsigned int>(ScaleBuffer->virt[0]), Exif->widthThumb,
@@ -193,6 +195,7 @@ bool NXExifProcessor::encodeThumb()
     }
     ThumbnailJpegSize = jpegSize;
     ALOGD("ThumbnailJpegSize %d", ThumbnailJpegSize);
+#endif
     return true;
 }
 

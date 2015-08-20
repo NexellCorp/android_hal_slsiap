@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
+#LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
 
 LOCAL_C_INCLUDES += \
 	system/core/include \
@@ -14,10 +14,14 @@ LOCAL_SRC_FILES := \
 	NXScaler.cpp \
 	NXCpu.cpp \
 	NXUtil.cpp \
-	csc_ARGB8888_to_NV12_NEON.s \
-	csc_ARGB8888_to_NV21_NEON.s \
 	csc.cpp \
 	NXCsc.cpp
+
+ifeq ($(TARGET_ARCH),arm)
+LOCAL_SRC_FILES += \
+	csc_ARGB8888_to_NV12_NEON.s \
+	csc_ARGB8888_to_NV21_NEON.s
+endif
 
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libion-nexell libion
 

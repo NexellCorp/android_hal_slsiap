@@ -18,8 +18,8 @@ LOCAL_PATH := $(call my-dir)
 
 # hwc service
 include $(CLEAR_VARS)
-LOCAL_PRELINK_MODULE := false
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
+#LOCAL_PRELINK_MODULE := false
+#LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
 LOCAL_SHARED_LIBRARIES := libutils libcutils libbinder
 LOCAL_C_INCLUDES += frameworks/base/include system/core/include
 LOCAL_SRC_FILES = service/NXHWCService.cpp
@@ -28,20 +28,20 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
 
 # for hwc property reporting
-include $(CLEAR_VARS)
-LOCAL_PRELINK_MODULE := false
-LOCAL_MODULE_PATH := $(TARGET_OUT_EXECUTABLES)
-LOCAL_SHARED_LIBRARIES := liblog libutils libnxhwcservice libcutils libbinder
-LOCAL_CFLAGS += -DLOG_TAG=\"HWC_SCENARIO_REPORTER\"
-LOCAL_C_INCLUDES += frameworks/native/include system/core/include
-LOCAL_SRC_FILES := executable/report_hwc_scenario.cpp
-LOCAL_MODULE := report_hwc_scenario
-LOCAL_MODULE_TAGS := optional
-include $(BUILD_EXECUTABLE)
+#include $(CLEAR_VARS)
+##LOCAL_PRELINK_MODULE := false
+#LOCAL_MODULE_PATH := $(TARGET_OUT_EXECUTABLES)
+#LOCAL_SHARED_LIBRARIES := liblog libutils libnxhwcservice libcutils libbinder
+#LOCAL_CFLAGS += -DLOG_TAG=\"HWC_SCENARIO_REPORTER\"
+#LOCAL_C_INCLUDES += frameworks/native/include system/core/include
+#LOCAL_SRC_FILES := executable/report_hwc_scenario.cpp
+#LOCAL_MODULE := report_hwc_scenario
+#LOCAL_MODULE_TAGS := optional
+#include $(BUILD_EXECUTABLE)
 
 # hwc
 include $(CLEAR_VARS)
-LOCAL_PRELINK_MODULE := false
+#LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 LOCAL_SHARED_LIBRARIES := liblog libsync libEGL libcutils libhardware libhardware_legacy libnxhwcservice libutils libbinder libion-nexell libv4l2-nexell libion libnxutil
 LOCAL_STATIC_LIBRARIES := libcec
