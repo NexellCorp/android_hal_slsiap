@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
+#LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
 
 LOCAL_C_INCLUDES += \
 	system/core/include \
@@ -23,7 +23,7 @@ else
 LOCAL_CFLAGS := -DARM64=0
 endif
 
-LOCAL_SRC_FILES_asm += \
+LOCAL_SRC_FILES_arm += \
 	csc_ARGB8888_to_NV12_NEON.s \
 	csc_ARGB8888_to_NV21_NEON.s
 
