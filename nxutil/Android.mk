@@ -14,10 +14,17 @@ LOCAL_SRC_FILES := \
 	NXScaler.cpp \
 	NXCpu.cpp \
 	NXUtil.cpp \
-	csc_ARGB8888_to_NV12_NEON.s \
-	csc_ARGB8888_to_NV21_NEON.s \
 	csc.cpp \
 	NXCsc.cpp
+
+ifeq ($(TARGET_ARCH),arm64)
+LOCAL_CFLAGS := -DARM64=1
+else
+LOCAL_CFLAGS := -DARM64=0
+LOCAL_SRC_FILES += \
+	csc_ARGB8888_to_NV12_NEON.s \
+	csc_ARGB8888_to_NV21_NEON.s
+endif
 
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libion-nexell libion
 

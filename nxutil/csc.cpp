@@ -56,10 +56,10 @@ int cscARGBToNV21(char *src, char *dstY, char *dstCbCr, uint32_t srcWidth, uint3
 {
     if( cbFirst )
     {
-#if 1
-        csc_ARGB8888_to_NV12_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
-#else
+#if ARM64		//	C module
 		csc_ARGB8888_to_NV12((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+#else
+        csc_ARGB8888_to_NV12_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
 #endif
     }
     else
