@@ -21,10 +21,11 @@ ifeq ($(TARGET_ARCH),arm64)
 LOCAL_CFLAGS := -DARM64=1
 else
 LOCAL_CFLAGS := -DARM64=0
-LOCAL_SRC_FILES += \
+endif
+
+LOCAL_SRC_FILES_asm += \
 	csc_ARGB8888_to_NV12_NEON.s \
 	csc_ARGB8888_to_NV21_NEON.s
-endif
 
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libion-nexell libion
 
