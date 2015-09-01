@@ -25,6 +25,7 @@ public:
     virtual uint32_t getZoomFactor(void);
     virtual status_t setZoomCrop(uint32_t left, uint32_t top, uint32_t width, uint32_t height);
     virtual int setFormat(int width, int height, int format);
+	virtual	bool isInterlace();
 
 private:
     void init();

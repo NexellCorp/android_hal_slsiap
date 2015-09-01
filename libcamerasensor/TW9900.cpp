@@ -282,6 +282,12 @@ int TW9900::setFormat(int width, int height, int format)
 
     ALOGE("[ %s ]: V4l2ID : %d\n", __func__, V4l2ID);
 
-
     return v4l2_set_format(V4l2ID, sensorWidth, sensorHeight, format);
+}
+
+bool TW9900::isInterlace()
+{
+	ALOGE("+++ %s ---\n", __func__);
+
+	return true;
 }

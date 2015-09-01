@@ -28,6 +28,7 @@ LOCAL_SRC_FILES := \
 	CallbackThread.cpp \
 	CaptureThread.cpp \
 	RecordThread.cpp \
+	InterlaceRecordThread.cpp \
 	NXStreamManager.cpp \
 	NXCameraHWInterface2.cpp
 
