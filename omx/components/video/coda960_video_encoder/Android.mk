@@ -19,7 +19,7 @@ LOCAL_CFLAGS += -DLOLLIPOP=1
 endif
 
 OMX_TOP := $(NX_HW_TOP)/omx
-RATECONTROL_PATH := $(NX_LINUX_TOP)/library/lib/ratecontrol
+RATECONTROL_PATH := $(NX_LINUX_TOP)/library/lib
 
 LOCAL_SRC_FILES:= \
 	NX_OMXVideoEncoder.c

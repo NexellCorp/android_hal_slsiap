@@ -19,7 +19,7 @@ NX_LINUX_TOP := $(TOP)/linux/platform/$(TARGET_CPU_VARIANT2)
 NX_LINUX_INCLUDE := $(NX_LINUX_TOP)/library/include
 
 OMX_TOP := $(NX_HW_TOP)/omx
-RATECONTROL_PATH := $(NX_LINUX_TOP)/library/lib/ratecontrol
+RATECONTROL_PATH := $(NX_LINUX_TOP)/library/lib
 
 LOCAL_SRC_FILES:= \
 	NX_AVCDecoder.c \
