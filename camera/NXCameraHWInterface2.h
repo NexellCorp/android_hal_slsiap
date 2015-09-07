@@ -64,8 +64,10 @@ public:
     virtual int setNotifyCallback(camera2_notify_callback cb, void *user);
     virtual int getMetadataVendorTagOps(vendor_tag_query_ops_t **ops);
     virtual int dump(int fd);
+	
 
 private:
+	friend class NXStreamManager;
     // member variable start with Capital
     const camera2_frame_queue_dst_ops_t *FrameQueueDstOps;
     camera2_notify_callback NotifyCb;

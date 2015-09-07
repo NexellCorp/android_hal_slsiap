@@ -269,7 +269,7 @@ status_t TW9900::setZoomCrop(uint32_t left, uint32_t top, uint32_t width, uint32
 
 int TW9900::setFormat(int width, int height, int format)
 {
-    ALOGE("[ %s ]: width : %d, height : %d, format : %d\n", __func__, width, height, format);
+    //ALOGD("[ %s ]: width : %d, height : %d, format : %d\n", __func__, width, height, format);
 
     int sensorWidth, sensorHeight;
 #ifdef S5P4418
@@ -280,14 +280,12 @@ int TW9900::setFormat(int width, int height, int format)
     sensorHeight = height;
 #endif
 
-    ALOGE("[ %s ]: V4l2ID : %d\n", __func__, V4l2ID);
+    //ALOGD("[ %s ]: V4l2ID : %d\n", __func__, V4l2ID);
 
     return v4l2_set_format(V4l2ID, sensorWidth, sensorHeight, format);
 }
 
 bool TW9900::isInterlace()
 {
-	ALOGE("+++ %s ---\n", __func__);
-
 	return true;
 }

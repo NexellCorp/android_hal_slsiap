@@ -65,6 +65,10 @@ public:
         return RawSensor->setZoomCrop(left, top, width, height);
     }
 
+	bool isInterlace(void) {
+		return RawSensor->isInterlace();
+	}
+
 public:
     // static sensor characteristics
     static const unsigned int kResolution[2][2];

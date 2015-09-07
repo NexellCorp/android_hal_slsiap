@@ -53,7 +53,6 @@ uint32_t NXStreamManager::whatStreamAllocate(int format)
 int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format, const camera2_stream_ops_t *streamOps,
         uint32_t *streamId, uint32_t *formatActual, uint32_t *usage, uint32_t *maxBuffers, bool useSensorZoom)
 {
-	ALOGD("+++ [%s] +++", __func__);
     uint32_t id = whatStreamAllocate(format);
     if (id == STREAM_ID_INVALID) {
         ALOGE("What stream can I allocate???");
@@ -83,7 +82,7 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
     sp<NXStreamManager> spStreamManager(this);
 
     NXStreamThread *streamThread = NULL;
-	int32_t	interlace = 0;
+	bool	interlace = false;
 
     switch (id) {
     case STREAM_ID_PREVIEW:
@@ -127,25 +126,21 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = DEFAULT_PIXEL_FORMAT;
 
-		//If the sense is not interlace and 128align
-		interlace = get_board_camera_interlace(Parent->getCameraId());
-		if((interlace >= 0) || ((width % 128) != 0))
-		{
-        	ALOGD("allocate InterlaceRecordThread");
+#ifdef ARCH_S5P4418
+		interlace = Parent->Sensor->isInterlace();
+		if (interlace || ((width % 128) != 0)) {
 			streamThread = new InterlaceRecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()), 
 				width,
 				height,
 				spZoomController, 
 				spStreamManager);
-		}
-		else
-		{
+		} else
+#endif
 			streamThread = new RecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()),
 				  width,
 				  height,
 				  spZoomController,
 				  spStreamManager);
-		}
         break;
 
     case STREAM_ID_ZSL:
@@ -190,7 +185,6 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
 
 int NXStreamManager::removeStream(uint32_t streamId)
 {
-	ALOGD("+++ [%s] +++", __func__);
     if (StreamThreads.indexOfKey(streamId) < 0) {
         ALOGE("removeStream: streamId %d is not added", streamId);
         return NO_ERROR;

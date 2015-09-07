@@ -32,7 +32,9 @@ public:
     virtual int setFormat(int width, int height, int format) {
         return v4l2_set_format(V4l2ID, width, height, format);
     }
-	virtual bool isInterlace() = 0;
+	virtual bool isInterlace() {
+		return false;	
+	}
 
 protected:
     uint32_t V4l2ID;
@@ -82,7 +84,6 @@ uint32_t get_board_capture_skip_frame(int v4l2_sensorId, int width = 0, int heig
 void set_board_preview_mode(int v4l2_sensorId, int width, int height);
 void set_board_capture_mode(int v4l2_sensorId, int width, int height);
 uint32_t get_board_camera_orientation(int cameraId);
-int32_t get_board_camera_interlace(int cameraId);
 
 } // namespace android
 
