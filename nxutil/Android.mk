@@ -23,10 +23,6 @@ else
 LOCAL_CFLAGS := -DARM64=0
 endif
 
-LOCAL_SRC_FILES_arm += \
-	csc_ARGB8888_to_NV12_NEON.s \
-	csc_ARGB8888_to_NV21_NEON.s
-
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libion-nexell libion
 
 ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
@@ -35,6 +31,15 @@ ifeq "5" "$(ANDROID_VERSION_MAJOR)"
 #@echo This is LOLLIPOP!!!
 LOCAL_C_INCLUDES += system/core/libion/include
 LOCAL_CFLAGS += -DLOLLIPOP
+LOCAL_SRC_FILES_arm += \
+	csc_ARGB8888_to_NV12_NEON.s \
+	csc_ARGB8888_to_NV21_NEON.s
+endif
+
+ifeq "4" "$(ANDROID_VERSION_MAJOR)"
+LOCAL_SRC_FILES += \
+	csc_ARGB8888_to_NV12_NEON.s \
+	csc_ARGB8888_to_NV21_NEON.s
 endif
 
 LOCAL_MODULE := libnxutil

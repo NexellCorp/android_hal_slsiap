@@ -28,6 +28,7 @@ LOCAL_SRC_FILES := \
 	CallbackThread.cpp \
 	CaptureThread.cpp \
 	RecordThread.cpp \
+	InterlaceRecordThread.cpp \
 	NXStreamManager.cpp \
 	NXCameraHWInterface2.cpp
 
@@ -42,6 +43,7 @@ LOCAL_CFLAGS += -DUSE_SYSTEM_TIMESTAMP
 ifeq ($(TARGET_CPU_VARIANT2),s5p4418)
 LOCAL_SRC_FILES += W128BAScalerZoomController.cpp
 LOCAL_CFLAGS += -DWORKAROUND_128BYTE_ALIGN
+LOCAL_CFLAGS += -DARCH_S5P4418
 endif
 
 ifeq ($(TARGET_CPU_VARIANT2),s5p6818)
@@ -133,3 +135,80 @@ LOCAL_MODULE_TAGS := optional
 include $(BUILD_EXECUTABLE)
 
 endif
+
+#LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libbinder libutils libgui libui libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_native_test
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native-copy.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libbinder libutils libgui libui libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_native_test_copy
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
+
+#LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native-thread.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libhardware_legacy libbinder libutils libgui libui libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_thread_native_test
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-native-thread-deinter.cpp \
+				   native_window_test/NXDeinterlacerManager.cpp
+
+LOCAL_SHARED_LIBRARIES := libcutils libhardware_legacy libbinder libutils libgui libui libnxutil libion-nexell libv4l2-nexell libion
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					system/core/libion/include \
+					hardware/libhardware/include  \
+					hardware/samsung_slsi/slsiap/include \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_thread_deinter_native_test
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-switch.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := camera_test_switch
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
