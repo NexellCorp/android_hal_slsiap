@@ -12,12 +12,12 @@ bool android_nxp_v4l2_init()
         struct V4l2UsageScheme s;
         memset(&s, 0, sizeof(s));
 
-        s.useClipper0 = true;
-        s.useDecimator0 = true;
-        s.useMlc0Video = true;
-        s.useMlc1Video = true;
-        s.useMlc1Rgb = true;
-        s.useHdmi = true;
+        // s.useClipper0 = true;
+        // s.useDecimator0 = true;
+        // s.useMlc0Video = true;
+        // s.useMlc1Video = true;
+        // s.useMlc1Rgb = true;
+        // s.useHdmi = true;
 
         int ret = v4l2_init(&s);
         if (ret != 0)
