@@ -8,11 +8,6 @@ BUILD=release
 #===================================
 # mali environment config for user
 #===================================
-#KDIR=../../../../../../kernel/
-#CROSS_COMPILE=arm-eabi-
-#KDIR=~/devel/build/s5p6818/linux_ln/
-#CROSS_COMPILE=arm-cortex_a9-linux-gnueabi-
-
 KDIR=../../../../../../kernel/
 CROSS_COMPILE=aarch64-linux-gnu-
 

@@ -23,7 +23,7 @@ extern "C" {
 
 extern struct platform_device *mali_platform_device;
 
-#if defined(CONFIG_MALI_DT)
+#if defined(CONFIG_MALI_DT) /* NEXELL_FEATURE_PORTING */
 extern int mali_platform_device_init(struct platform_device *device);
 extern int mali_platform_device_deinit(struct platform_device *device);
 #endif

@@ -1108,6 +1108,9 @@ static void mali_scheduler_return_gp_job_to_user(struct mali_gp_job *job,
 
 	jobres->user_job_ptr = mali_gp_job_get_user_id(job);
 	if (MALI_TRUE == success) {
+
+		
+	
 		jobres->status = _MALI_UK_JOB_STATUS_END_SUCCESS;
 	} else {
 		jobres->status = _MALI_UK_JOB_STATUS_END_UNKNOWN_ERR;

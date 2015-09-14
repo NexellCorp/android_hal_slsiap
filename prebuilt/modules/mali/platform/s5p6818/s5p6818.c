@@ -35,6 +35,15 @@ static int mali_core_scaling_enable = 0;
 void mali_gpu_utilization_callback(struct mali_gpu_utilization_data *data);
 
 static struct mali_gpu_device_data mali_gpu_data = {
+	/* temp test */
+#if 0 //ndef CONFIG_MALI_DT
+	.pmu_switch_delay = 0xFF, /* do not have to be this high on FPGA, but it is good for testing to have a delay */
+	.max_job_runtime = 60000, /* 60 seconds */
+#if 0 //defined(CONFIG_ARCH_VEXPRESS)
+	.shared_mem_size = 256 * 1024 * 1024, /* 256MB */
+#endif
+#endif
+
 	.control_interval = 1000, /* 1000ms */
 	.utilization_callback = mali_gpu_utilization_callback,
 	.get_clock_info = NULL,
@@ -53,6 +62,11 @@ int mali_platform_device_init(struct platform_device *device)
 	 if (device && !device->dev.dma_mask) {
 		device->dev.dma_mask = &device->dev.coherent_dma_mask;		
 		device->dev.coherent_dma_mask = DMA_BIT_MASK(32);	
+#if 0		
+#if defined(CONFIG_ARM64)
+		device->dev.archdata.dma_ops = &noncoherent_swiotlb_dma_ops,
+#endif
+#endif		
 	}
 
 	err = platform_device_add_data(device, &mali_gpu_data, sizeof(mali_gpu_data));

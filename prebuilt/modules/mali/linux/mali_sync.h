@@ -24,7 +24,7 @@
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 #include <linux/sync.h>
 #else
-#if 1
+#if 1 /* NEXELL_FEATURE_PORTING */
 #include <linux/sync.h>
 #else /* org */
 #include <sync.h>

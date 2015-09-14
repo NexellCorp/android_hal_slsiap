@@ -71,7 +71,12 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(mali_sw_counters);
 extern const char *__malidrv_build_info(void);
 
 /* Module parameter to control log level */
+#if 1 /* org */
 int mali_debug_level = 2;
+#else /* temp test */
+int mali_debug_level = 2;
+#endif
+
 module_param(mali_debug_level, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw-rw-r-- */
 MODULE_PARM_DESC(mali_debug_level, "Higher number, more dmesg output");
 
@@ -1064,8 +1069,11 @@ int mali_module_init(void)
 				      0, 0, 0);
 #endif
 
-	MALI_PRINT(("Mali device driver loaded\n"));
-
+#ifdef DEBUG
+	MALI_PRINT(("Mali device driver loaded. ver1.4D\n"));
+#else
+	MALI_PRINT(("Mali device driver loaded. ver1.4\n"));
+#endif
 	return 0; /* Success */
 }
 
@@ -1297,13 +1305,13 @@ static int mali_open(struct inode *inode, struct file *filp)
 
 	/* input validation */
 	if (mali_miscdevice.minor != iminor(inode)) {
-		MALI_PRINT_ERROR(("mali_open() Minor does not match\n"));
+		MALI_PRINT_ERROR(("mali_open() Minor does not match\n"));		
 		return -ENODEV;
 	}
-
+	
 	/* allocated struct to track this session */
 	err = _mali_ukk_open((void **)&session_data);
-	if (_MALI_OSK_ERR_OK != err) return map_errcode(err);
+	if (_MALI_OSK_ERR_OK != err) return map_errcode(err);	
 
 	/* initialize file pointer */
 	filp->f_pos = 0;

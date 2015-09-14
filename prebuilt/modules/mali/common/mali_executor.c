@@ -735,6 +735,12 @@ _mali_osk_errcode_t mali_executor_interrupt_pp(struct mali_group *group,
 	return _MALI_OSK_ERR_OK;
 }
 
+
+/* temp test*/
+/*int gFirstTempTestDone = 0;*/
+
+
+
 _mali_osk_errcode_t mali_executor_interrupt_mmu(struct mali_group *group,
 		mali_bool in_upper_half)
 {
@@ -795,6 +801,25 @@ _mali_osk_errcode_t mali_executor_interrupt_mmu(struct mali_group *group,
 
 		u32 fault_address = mali_mmu_get_page_fault_addr(group->mmu);
 		u32 status = mali_mmu_get_status(group->mmu);
+
+
+		/* temp test*/
+		#if 0
+		{
+			if(!gFirstTempTestDone)
+			{
+				MALI_DEBUG_PRINT(2, ("Executor: Mali page fault detected at 0x%x from bus id %d of type %s on %s\n",
+						     (void *)(uintptr_t)fault_address,
+						     (status >> 6) & 0x1F,
+						     (status & 32) ? "write" : "read",
+						     group->mmu->hw_core.description));
+				MALI_DEBUG_PRINT(2, ("Executor: MMU rawstat = 0x%08X, MMU status = 0x%08X\n",
+						     mali_mmu_get_rawstat(group->mmu), status));
+
+				//gFirstTempTestDone = 1;		     
+			}
+		}
+		#else /* org */		
 		MALI_DEBUG_PRINT(2, ("Executor: Mali page fault detected at 0x%x from bus id %d of type %s on %s\n",
 				     (void *)(uintptr_t)fault_address,
 				     (status >> 6) & 0x1F,
@@ -802,6 +827,7 @@ _mali_osk_errcode_t mali_executor_interrupt_mmu(struct mali_group *group,
 				     group->mmu->hw_core.description));
 		MALI_DEBUG_PRINT(3, ("Executor: MMU rawstat = 0x%08X, MMU status = 0x%08X\n",
 				     mali_mmu_get_rawstat(group->mmu), status));
+		#endif		     
 #endif
 
 		mali_executor_complete_group(group, MALI_FALSE, &gp_job, &pp_job);

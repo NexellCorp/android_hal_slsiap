@@ -369,6 +369,23 @@ _mali_osk_errcode_t _mali_osk_device_data_get(_mali_osk_device_data *data)
 				else
 				{
 					printk("################ ERROR! There is no available FB ###############\n");
+					printk("registered_fb0(0x%x), registered_fb1(0x%x)\n", registered_fb[0], registered_fb[1]);
+					{
+						struct fb_info *info;
+						info = registered_fb[0];
+						if(info)
+						{
+							printk("fix.smem_start(0x%x), var.yres_virtual(0x%p), info->var.xres(%d), info->var.yres(%d), fix.smem_len(0x%x)\n",
+								info->fix.smem_start, info->var.yres_virtual, info->var.xres, info->var.yres, info->fix.smem_len);
+						}
+						
+						info = registered_fb[1];
+						if(info)
+						{
+							printk("fix.smem_start(0x%x), var.yres_virtual(0x%p), info->var.xres(%d), info->var.yres(%d), fix.smem_len(0x%x)\n",
+								info->fix.smem_start, info->var.yres_virtual, info->var.xres, info->var.yres, info->fix.smem_len);
+						}
+					}
 					return _MALI_OSK_ERR_ITEM_NOT_FOUND;
 				}	
 				

@@ -113,6 +113,11 @@ static _mali_osk_errcode_t fill_page(mali_io_address mapping, u32 data)
 	MALI_SUCCESS;
 }
 
+
+/* temp test*/
+/*extern int gFirstTempTestDone;*/
+
+
 _mali_osk_errcode_t mali_mmu_pagedir_map(struct mali_page_directory *pagedir, u32 mali_address, u32 size)
 {
 	const int first_pde = MALI_MMU_PDE_ENTRY(mali_address);
@@ -121,6 +126,12 @@ _mali_osk_errcode_t mali_mmu_pagedir_map(struct mali_page_directory *pagedir, u3
 	mali_io_address pde_mapping;
 	mali_dma_addr pde_phys;
 	int i;
+
+	
+	/* temp test*/
+	/*u32 pde_phys_first = 0;*/
+
+	
 
 	if (last_pde < first_pde)
 		return _MALI_OSK_ERR_INVALID_ARGS;
@@ -145,11 +156,30 @@ _mali_osk_errcode_t mali_mmu_pagedir_map(struct mali_page_directory *pagedir, u3
 
 			MALI_DEBUG_ASSERT(0 == pagedir->page_entries_usage_count[i]);
 			pagedir->page_entries_usage_count[i] = 1;
+
+
+			/* temp test */
+			#if 0
+			if(!pde_phys_first)
+			{
+				pde_phys_first = pde_phys;
+			}
+			#endif
+			
 		} else {
 			pagedir->page_entries_usage_count[i]++;
 		}
 	}
 	_mali_osk_write_mem_barrier();
+
+
+	/* temp test*/
+	#if 0
+	if(!gFirstTempTestDone)
+	{
+		MALI_PRINT(("[drv] <1> phys(0x%x):mali(0x%x), size(0x%x)\n", pde_phys_first, mali_address, size));
+	}
+	#endif
 
 	return _MALI_OSK_ERR_OK;
 }
@@ -302,11 +332,22 @@ void mali_mmu_pagedir_free(struct mali_page_directory *pagedir)
 }
 
 
+/* temp test */
+#if 0
+extern int gFirstTempTestDone;
+#endif
+
 void mali_mmu_pagedir_update(struct mali_page_directory *pagedir, u32 mali_address,
 			     mali_dma_addr phys_address, u32 size, u32 permission_bits)
 {
 	u32 end_address = mali_address + size;
 	u32 mali_phys = (u32)phys_address;
+
+
+	/* temp test */
+	#if 0
+	u32 first_mali_addr = mali_address;
+	#endif
 
 	/* Map physical pages into MMU page tables */
 	for (; mali_address < end_address; mali_address += MALI_MMU_PAGE_SIZE, mali_phys += MALI_MMU_PAGE_SIZE) {
@@ -315,6 +356,15 @@ void mali_mmu_pagedir_update(struct mali_page_directory *pagedir, u32 mali_addre
 						MALI_MMU_PTE_ENTRY(mali_address) * sizeof(u32),
 						mali_phys | permission_bits);
 	}
+
+	
+	/* temp test*/
+	#if 0
+	if(!gFirstTempTestDone)
+	{
+		MALI_PRINT(("[drv] <2> phys(0x%x):mali(0x%x), size(0x%x)\n", phys_address, first_mali_addr, size));
+	}
+	#endif
 }
 
 void mali_mmu_pagedir_diag(struct mali_page_directory *pagedir, u32 fault_addr)
