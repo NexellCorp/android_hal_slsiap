@@ -58,7 +58,7 @@ endif
 	#libEGL_vr
 
 # for ogl 64bit
-PRODUCT_PACKAGES += \
+#PRODUCT_PACKAGES += \
 	libGLES_mali
 
 # haptic HAL
