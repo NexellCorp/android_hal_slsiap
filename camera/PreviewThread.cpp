@@ -148,16 +148,18 @@ status_t PreviewThread::readyToRun()
     }
 #endif
 
+    // psw0523 fix for SVT
     ret = Sensor->setFormat(Width, Height, V4L2_MBUS_FMT_YUYV8_2X8);
     if (ret < 0) {
-        ALOGE("failed to v4l2_set_format for %d", SensorId);
+        ALOGE("failed to v4l2_set_format for Sensor %d", SensorId);
         return NO_INIT;
     }
 
+    // psw0523 fix for SVT
     if (get_board_camera_is_mipi(SensorId)) {
         ret = v4l2_set_format(nxp_v4l2_mipicsi, Width, Height, V4L2_MBUS_FMT_YUYV8_2X8);
         if (ret < 0) {
-            ALOGE("failed to v4l2_set_format for %d", nxp_v4l2_mipicsi);
+            ALOGE("failed to v4l2_set_format for MipiCSI %d", nxp_v4l2_mipicsi);
             return NO_INIT;
         }
     }

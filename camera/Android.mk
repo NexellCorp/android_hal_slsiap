@@ -32,8 +32,10 @@ LOCAL_SRC_FILES := \
 	NXStreamManager.cpp \
 	NXCameraHWInterface2.cpp
 
-LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libnxutil libion-nexell libv4l2-nexell libion libhardware \
+#LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libnxutil libion-nexell libv4l2-nexell libion libhardware \
 	libcamera_client libcamera_metadata libNX_Jpeg libjpeg libNX_Jpeghw
+LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libnxutil libion-nexell libv4l2-nexell libion libhardware \
+	libcamera_client libcamera_metadata libNX_Jpeg libjpeg
 
 LOCAL_STATIC_LIBRARIES := libcamera-$(TARGET_BOOTLOADER_BOARD_NAME) libcamerasensor
 

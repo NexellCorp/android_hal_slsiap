@@ -19,7 +19,7 @@
 #include <fourcc.h>
 
 // if defined, use hw jpeg library
-#define USE_HW_JPEG
+//#define USE_HW_JPEG
 
 #ifdef USE_HW_JPEG
 #include <libnxjpeghw.h>
@@ -308,6 +308,43 @@ void CaptureThread::freeCaptureBuffer()
     CaptureBufferAllocated = false;
 }
 
+// psw0523 add for arm64
+bool CaptureThread::capture(void *srcYPhys, void *srcCBPhys, void *srcCRPhys,
+    void *srcYVirt, void *srcCBVirt, void *srcCRVirt,
+    void *dstBase, int dstSize, int width, int height, uint32_t dstOffset)
+{
+#ifdef USE_HW_JPEG
+  return false;
+#else
+    int jpegSize;
+    int jpegBufSize;
+    char *jpegBuf;
+    camera2_jpeg_blob *jpegBlob;
+
+    struct ycbcr_planar planar;
+    planar.y = (unsigned char *)srcYVirt;
+    planar.cb = (unsigned char *)srcCBVirt;
+    planar.cr = (unsigned char *)srcCRVirt;
+
+    jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
+            (unsigned char const *)&planar, width, height, 100, NX_PIXFORMAT_YUV420);
+    if (jpegSize <= 0) {
+      ALOGE("failed to NX_JpegEncoding!!!");
+      return false;
+    }
+
+    jpegBufSize = dstSize;
+    jpegBuf = (char *)dstBase;
+    jpegBlob = (camera2_jpeg_blob *)(&jpegBuf[jpegBufSize - sizeof(camera2_jpeg_blob)]);
+    jpegBlob->jpeg_size = jpegSize + dstOffset;
+    jpegBlob->jpeg_blob_id = CAMERA2_JPEG_BLOB_ID;
+
+    ALOGD("capture success: jpegSize(%d), totalSize(%d)", jpegSize, jpegBlob->jpeg_size);
+#endif
+
+    return true;
+}
+
 bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsigned int srcCRPhys,
         unsigned int srcYVirt, unsigned int srcCBVirt, unsigned int srcCRVirt,
         void *dstBase, int dstSize, int width, int height, uint32_t dstOffset)
@@ -322,8 +359,8 @@ bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsig
         ALOGE("HWJPEG not support YUV422_PACKED format!!!");
         return false;
 #else
-        jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
-                (unsigned char const *)srcYVirt, width, height, 100, NX_PIXELFORMAT_YUYV);
+        // jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
+        //         (unsigned char const *)srcYVirt, width, height, 100, NX_PIXELFORMAT_YUYV);
 #endif
     } else {
 #ifdef USE_HW_JPEG
@@ -338,12 +375,13 @@ bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsig
                 dstOffset == 0);
 #endif
 #else
-        struct ycbcr_planar planar;
-        planar.y = (unsigned char *)srcYVirt;
-        planar.cb = (unsigned char *)srcCBVirt;
-        planar.cr = (unsigned char *)srcCRVirt;
-        jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
-                (unsigned char const *)&planar, width, height, 100, NX_PIXFORMAT_YUV420);
+        // psw0523 fix
+        // struct ycbcr_planar planar;
+        // planar.y = (unsigned char *)srcYVirt;
+        // planar.cb = (unsigned char *)srcCBVirt;
+        // planar.cr = (unsigned char *)srcCRVirt;
+        // jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
+        //         (unsigned char const *)&planar, width, height, 100, NX_PIXFORMAT_YUV420);
 #endif
     }
     if (jpegSize <= 0) {
@@ -378,7 +416,11 @@ bool CaptureThread::capture(struct nxp_vid_buffer *srcBuf, private_handle_t cons
     releaseVirtForHandle(dstHandle, dstVirt);
     return captured;
 #else
-    return false;
+    bool captured = capture((void *)srcBuf->phys[0], (void *)srcBuf->phys[1], (void *)srcBuf->phys[2],
+            (void *)srcBuf->virt[0], (void *)srcBuf->virt[1], (void *)srcBuf->virt[2],
+            (void *)dstVirt, dstHandle->size, width, height, dstOffset);
+    releaseVirtForHandle(dstHandle, dstVirt);
+    return captured;
 #endif
 }
 
@@ -449,15 +491,18 @@ bool CaptureThread::threadLoop()
             }
 
             private_handle_t const *dstHandle = stream->getNextBuffer();
-            NXExifProcessor::ExifResult result = ExifProcessor->makeExif(Width, Height, srcBuf, CurrentExif, dstHandle);
-            if (result.getSize() == 0) {
-                ALOGE("Failed to makeExif()!!!");
-            } else {
-                if (false == capture(srcBuf, dstHandle, Width, Height, result.getSize()))
-                    ALOGE("Capture Failed!!!");
-
-                ExifProcessor->clear();
-            }
+            // psw0523 fix for SVT arm64
+            // NXExifProcessor::ExifResult result = ExifProcessor->makeExif(Width, Height, srcBuf, CurrentExif, dstHandle);
+            // if (result.getSize() == 0) {
+            //     ALOGE("Failed to makeExif()!!!");
+            // } else {
+            //     if (false == capture(srcBuf, dstHandle, Width, Height, result.getSize()))
+            //         ALOGE("Capture Failed!!!");
+            //
+            //     ExifProcessor->clear();
+            // }
+            if (false == capture(srcBuf, dstHandle, Width, Height, 0)) 
+              ALOGE("Capture Failed!!!");
 
             status_t res = stream->enqueueBuffer(CaptureTimeStamp);
             if (res != NO_ERROR) {

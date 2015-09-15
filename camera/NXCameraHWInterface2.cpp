@@ -155,7 +155,7 @@ int NXCameraHWInterface2::allocateStream(uint32_t width, uint32_t height, int fo
 //#ifdef ARCH_S5P6818
     //bool useSensorZoom = true;
 //#else
-    bool useSensorZoom = false;
+    bool useSensorZoom = true;
     if (Sensor->getZoomFactor() > 1)
         useSensorZoom = true;
 //#endif

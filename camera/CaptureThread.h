@@ -42,6 +42,10 @@ private:
     bool capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsigned int srcCRPhys,
                  unsigned int srcYVirt, unsigned int srcCBVirt, unsigned int srcCRVirt,
                  void *dstBase, int dstSize, int width, int height, uint32_t dstOffset = 0);
+    // psw0523 add for arm64
+    bool capture(void *srcYPhys, void *srcCBPhys, void *srcCRPhys,
+        void *srcYVirt, void *srcCBVirt, void *srcCRVirt,
+        void *dstBase, int dstSize, int width, int height, uint32_t dstOffset = 0);
     bool capture(private_handle_t const *srcHandle, private_handle_t const *dstHandle, int width, int height, uint32_t dstOffset = 0);
     bool capture(struct nxp_vid_buffer *srcBuf, private_handle_t const *dstHandle, int width, int height, uint32_t dstOffset = 0);
     bool makeFrame(camera_metadata_t *srcMetadata);
