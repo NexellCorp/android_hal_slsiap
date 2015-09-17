@@ -249,7 +249,6 @@ bool PreviewThread::threadLoop()
 #endif
     }
     ALOGV("dqIdx: %d", dqIdx);
-    ALOGD("dqIdx: %d", dqIdx);
 
     if (InitialSkipCount) {
         InitialSkipCount--;
@@ -297,7 +296,6 @@ bool PreviewThread::threadLoop()
         ERROR_EXIT();
     }
     ALOGV("End v4l2_qbuf()");
-    ALOGD("End v4l2_qbuf()");
 
     CHECK_AND_EXIT();
 
