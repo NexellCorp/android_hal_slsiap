@@ -56,6 +56,11 @@
 #define VSYNC_OFF           "0"
 
 #define HDMI_STATE_FILE     "/sys/class/switch/hdmi/state"
+#define HDMI_STATE_CHANGE_EVENT "change@/devices/virtual/switch/hdmi"
+
+#define TVOUT_STATE_FILE    "/sys/class/switch/tvout/state"
+#define TVOUT_STATE_CHANGE_EVENT "change@/devices/virtual/switch/tvout"
+
 #define FRAMEBUFFER_FILE    "/dev/graphics/fb0"
 
 #define HWC_SCENARIO_PROPERTY_KEY    "hwc.scenario"
@@ -63,6 +68,14 @@
 #define HWC_RESOLUTION_PROPERTY_KEY  "hwc.resolution"
 #define HWC_HDMIMODE_PROPERTY_KEY    "hwc.hdmimode"
 #define HWC_SCREEN_DOWNSIZING_PROPERTY_KEY "hwc.screendownsizing"
+#define HWC_EXTERNAL_DISPLAY_PROPERTY_KEY "persist.external_display_device"
+
+enum {
+    EXTERNAL_DISPLAY_DEVICE_HDMI = 0,
+    EXTERNAL_DISPLAY_DEVICE_TVOUT,
+    EXTERNAL_DISPLAY_DEVICE_DUMMY,
+    EXTERNAL_DISPLAY_DEVICE_MAX
+};
 
 #define MAX_SCALE_FACTOR        3
 
@@ -126,6 +139,7 @@ public:
     uint32_t mScaleFactor;
     uint32_t mHDMIMode;
     bool     mScreenDownSizing;
+    uint32_t mExternalDisplayDevice;
 
 
     /* interface to SurfaceFlinger */
@@ -200,28 +214,9 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
 
     close(fd);
 
-#if 0
-    uint64_t base =
-         (uint64_t)((info.upper_margin + info.lower_margin + info.yres)
-             * (info.left_margin + info.right_margin + info.xres)
-             * info.pixclock);
-    uint32_t refreshRate = 60;
-    if (base != 0) {
-        refreshRate = 1000000000000LLU / base;
-        if (refreshRate <= 0 || refreshRate > 60) {
-            ALOGE("invalid refresh rate(%d), assuming 60Hz", refreshRate);
-            ALOGE("upper_margin(%d), lower_margin(%d), yres(%d),left_margin(%d), right_margin(%d), xres(%d),pixclock(%d)",
-                    info.upper_margin, info.lower_margin, info.yres,
-                    info.left_margin, info.right_margin, info.xres,
-                    info.pixclock);
-            refreshRate = 60;
-        }
-    }
-#else
     int32_t xres, yres, refreshRate;
     getScreenAttribute("fb0", xres, yres, refreshRate);
     ALOGD("%s: refreshRate %d", __func__, refreshRate);
-#endif
 
     pInfo->xres = info.xres;
     pInfo->yres = info.yres;
@@ -236,21 +231,32 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
     return 0;
 }
 
-static bool hdmi_connected()
+static bool hdmi_connected(struct NXHWC *me)
 {
-    char val;
-    int fd = open(HDMI_STATE_FILE, O_RDONLY);
-    if (fd < 0) {
-        ALOGE("failed to open hdmi state fd: %s", HDMI_STATE_FILE);
+    if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_DUMMY) {
+        return false;
     } else {
-        char val;
-        if (read(fd, &val, 1) == 1 && val == '1') {
-            return true;
-        }
-        close(fd);
-    }
+        char *state_file = NULL;
+        if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI)
+            state_file = HDMI_STATE_FILE;
+        else if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT)
+            state_file = TVOUT_STATE_FILE;
+        else
+            return false;
 
-    return false;
+        int fd = open(state_file, O_RDONLY);
+        if (fd < 0) {
+            ALOGE("failed to open hdmi state fd: %s", HDMI_STATE_FILE);
+        } else {
+            char val;
+            if (read(fd, &val, 1) == 1 && val == '1') {
+                return true;
+            }
+            close(fd);
+        }
+
+        return false;
+    }
 }
 
 /**********************************************************************************************
@@ -284,7 +290,7 @@ static void *hwc_vsync_thread(void *data)
         num_fds++;
     }
 
-    while(true) {
+    while (true) {
         err = poll(fds, num_fds, -1);
 
         if (err > 0) {
@@ -293,7 +299,16 @@ static void *hwc_vsync_thread(void *data)
             } else if ((me->mHDMIMode == HDMI_MODE_SECONDARY) &&
                        (fds[1].revents & POLLIN)) {
                 int len = uevent_next_event(uevent_desc, sizeof(uevent_desc) - 2);
-                bool hdmi = !strcmp(uevent_desc, "change@/devices/virtual/switch/hdmi");
+                char *event_file = NULL;
+                if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI)
+                    event_file = HDMI_STATE_CHANGE_EVENT;
+                else if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT)
+                    event_file = TVOUT_STATE_CHANGE_EVENT;
+                else {
+                    ALOGE("%s: invalid external display device: %d ---> stop", __func__, me->mExternalDisplayDevice); 
+                    return NULL;
+                }
+                bool hdmi = !strcmp(uevent_desc, event_file);
                 if (hdmi)
                     me->handleHDMIEvent(uevent_desc, len);
             }
@@ -776,7 +791,7 @@ void NXHWC::changeHDMIImpl()
         delete oldHDMIAlternativeImpl;
 
     // 5. check hdmi connected and if so, enable
-    if (hdmi_connected()) {
+    if (hdmi_connected(this)) {
         ALOGD("changeHDMIImpl: force connect!");
         mHDMIPlugged = true;
         mHDMIImpl->enable();
@@ -858,6 +873,30 @@ void NXHWC::getHWCProperty()
     }
     mOriginalUsageScenario = mUsageScenario;
 
+    len = property_get((const char *)HWC_SCREEN_DOWNSIZING_PROPERTY_KEY, buf, "0"); // default - no downsizing
+    if (len <= 0)
+        mScreenDownSizing = false;
+    else
+        mScreenDownSizing = buf[0] == '1' ? true : false;
+
+    len = property_get((const char *)HWC_EXTERNAL_DISPLAY_PROPERTY_KEY, buf, "hdmi"); // default - hdmi
+    if (len <= 0) {
+        mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_HDMI;
+    } else {
+        if (!strcmp("hdmi", buf)) {
+        } else if (!strcmp("tvout", buf)) {
+            mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_TVOUT;
+        } else if (!strcmp("dummy", buf)) {
+            mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_DUMMY;
+        } else {
+            ALOGE("%s: unknown external device : %s", __func__, buf);
+            ALOGE("set to default hdmi", __func__);
+            mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_HDMI;
+        }
+    }
+    ALOGD("HWC_EXTERNAL_DISPLAY_PROPERTY_KEY --> %s", buf);
+    ALOGD("%s: external display device --> %d", __func__, mExternalDisplayDevice);
+
     len = property_get((const char *)HWC_RESOLUTION_PROPERTY_KEY, buf, "18"); // default - 1920x1080
     if (len <= 0)
         setHDMIPreset(18);
@@ -873,16 +912,15 @@ void NXHWC::getHWCProperty()
 #else
     mScaleFactor = 0;
 #endif
-
-    len = property_get((const char *)HWC_SCREEN_DOWNSIZING_PROPERTY_KEY, buf, "0"); // default - no downsizing
-    if (len <= 0)
-        mScreenDownSizing = false;
-    else
-        mScreenDownSizing = buf[0] == '1' ? true : false;
 }
 
 void NXHWC::checkHDMIModeAndSetProperty()
 {
+    // if (mExternalDisplayDevice != EXTERNAL_DISPLAY_DEVICE_HDMI) {
+    //     mHDMIMode = HDMI_MODE_SECONDARY;
+    //     return;
+    // }
+
     int fd = open("/sys/devices/platform/nxp-hdmi/modalias", O_RDONLY);
     char *mode;
     if (fd < 0) {
@@ -902,36 +940,41 @@ void NXHWC::checkHDMIModeAndSetProperty()
 
 void NXHWC::setHDMIPreset(uint32_t preset)
 {
-    if (preset != mHDMIPreset) {
-        switch (preset) {
-            case V4L2_DV_1080P60:
-                mHDMIWidth = 1920;
-                mHDMIHeight = 1080;
-                mHDMIPreset = preset;
-                break;
-            case V4L2_DV_720P60:
-                mHDMIWidth = 1280;
-                mHDMIHeight = 720;
-                mHDMIPreset = preset;
-                break;
-            case V4L2_DV_576P50:
-                mHDMIWidth = 720;
-                mHDMIHeight = 576;
-                mHDMIPreset = preset;
-                break;
-            case V4L2_DV_480P60:
-                mHDMIWidth = 720;
-                mHDMIHeight = 480;
-                mHDMIPreset = preset;
-                break;
-            default:
-                mHDMIWidth = 1920;
-                mHDMIHeight = 1080;
-                mHDMIPreset = V4L2_DV_1080P60;
-                break;
-        }
+    if (mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI) {
+        if (preset != mHDMIPreset) {
+            switch (preset) {
+                case V4L2_DV_1080P60:
+                    mHDMIWidth = 1920;
+                    mHDMIHeight = 1080;
+                    mHDMIPreset = preset;
+                    break;
+                case V4L2_DV_720P60:
+                    mHDMIWidth = 1280;
+                    mHDMIHeight = 720;
+                    mHDMIPreset = preset;
+                    break;
+                case V4L2_DV_576P50:
+                    mHDMIWidth = 720;
+                    mHDMIHeight = 576;
+                    mHDMIPreset = preset;
+                    break;
+                case V4L2_DV_480P60:
+                    mHDMIWidth = 720;
+                    mHDMIHeight = 480;
+                    mHDMIPreset = preset;
+                    break;
+                default:
+                    mHDMIWidth = 1920;
+                    mHDMIHeight = 1080;
+                    mHDMIPreset = V4L2_DV_1080P60;
+                    break;
+            }
 
-        ALOGD("HDMI Resolution: %dx%d", mHDMIWidth, mHDMIHeight);
+            ALOGD("HDMI Resolution: %dx%d", mHDMIWidth, mHDMIHeight);
+        }
+    } else if (mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT) {
+        mHDMIWidth = 720;
+        mHDMIHeight = 480;
     }
 }
 
@@ -1164,10 +1207,12 @@ static int hwc_blank(struct hwc_composer_device_1 *dev, int disp, int blank)
         break;
 
     case HWC_DISPLAY_EXTERNAL:
-        if (blank)
-            v4l2_set_ctrl(nxp_v4l2_hdmi, V4L2_CID_HDMI_ON_OFF, 0);
-        else
-            v4l2_set_ctrl(nxp_v4l2_hdmi, V4L2_CID_HDMI_ON_OFF, 1);
+        if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI) {
+            if (blank)
+                v4l2_set_ctrl(nxp_v4l2_hdmi, V4L2_CID_HDMI_ON_OFF, 0);
+            else
+                v4l2_set_ctrl(nxp_v4l2_hdmi, V4L2_CID_HDMI_ON_OFF, 1);
+        }
         break;
 
     default:
@@ -1309,6 +1354,7 @@ static int hwc_close(hw_device_t *device)
 static int hwc_open(const struct hw_module_t *module, const char *name, struct hw_device_t **device)
 {
     int ret;
+    int externalDevice = 0;
 
     ALOGD("hwc_open");
 
@@ -1351,7 +1397,7 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     me->getHWCProperty();
     me->checkHDMIModeAndSetProperty();
 
-    if (me->mHDMIMode == HDMI_MODE_SECONDARY && hdmi_connected()) {
+    if (me->mHDMIMode == HDMI_MODE_SECONDARY && hdmi_connected(me)) {
         me->mHDMIPlugged = true;
         ALOGD("HDMI Plugged boot!!!");
     }
@@ -1365,32 +1411,56 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
         goto error_out;
     }
 
-    me->mHDMIImpl = HWCreator::create(HWCreator::DISPLAY_HDMI,
-            me->mUsageScenario,
-            me->mHDMIWidth,
-            me->mHDMIHeight,
-            me->mScreenInfo.width,
-            me->mScreenInfo.height,
-            me->mScaleFactor);
-    if (!me->mHDMIImpl) {
-        ALOGE("failed to create hdmi implementor: scenario %d", me->mUsageScenario);
-        goto error_out;
-    }
+    if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI ||
+        me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT) {
+        me->mHDMIImpl = HWCreator::create(HWCreator::DISPLAY_HDMI,
+                me->mUsageScenario,
+                me->mHDMIWidth,
+                me->mHDMIHeight,
+                me->mScreenInfo.width,
+                me->mScreenInfo.height,
+                me->mScaleFactor);
+        if (!me->mHDMIImpl) {
+            ALOGE("failed to create hdmi implementor: scenario %d", me->mUsageScenario);
+            goto error_out;
+        }
 
-    me->mHDMIAlternateImpl = HWCreator::create(HWCreator::DISPLAY_HDMI_ALTERNATE,
-            me->mUsageScenario,
-            me->mHDMIWidth,
-            me->mHDMIHeight,
-            me->mScreenInfo.width,
-            me->mScreenInfo.height,
-            me->mScaleFactor);
-    me->mUseHDMIAlternate = 0;
-    ALOGD("mHDMIAlternateImpl %p", me->mHDMIAlternateImpl);
+        me->mHDMIAlternateImpl = HWCreator::create(HWCreator::DISPLAY_HDMI_ALTERNATE,
+                me->mUsageScenario,
+                me->mHDMIWidth,
+                me->mHDMIHeight,
+                me->mScreenInfo.width,
+                me->mScreenInfo.height,
+                me->mScaleFactor);
+        me->mUseHDMIAlternate = 0;
+        ALOGD("mHDMIAlternateImpl %p", me->mHDMIAlternateImpl);
 
-    ret = pthread_create(&me->mVsyncThread, NULL, hwc_vsync_thread, me);
-    if (ret) {
-        ALOGE("failed to start vsync thread: %s", strerror(ret));
-        goto error_out;
+        ret = pthread_create(&me->mVsyncThread, NULL, hwc_vsync_thread, me);
+        if (ret) {
+            ALOGE("failed to start vsync thread: %s", strerror(ret));
+            goto error_out;
+        }
+    } else if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_DUMMY) {
+        me->mHDMIImpl = HWCreator::create(HWCreator::DISPLAY_DUMMY,
+                me->mUsageScenario,
+                me->mHDMIWidth,
+                me->mHDMIHeight,
+                me->mScreenInfo.width,
+                me->mScreenInfo.height,
+                me->mScaleFactor);
+        if (!me->mHDMIImpl) {
+            ALOGE("failed to create hdmi implementor: scenario %d", me->mUsageScenario);
+            goto error_out;
+        }
+
+        me->mHDMIAlternateImpl = HWCreator::create(HWCreator::DISPLAY_DUMMY,
+                me->mUsageScenario,
+                me->mHDMIWidth,
+                me->mHDMIHeight,
+                me->mScreenInfo.width,
+                me->mScreenInfo.height,
+                me->mScaleFactor);
+        me->mUseHDMIAlternate = 0;
     }
 
     me->mChangingScenario = 0;
@@ -1398,10 +1468,12 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
 
     android_nxp_v4l2_init();
 
-    // TODO
-#if 0
-    if (me->mHDMIPlugged)
-#endif
+    if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI) {
+        externalDevice = nxp_v4l2_hdmi;
+    } else if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT) {
+        externalDevice = nxp_v4l2_tvout;
+    }
+    me->mHDMIImpl->setMyDevice(externalDevice);
     me->mHDMIImpl->enable(); // set(): real enable
 
     me->base.common.tag     = HARDWARE_DEVICE_TAG;
@@ -1449,19 +1521,7 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     return 0;
 
 error_out:
-#if 0
-    if (me->mVsyncCtlFd > 0)
-        close(me->mVsyncCtlFd);
-    if (me->mVsyncMonFd > 0)
-        close(me->mVsyncMonFd);
-    if (me->mLCDImpl)
-        delete me->mLCDImpl;
-    if (me->mHDMIImpl)
-        delete me->mHDMIImpl;
-    delete me;
-#else
     hwc_close(&me->base.common);
-#endif
     return -EINVAL;
 }
 

@@ -11,6 +11,7 @@ public:
         DISPLAY_LCD = 0,
         DISPLAY_HDMI,
         DISPLAY_HDMI_ALTERNATE,
+        DISPLAY_DUMMY,
         DISPLAY_MAX
     };
 

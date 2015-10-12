@@ -142,11 +142,14 @@ int HDMICommonImpl::configHDMI(uint32_t preset)
     if (likely(mHDMIConfigured))
         return 0;
 
-    int ret = v4l2_set_preset(nxp_v4l2_hdmi, preset);
-    if (ret < 0) {
-        ALOGE("configHDMI(): failed to v4l2_set_preset(0x%x)", preset);
-        return ret;
+    if (mMyDevice == nxp_v4l2_hdmi) {
+        int ret = v4l2_set_preset(mMyDevice, preset);
+        if (ret < 0) {
+            ALOGE("configHDMI(): failed to v4l2_set_preset(0x%x)", preset);
+            return ret;
+        }
     }
+
     mHDMIConfigured = true;
     return 0;
 }

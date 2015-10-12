@@ -22,6 +22,7 @@
 #include "HDMIUseOnlyGLImpl.h"
 #include "HDMIUseGLAndVideoImpl.h"
 #include "HDMIUseRescCommonImpl.h"
+#include "DummyImpl.h"
 #include "HWCreator.h"
 
 using namespace android;
@@ -199,6 +200,8 @@ android::HWCImpl *HWCreator::create(
             default:
                 return NULL;
         }
+    } else if (dispType == DISPLAY_DUMMY) {
+        return new DummyImpl();
     } else {
         ALOGE("invalid dispType: %d", dispType);
         return NULL;
