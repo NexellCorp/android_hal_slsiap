@@ -126,16 +126,18 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = DEFAULT_PIXEL_FORMAT;
 
-#ifdef ARCH_S5P4418
 		interlace = Parent->Sensor->isInterlace();
+#ifdef ARCH_S5P4418
 		if (interlace || ((width % 128) != 0)) {
+#else
+		if (interlace) {
+#endif
 			streamThread = new InterlaceRecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()), 
 				width,
 				height,
 				spZoomController, 
 				spStreamManager);
 		} else
-#endif
 			streamThread = new RecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()),
 				  width,
 				  height,
