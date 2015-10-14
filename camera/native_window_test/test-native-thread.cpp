@@ -175,8 +175,8 @@ static void handle_change_event(const char *buf, int len)
 
 static void *backward_camera_monitoring_thread(void *data)
 {
-    const char *state_file = "/sys/devices/virtual/switch/tw9900/state";
-    const char *change_event = "change@/devices/virtual/switch/tw9900";
+    const char *state_file = "/sys/devices/virtual/switch/rearcam/state";
+    const char *change_event = "change@/devices/virtual/switch/rearcam";
 
     int state_fd = open(state_file, O_RDONLY);
     if (state_fd < 0) {
