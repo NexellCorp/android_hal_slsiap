@@ -33,10 +33,12 @@ const int32_t ResolutionSP2518[] = {
     800, 600,
     704, 480,
     720, 480,
-    640, 480,
+    640, 480
+#if 0
     352, 288,
     320, 240,
     176, 144
+#endif
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h

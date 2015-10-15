@@ -29,16 +29,20 @@ enum {
 
 const int32_t ResolutionSP0838[] = {
 #ifdef S5P4418
-    608, 479,
+    608, 479
+#if 0
     //real: 384, 289,
     352, 288,
     //real: 208, 145,
     176, 144,
+#endif
 #else
-    640, 480,
+    640, 480
+#if 0
     352, 288,
     320, 240,
     176, 144,
+#endif
 #endif
 };
 
