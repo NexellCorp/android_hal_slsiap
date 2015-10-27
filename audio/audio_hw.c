@@ -1478,6 +1478,10 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     struct stream_out *out;
     int ret;
     enum output_type type;
+	char s[30];
+	char p[15];
+	char c[] = "SPDIFTranscieve";
+	int i, fd;
 
 	DLOGI("*** %s (devices=0x%x, flags=0x%x) ***\n", __FUNCTION__, devices, flags);
 
@@ -1506,11 +1510,29 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->stream.write = out_write;
     out->stream.get_render_position = out_get_render_position;
 //  out->stream.get_next_write_timestamp = out_get_next_write_timestamp;
-  out->stream.get_presentation_position = out_get_presentation_position;
+	out->stream.get_presentation_position = out_get_presentation_position;
 
 	// jhkim
 	struct snd_card_dev *card = &pcm_out;
 	struct pcm_config *pcm = &out->config;
+
+	// check spdif card name. -> edited by hsjung
+	for (i = 0; i < 10; i++) {
+		sprintf(s, "/proc/asound/card%d/id", i);
+		fd = open(s,O_RDONLY);
+		if (fd < 0) {
+			DLOGI("No more cards\n");
+			break;
+		}
+		read(fd,p,15);
+		if (strcmp(&p,&c) == 0) {
+			DLOGI("card name is %s %d\n", p, i);
+			spdif_out.card = i;
+			break;
+		} else {
+			DLOGI("card name is %s %d\n", p, i);
+		}
+	}
 
 	if ((devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) &&
 		(flags & AUDIO_OUTPUT_FLAG_DIRECT)) {
