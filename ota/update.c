@@ -236,3 +236,33 @@ end:
     printf("%s exit\n", __func__);
     return 0;
 }
+
+int update_sd_from_mem(char *device, int offset, char *mem, size_t img_size)
+{
+    int fd = open(device, O_RDWR);
+    int ret = 0;
+    if (fd < 0) {
+        fprintf(stderr, "%s: failed to open %s\n", __func__, device);
+        return -1;
+    }
+
+    ret = lseek(fd, offset, SEEK_SET);
+    if (ret != offset) {
+        fprintf(stderr, "%s: lseek returned invalid offset(%d/%d)\n", __func__, ret, offset);
+        close(fd);
+        return -1;
+    }
+
+    ret = write(fd, mem, img_size);
+    if (ret != img_size) {
+        fprintf(stderr, "%s: write returned invalid size(%d/%d)\n", __func__, ret, img_size);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+
+    printf("Succeed to update of %s, offset %d, size %d\n", device, offset, img_size);
+
+    return 0;
+}
