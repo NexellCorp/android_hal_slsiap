@@ -36,6 +36,6 @@ make -j7 KDIR=$KDIR BUILD=$BUILD \
 
 	
 cp mali.ko ../
-sudo cp -a mali.ko ~/devel/nfs/kernel_rootfs-zynq/test/
+#sudo cp -a mali.ko ~/devel/nfs/kernel_rootfs-zynq/test/
 
-
+echo "End of build mali module"
