@@ -113,20 +113,35 @@ int HDMIUseOnlyGLImpl::prepare(hwc_display_contents_1_t *contents)
     return 0;
 }
 
-int HDMIUseOnlyGLImpl::set(hwc_display_contents_1_t *contents, void *unused)
+int HDMIUseOnlyGLImpl::set(hwc_display_contents_1_t *contents, __attribute__((__unused__)) void *unused)
 {
-    int framebufferTargetIndex = contents->numHwLayers - 1;
-    if (framebufferTargetIndex > 0) {
-        hwc_layer_1_t *framebufferHWCLayer = &contents->hwLayers[framebufferTargetIndex];
-        configHDMI(mWidth, mHeight);
-        //configRgb(contents->hwLayers[framebufferTargetIndex]);
-        configRgb(*framebufferHWCLayer);
-        mRGBHandle = reinterpret_cast<private_handle_t const *>(framebufferHWCLayer->handle);
-        mRGBRenderer->setHandle(mRGBHandle);
-    } else {
-        mRGBHandle = NULL;
-    }
+    // int fbTargetIndex = -1;
+    // for (int i = (contents->numHwLayers - 1); i >= 0; i--) {
+    //     hwc_layer_1_t &layer = contents->hwLayers[i];
+    //
+    //     if (layer.compositionType == HWC_FRAMEBUFFER_TARGET) {
+    //         ALOGD("HWC_FRAMEBUFFER_TARGET index %d, numLayers %d", i, contents->numHwLayers);
+    //         fbTargetIndex = i;
+    //         break;
+    //     }
+    // }
+    //
+    // if (fbTargetIndex < 0) {
+    //     ALOGE("%s: can't find fbTargetIndex\n", __func__);
+    //     return -1;
+    // }
+    // hwc_layer_1_t *framebufferHWCLayer = &contents->hwLayers[fbTargetIndex];
 
+    hwc_layer_1_t *framebufferHWCLayer = &contents->hwLayers[contents->numHwLayers - 1];
+    mRGBHandle = reinterpret_cast<private_handle_t const *>(framebufferHWCLayer->handle);
+    if (!mRGBHandle) {
+        ALOGE("%s: No vaild RGB Handle, hwc_layer_1_t %p\n", __func__, framebufferHWCLayer);
+        return -1;
+    }
+    configHDMI(mWidth, mHeight);
+    configRgb(*framebufferHWCLayer);
+    mRGBRenderer->setHandle(mRGBHandle);
+    ALOGV("%s: handle %p\n", __func__, mRGBHandle);
     return 0;
 }
 
@@ -144,5 +159,7 @@ int HDMIUseOnlyGLImpl::render()
 {
     if (mRGBHandle)
         return mRGBRenderer->render();
+    else
+        ALOGE("%s --> No valid RGBHandle\n", __func__);
     return 0;
 }

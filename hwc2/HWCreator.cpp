@@ -209,12 +209,12 @@ android::HWCImpl *HWCreator::create(
 }
 
 android::HWCImpl *HWCreator::createByPreset(
-        uint32_t dispType,
-        uint32_t usageScenario,
-        int32_t  preset,
-        int32_t  srcWidth,
-        int32_t  srcHeight,
-        int32_t  scaleFactor)
+        __attribute__((__unused__)) uint32_t dispType,
+        __attribute__((__unused__)) uint32_t usageScenario,
+        __attribute__((__unused__)) int32_t  preset,
+        __attribute__((__unused__)) int32_t  srcWidth,
+        __attribute__((__unused__)) int32_t  srcHeight,
+        __attribute__((__unused__)) int32_t  scaleFactor)
 {
     return NULL;
 }

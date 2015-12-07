@@ -182,28 +182,10 @@ int LCDUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
     return 0;
 }
 
-int LCDUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, void *unused)
+int LCDUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, __attribute__((__unused__)) void *unused)
 {
     mRGBHandle = NULL;
     mVideoHandle = NULL;
-
-#if 0
-    mOverlayLayerIndex = -1;
-    for (size_t i = 0; i < contents->numHwLayers; i++) {
-        hwc_layer_1_t &layer = contents->hwLayers[i];
-
-        if (layer.compositionType == HWC_FRAMEBUFFER_TARGET)
-            continue;
-
-        if (layer.compositionType == HWC_BACKGROUND)
-            continue;
-
-        if (mOverlayLayerIndex == -1 && canOverlay(layer)) {
-            mOverlayLayerIndex = i;
-            break;
-        }
-    }
-#endif
 
     ALOGV("set: rgb %d, overlay %d", mRGBLayerIndex, mOverlayLayerIndex);
     if (mOverlayLayerIndex >= 0) {

@@ -154,7 +154,7 @@ int HDMICommonImpl::configHDMI(uint32_t preset)
     return 0;
 }
 
-int HDMICommonImpl::configHDMI(int width, int height)
+int HDMICommonImpl::configHDMI(__attribute__((__unused__)) int width, int height)
 {
     if (likely(mHDMIConfigured))
         return 0;
@@ -172,7 +172,6 @@ int HDMICommonImpl::configHDMI(int width, int height)
         preset = V4L2_DV_576P50;
         break;
     case 480:
-        //preset = V4L2_DV_480P60;
         preset = V4L2_DV_480P59_94;
         break;
     default:

@@ -46,43 +46,9 @@ LCDRGBRenderer::~LCDRGBRenderer()
 }
 
 #define NXPFB_SET_FB_FD _IOW('N', 102, __u32)
-int LCDRGBRenderer::render(int *fenceFd)
+int LCDRGBRenderer::render(__attribute__((__unused__)) int *fenceFd)
 {
     if (mHandle) {
-#if 0
-        if (mFBFd < 0) {
-            mFBFd = open("/dev/graphics/fb0", O_RDWR);
-            if (mFBFd < 0) {
-                ALOGE("failed to open framebuffer");
-                return -EINVAL;
-            }
-
-            if (ioctl(mFBFd, FBIOGET_VSCREENINFO, &mFBVarInfo) == -1) {
-                ALOGE("can't get fb_var_screeninfo");
-                return -EINVAL;
-            }
-
-            struct fb_fix_screeninfo finfo;
-            if (ioctl(mFBFd, FBIOGET_FSCREENINFO, &finfo) == -1) {
-                ALOGE("can't get fb_fix_screeninfo");
-                return -EINVAL;
-            }
-            mFBLineLength = finfo.line_length;
-        }
-
-        if (mHandle->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER) {
-            mFBVarInfo.activate = FB_ACTIVATE_VBL;
-            mFBVarInfo.yoffset  = mHandle->offset / mFBLineLength;
-            //ALOGD("%s: yoffset 0x%x", __func__, mFBVarInfo.yoffset);
-            if (ioctl(mFBFd, FBIOPUT_VSCREENINFO, &mFBVarInfo) == -1) {
-                ALOGE("failed to FBIOPUT_VSCREENINFO");
-                return -EINVAL;
-            }
-        } else {
-            ALOGE("can't render not framebuffer type handle");
-            return -EINVAL;
-        }
-#else
         if (mFBFd < 0) {
             mFBFd = open("/dev/graphics/fb0", O_RDWR);
             if (mFBFd < 0) {
@@ -91,7 +57,6 @@ int LCDRGBRenderer::render(int *fenceFd)
             }
         }
         ioctl(mFBFd, NXPFB_SET_FB_FD, &mHandle->share_fd);
-#endif
         mHandle = NULL;
     }
 

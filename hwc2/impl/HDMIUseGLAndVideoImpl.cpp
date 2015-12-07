@@ -147,8 +147,8 @@ int HDMIUseGLAndVideoImpl::prepare(hwc_display_contents_1_t *contents)
 
 bool HDMIUseGLAndVideoImpl::checkVideoConfigChanged()
 {
-    uint32_t width = mVideoHandle->width;
-    uint32_t height = mVideoHandle->height;
+    int32_t width = mVideoHandle->width;
+    int32_t height = mVideoHandle->height;
 
     return    (width != mVideoWidth    ||
                height != mVideoHeight  ||
@@ -158,11 +158,8 @@ bool HDMIUseGLAndVideoImpl::checkVideoConfigChanged()
                mVideoBottom != mVideoLayer->displayFrame.bottom);
 }
 
-int HDMIUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, void *unused)
+int HDMIUseGLAndVideoImpl::set(hwc_display_contents_1_t *contents, __attribute__((__unused__)) void *unused)
 {
-    // if (unlikely(!mEnabled))
-    //     return 0;
-
     mRGBHandle = NULL;
     mVideoHandle = NULL;
     mVideoLayer = NULL;

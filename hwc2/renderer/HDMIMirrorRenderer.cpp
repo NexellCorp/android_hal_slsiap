@@ -123,14 +123,10 @@ private_handle_t const *HDMIMirrorRenderer::getHandle()
 #endif
 }
 
-int HDMIMirrorRenderer::render(int *fenceFd)
+int HDMIMirrorRenderer::render(__attribute__((__unused__)) int *fenceFd)
 {
     int ret;
-#if 0
-    private_handle_t *hnd = mMirrorHandleArray[mMirrorIndex];
-#else
     private_handle_t *hnd = mHandle;
-#endif
 
     if (!hnd)
         return 0;

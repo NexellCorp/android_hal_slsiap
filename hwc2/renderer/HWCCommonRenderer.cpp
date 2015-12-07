@@ -64,6 +64,7 @@ int HWCCommonRenderer::render(int *fenceFd)
             mOutCount--;
         }
 
+        ALOGV("%s: handle %p", __func__, hnd);
         ret = v4l2_qbuf(mID, mPlaneNum, mOutIndex, hnd, -1, NULL, fenceFd, NULL);
         if (ret < 0) {
             ALOGE("failed to v4l2_qbuf()");

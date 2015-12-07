@@ -89,11 +89,10 @@ int LCDUseOnlyGLImpl::prepare(hwc_display_contents_1_t *contents)
     return 0;
 }
 
-int LCDUseOnlyGLImpl::set(hwc_display_contents_1_t *contents, void *unused)
+int LCDUseOnlyGLImpl::set(hwc_display_contents_1_t *contents, __attribute__((__unused__)) void *unused)
 {
     mRGBHandle = reinterpret_cast<private_handle_t const *>(contents->hwLayers[contents->numHwLayers - 1].handle);
     return mRGBRenderer->setHandle(mRGBHandle);
-    return 0;
 }
 
 private_handle_t const *LCDUseOnlyGLImpl::getRgbHandle()
