@@ -3,7 +3,11 @@ ifeq ($(BOARD_HAS_GPS),true)
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+else
+LOCAL_MODULE_RELATIVE_PATH := hw
+endif
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/../include

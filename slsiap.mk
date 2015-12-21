@@ -51,11 +51,16 @@ PRODUCT_PACKAGES += libNX_FFMpegExtractor
 endif
 
 # for ogl
+ifeq ($(strip $(TARGET_ARCH)),arm)
 #PRODUCT_PACKAGES += \
 	#libVR \
 	#libGLESv1_CM_vr \
 	#libGLESv2_vr \
 	#libEGL_vr
+else
+PRODUCT_PACKAGES += \
+	libGLES_mali
+endif
 
 # haptic HAL
 ifeq ($(BOARD_HAS_HAPTIC),true)

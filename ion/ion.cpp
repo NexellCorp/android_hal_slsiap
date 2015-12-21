@@ -32,7 +32,9 @@ int ion_get_phys(int fd, int buf_fd, unsigned long *phys)
     data.cmd = NXP_ION_GET_PHY_ADDR;
     data.arg = (unsigned long)&custom_data;
 
+    ALOGD("call ION_IOC_CUSTOM");
     ret = ion_ioctl(fd, ION_IOC_CUSTOM, &data);
+    ALOGD("end ION_IOC_CUSTOM");
     if (ret) {
         ALOGE("%s error: failed ION_IOC_CUSTOM\n", __func__);
         return ret;

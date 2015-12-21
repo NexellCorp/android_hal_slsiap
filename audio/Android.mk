@@ -25,7 +25,11 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := audio.primary.$(TARGET_BOARD_PLATFORM)
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+else
+LOCAL_MODULE_RELATIVE_PATH := hw
+endif
 LOCAL_SRC_FILES := audio_hw.c audio_route.c
 LOCAL_SHARED_LIBRARIES := liblog libcutils libtinyalsa libaudioutils libexpat
 LOCAL_MODULE_TAGS := optional

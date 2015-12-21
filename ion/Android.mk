@@ -1,7 +1,9 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)
+endif
 LOCAL_C_INCLUDES += hardware/samsung_slsi/slsiap/include \
 					hardware/samsung_slsi/slsiap/kernel-headers
 LOCAL_SHARED_LIBRARIES := liblog

@@ -821,6 +821,7 @@ int mali_module_init(void)
 
 
 	//temp test
+#if 0
 	{
 		unsigned int baseaddr = 0x43C20000, offset;
 
@@ -836,6 +837,7 @@ int mali_module_init(void)
 			MALI_PRINT(("[TEST] %s: done\n", __FUNCTION__));
 		}
 	}
+#endif
 	#if 0
 	{
 		unsigned int baseaddr = 0x80000000, offset;
@@ -958,7 +960,7 @@ int mali_module_init(void)
 	#endif	
 
 	MALI_DEBUG_PRINT(2, ("Inserting Mali v%d device driver. \n", _MALI_API_VERSION));
-	MALI_DEBUG_PRINT(2, ("Compiled: %s, time: %s.\n", __DATE__, __TIME__));
+	/* MALI_DEBUG_PRINT(2, ("Compiled: %s, time: %s.\n", __DATE__, __TIME__)); */
 	MALI_DEBUG_PRINT(2, ("Driver revision: %s\n", SVN_REV_STRING));
 
 #if MALI_ENABLE_CPU_CYCLES

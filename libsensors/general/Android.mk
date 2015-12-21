@@ -20,7 +20,11 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := sensors.$(TARGET_BOOTLOADER_BOARD_NAME)
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+else
+LOCAL_MODULE_RELATIVE_PATH := hw
+endif
 LOCAL_MODULE_TAGS := eng optional
 LOCAL_CFLAGS := -DLOG_TAG=\"Sensors\"
 

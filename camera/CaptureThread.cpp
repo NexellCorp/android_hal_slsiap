@@ -18,9 +18,6 @@
 
 #include <fourcc.h>
 
-// if defined, use hw jpeg library
-#define USE_HW_JPEG
-
 #ifdef USE_HW_JPEG
 #include <libnxjpeghw.h>
 #else
@@ -308,28 +305,57 @@ void CaptureThread::freeCaptureBuffer()
     CaptureBufferAllocated = false;
 }
 
-bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsigned int srcCRPhys,
-        unsigned int srcYVirt, unsigned int srcCBVirt, unsigned int srcCRVirt,
-        void *dstBase, int dstSize, int width, int height, uint32_t dstOffset, uint32_t yStride)
+bool CaptureThread::capture(void *srcYPhys, void *srcCBPhys, void *srcCRPhys,
+        void *srcYVirt, void *srcCBVirt, void *srcCRVirt,
+        void *dstBase, int dstSize, int width, int height, uint32_t dstOffset)
 {
+#ifdef USE_HW_JPEG
+    return false;
+#else
     int jpegSize;
     int jpegBufSize;
     char *jpegBuf;
     camera2_jpeg_blob *jpegBlob;
 
-	//ALOGD("KEUN : width : %d, height : %d\n", width, height);
+    struct ycbcr_planar planar;
+    planar.y = (unsigned char *)srcYVirt;
+    planar.cb = (unsigned char *)srcCBVirt;
+    planar.cr = (unsigned char *)srcCRVirt;
+
+    ALOGD("start jpeg sw encoding--> y %p, cb %p, cr %p", srcYVirt, srcCBVirt, srcCRVirt);
+    jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
+            (unsigned char const *)&planar, width, height, 100, NX_PIXFORMAT_YUV420);
+    if (jpegSize <= 0) {
+        ALOGE("failed to NX_JpegEncoding!!!");
+        return false;
+    }
+
+    jpegBufSize = dstSize;
+    jpegBuf = (char *)dstBase;
+    jpegBlob = (camera2_jpeg_blob *)(&jpegBuf[jpegBufSize - sizeof(camera2_jpeg_blob)]);
+    jpegBlob->jpeg_size = jpegSize + dstOffset;
+    jpegBlob->jpeg_blob_id = CAMERA2_JPEG_BLOB_ID;
+
+    ALOGD("capture success: jpegSize(%d), totalSize(%d)", jpegSize, jpegBlob->jpeg_size);
+#endif
+
+    return true;
+}
+
+bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsigned int srcCRPhys,
+        unsigned int srcYVirt, unsigned int srcCBVirt, unsigned int srcCRVirt,
+        void *dstBase, int dstSize, int width, int height, uint32_t dstOffset, uint32_t yStride)
+{
+#ifdef USE_HW_JPEG
+    int jpegSize;
+    int jpegBufSize;
+    char *jpegBuf;
+    camera2_jpeg_blob *jpegBlob;
 
     if (PixelIndex == YUV422_PACKED) {
-#ifdef USE_HW_JPEG
         ALOGE("HWJPEG not support YUV422_PACKED format!!!");
         return false;
-#else
-        jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
-                (unsigned char const *)srcYVirt, width, height, 100, NX_PIXELFORMAT_YUYV);
-#endif
     } else {
-#ifdef USE_HW_JPEG
-
 		uint32_t stride = (yStride == 0) ? width : yStride;
         ALOGV("jpeg src buf: 0x%x, 0x%x, 0x%x, dst virt 0x%x", srcYPhys, srcCBPhys, srcCRPhys, dstBase);
         jpegSize = NX_JpegHWEncoding((void *)(((uint32_t)dstBase) + dstOffset), dstSize,
@@ -338,14 +364,6 @@ bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsig
                 srcCBPhys, srcCBVirt, stride >> 1,
                 srcCRPhys, srcCRVirt, stride >> 1,
                 dstOffset == 0);
-#else
-        struct ycbcr_planar planar;
-        planar.y = (unsigned char *)srcYVirt;
-        planar.cb = (unsigned char *)srcCBVirt;
-        planar.cr = (unsigned char *)srcCRVirt;
-        jpegSize = NX_JpegEncoding((unsigned char *)dstBase, dstSize,
-                (unsigned char const *)&planar, width, height, 100, NX_PIXFORMAT_YUV420);
-#endif
     }
     if (jpegSize <= 0) {
         ALOGE("failed to NX_JpegEncoding!!!");
@@ -360,6 +378,9 @@ bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsig
 
     ALOGD("capture success: jpegSize(%d), totalSize(%d)", jpegSize, jpegBlob->jpeg_size);
     return true;
+#else
+    return false;
+#endif
 }
 
 bool CaptureThread::capture(struct nxp_vid_buffer *srcBuf, private_handle_t const *dstHandle, int width, int height, uint32_t dstOffset)
@@ -370,10 +391,16 @@ bool CaptureThread::capture(struct nxp_vid_buffer *srcBuf, private_handle_t cons
         ALOGE("%s: failed to getVirtForHandle %p", __func__, dstHandle);
         return false;
     }
+#ifdef USE_HW_JPEG
     bool captured = capture((unsigned int)srcBuf->phys[0], (unsigned int)srcBuf->phys[1], (unsigned int)srcBuf->phys[2],
             (unsigned int)srcBuf->virt[0], (unsigned int)srcBuf->virt[1], (unsigned int)srcBuf->virt[2],
             //(void *)dstHandle->base, dstHandle->size, width, height, dstOffset);
             (void *)dstVirt, dstHandle->size, width, height, dstOffset, width);
+#else
+    bool captured = capture((void *)srcBuf->phys[0], (void *)srcBuf->phys[1], (void *)srcBuf->phys[2],
+            (void *)srcBuf->virt[0], (void *)srcBuf->virt[1], (void *)srcBuf->virt[2],
+            (void *)dstVirt, dstHandle->size, width, height, dstOffset);
+#endif
     releaseVirtForHandle(dstHandle, dstVirt);
     return captured;
 }
@@ -423,7 +450,7 @@ bool CaptureThread::threadLoop()
             ALOGE("failed to v4l2_dqbuf for Capture id %d", Id);
             ERROR_EXIT();
         }
-        ALOGV("dq end");
+        ALOGD("dq end");
 
         if (InitialSkipCount) {
             InitialSkipCount--;
@@ -445,6 +472,7 @@ bool CaptureThread::threadLoop()
             }
 
             private_handle_t const *dstHandle = stream->getNextBuffer();
+#ifdef USE_HW_JPEG
             NXExifProcessor::ExifResult result = ExifProcessor->makeExif(Width, Height, srcBuf, CurrentExif, dstHandle);
             if (result.getSize() == 0) {
                 ALOGE("Failed to makeExif()!!!");
@@ -454,6 +482,10 @@ bool CaptureThread::threadLoop()
 
                 ExifProcessor->clear();
             }
+#else
+            if (false == capture(srcBuf, dstHandle, Width, Height, 0))
+                ALOGE("Capture Failed!!!");
+#endif
 
             status_t res = stream->enqueueBuffer(CaptureTimeStamp);
             if (res != NO_ERROR) {

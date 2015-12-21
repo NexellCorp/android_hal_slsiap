@@ -3,7 +3,11 @@ ifeq ($(BOARD_HAS_CAMERA),true)
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+else
+LOCAL_MODULE_RELATIVE_PATH := hw
+endif
 
 LOCAL_C_INCLUDES += \
 	frameworks/native/include \
@@ -33,7 +37,12 @@ LOCAL_SRC_FILES := \
 	NXCameraHWInterface2.cpp
 
 LOCAL_SHARED_LIBRARIES := liblog libutils libcutils libnxutil libion-nexell libv4l2-nexell libion libhardware \
-	libcamera_client libcamera_metadata libNX_Jpeg libjpeg libNX_Jpeghw
+	libcamera_client libcamera_metadata libNX_Jpeg libjpeg
+
+ifeq ($(strip $(TARGET_ARCH)),arm)
+LOCAL_SHARED_LIBRARIES += libNX_Jpeghw
+LOCAL_CFLAGS += -DUSE_HW_JPEG
+endif
 
 LOCAL_STATIC_LIBRARIES := libcamera-$(TARGET_BOOTLOADER_BOARD_NAME) libcamerasensor
 

@@ -20,7 +20,11 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := lights.c
 
 LOCAL_PRELINK_MODULE := false
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+else
+LOCAL_MODULE_RELATIVE_PATH := hw
+endif
 
 LOCAL_SHARED_LIBRARIES := liblog
 

@@ -19,7 +19,12 @@ LOCAL_PATH := $(call my-dir)
 # hw/<OVERLAY_HARDWARE_MODULE_ID>.<ro.product.board>.so
 include $(CLEAR_VARS)
 
+ifeq ($(strip $(TARGET_ARCH)),arm)
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+else
+LOCAL_MODULE_RELATIVE_PATH := hw
+endif
+
 LOCAL_SHARED_LIBRARIES := liblog libcutils libion libutils libion-nexell libnxutil
 
 LOCAL_C_INCLUDES := system/core/include $(LOCAL_PATH)/../include
@@ -39,6 +44,12 @@ ifeq "5" "$(ANDROID_VERSION_MAJOR)"
 #@echo This is LOLLIPOP!!!
 LOCAL_C_INCLUDES += system/core/libion/include
 LOCAL_CFLAGS += -DLOLLIPOP
+endif
+
+kernel_patch_level := $(shell cat kernel/Makefile | grep "PATCHLEVEL =" | cut -f 3 -d ' ')
+#$(warning kernel_patch_level: $(kernel_patch_level))
+ifeq ($(strip $(kernel_patch_level)),18)
+LOCAL_CFLAGS += -DARM64
 endif
 
 include $(BUILD_SHARED_LIBRARY)

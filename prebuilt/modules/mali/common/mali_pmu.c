@@ -185,9 +185,12 @@ _mali_osk_errcode_t mali_pmu_power_up(struct mali_pmu_core *pmu, u32 mask)
 	MALI_DEBUG_ASSERT_POINTER(pmu);
 	MALI_DEBUG_ASSERT(pmu->registered_cores_mask != 0);
 	MALI_DEBUG_ASSERT(mask <= pmu->registered_cores_mask);
+#if 0
+    printk(KERN_ERR "%s: PMU_REG_ADDR_MGMT_INT_RAWSTAT --> 0x%x\n", __func__, mali_hw_core_register_read(&pmu->hw_core, PMU_REG_ADDR_MGMT_INT_RAWSTAT));
 	MALI_DEBUG_ASSERT(0 == (mali_hw_core_register_read(&pmu->hw_core,
 				PMU_REG_ADDR_MGMT_INT_RAWSTAT) &
 				PMU_REG_VAL_IRQ));
+#endif
 
 	MALI_DEBUG_PRINT(3,
 			 ("PMU power up: ........................ [%s]\n",
