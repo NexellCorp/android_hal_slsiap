@@ -225,7 +225,7 @@ static int get_fb_screen_info(struct FBScreenInfo *pInfo)
     pInfo->width = info.xres;
     pInfo->height = info.yres;
     pInfo->vsync_period = 1000000000 / refreshRate;
-    ALOGV("lcd xres %d, yres %d, xdpi %d, ydpi %d, width %d, height %d, vsync_period %llu",
+    ALOGV("lcd xres %d, yres %d, xdpi %d, ydpi %d, width %d, height %d, vsync_period %d",
             pInfo->xres, pInfo->yres, pInfo->xdpi, pInfo->ydpi, pInfo->width, pInfo->height, pInfo->vsync_period);
 
     return 0;
@@ -238,9 +238,9 @@ static bool hdmi_connected(struct NXHWC *me)
     } else {
         char *state_file = NULL;
         if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI)
-            state_file = HDMI_STATE_FILE;
+            state_file = (char *)HDMI_STATE_FILE;
         else if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT)
-            state_file = TVOUT_STATE_FILE;
+            state_file = (char *)TVOUT_STATE_FILE;
         else
             return false;
 
@@ -301,9 +301,9 @@ static void *hwc_vsync_thread(void *data)
                 int len = uevent_next_event(uevent_desc, sizeof(uevent_desc) - 2);
                 char *event_file = NULL;
                 if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI)
-                    event_file = HDMI_STATE_CHANGE_EVENT;
+                    event_file = (char *)HDMI_STATE_CHANGE_EVENT;
                 else if (me->mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT)
-                    event_file = TVOUT_STATE_CHANGE_EVENT;
+                    event_file = (char *)TVOUT_STATE_CHANGE_EVENT;
                 else {
                     ALOGE("%s: invalid external display device: %d ---> stop", __func__, me->mExternalDisplayDevice); 
                     return NULL;
@@ -884,13 +884,14 @@ void NXHWC::getHWCProperty()
         mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_HDMI;
     } else {
         if (!strcmp("hdmi", buf)) {
+            mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_HDMI;
         } else if (!strcmp("tvout", buf)) {
             mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_TVOUT;
         } else if (!strcmp("dummy", buf)) {
             mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_DUMMY;
         } else {
             ALOGE("%s: unknown external device : %s", __func__, buf);
-            ALOGE("set to default hdmi", __func__);
+            ALOGE("set to default hdmi");
             mExternalDisplayDevice = EXTERNAL_DISPLAY_DEVICE_HDMI;
         }
     }
@@ -1122,8 +1123,8 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
             } else {
                 impl = me->mHDMIImpl;
             }
-            impl->set(hdmiContents, (void *)rgbHandle);
-            impl->render();
+            if (NO_ERROR == impl->set(hdmiContents, (void *)rgbHandle))
+                impl->render();
         }
 
         // handle unplug
@@ -1167,7 +1168,7 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
     return 0;
 }
 
-static int hwc_eventControl(struct hwc_composer_device_1 *dev, int dpy,
+static int hwc_eventControl(struct hwc_composer_device_1 *dev, __attribute__((__unused__)) int dpy,
         int event, int enabled)
 {
     struct NXHWC *me = (struct NXHWC *)dev;
@@ -1264,7 +1265,7 @@ static int hwc_getDisplayConfigs(struct hwc_composer_device_1 *dev,
 }
 
 static int hwc_getDisplayAttributes(struct hwc_composer_device_1 *dev,
-        int disp, uint32_t config, const uint32_t *attributes, int32_t *values)
+        int disp, __attribute__((__unused__)) uint32_t config, const uint32_t *attributes, int32_t *values)
 {
     struct NXHWC *me = (struct NXHWC *)dev;
     struct FBScreenInfo *pInfo = &me->mScreenInfo;

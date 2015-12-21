@@ -17,10 +17,10 @@ public:
     virtual int disable() {
         return 0;
     }
-    virtual int prepare(hwc_display_contents_1_t *content) {
+    virtual int prepare(__attribute__((__unused__)) hwc_display_contents_1_t *content) {
         return 0;
     }
-    virtual int set(hwc_display_contents_1_t *content, void *reserve) {
+    virtual int set(__attribute__((__unused__)) hwc_display_contents_1_t *content, __attribute__((__unused__)) void *reserve) {
         return 0;
     }
     virtual private_handle_t const *getRgbHandle() {

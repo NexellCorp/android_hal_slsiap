@@ -146,16 +146,14 @@ int HDMIUseOnlyMirrorImpl::prepare(hwc_display_contents_1_t *contents)
     return 0;
 }
 
-int HDMIUseOnlyMirrorImpl::set(hwc_display_contents_1_t *contents, void *hnd)
+int HDMIUseOnlyMirrorImpl::set(__attribute__((__unused__)) hwc_display_contents_1_t *contents, void *hnd)
 {
-    ALOGV("set");
     if (!mConfigured)
         config();
 
     private_handle_t const *rgbHandle = (private_handle_t const *)hnd;
     mMirrorRenderer->setHandle(rgbHandle);
 
-    ALOGV("set");
     return -EINVAL;
 }
 

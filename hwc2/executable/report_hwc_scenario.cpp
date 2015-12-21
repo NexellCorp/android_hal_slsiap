@@ -22,7 +22,7 @@ static int get_hwc_property(const char *key, uint32_t *val, const char *defaultV
     return len;
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((__unused__)) int argc, __attribute__((__unused__)) char *argv[])
 {
     sp<INXHWCService> hwcService = getNXHWCService();
     uint32_t val;
