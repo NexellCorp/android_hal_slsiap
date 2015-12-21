@@ -74,7 +74,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
     SurfaceComposerClient::openGlobalTransaction();
     surfaceControl->show();
     surfaceControl->setLayer(99999);
-#if 1
+#if 0
     if (module == 0) {
         surfaceControl->setPosition(0, 0);
     } else {
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 
     int ret;
 
-#if 0
+#if 1
     s_thread_data0.module = 0;
     s_thread_data0.width = 704;
     s_thread_data0.height = 480;
