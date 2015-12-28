@@ -112,6 +112,15 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         return -1;
     }
 
+    // psw0523 test for rotate
+#if 0
+    ret = native_window_set_buffers_transform(window.get(), NATIVE_WINDOW_TRANSFORM_ROT_270);
+    if (ret) {
+        ALOGE("failed to native_window_set_buffers_transform(): ret %d", ret);
+        return -1;
+    }
+#endif
+
     ANativeWindowBuffer *anBuffer[BUFFER_COUNT];
     private_handle_t const *handle[BUFFER_COUNT];
 
