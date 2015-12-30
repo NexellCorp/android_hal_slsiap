@@ -37,6 +37,11 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_EXECUTABLES)
 endif
 LOCAL_SHARED_LIBRARIES := liblog libutils libnxhwcservice libcutils libbinder
 LOCAL_CFLAGS += -DLOG_TAG=\"HWC_SCENARIO_REPORTER\"
+ANDROID_VERSION_STR := $(subst ., ,$(PLATFORM_VERSION))
+ANDROID_VERSION_MAJOR := $(firstword $(ANDROID_VERSION_STR))
+ifeq "5" "$(ANDROID_VERSION_MAJOR)"
+LOCAL_CFLAGS += -DLOLLIPOP
+endif
 LOCAL_C_INCLUDES += frameworks/native/include system/core/include
 LOCAL_SRC_FILES := executable/report_hwc_scenario.cpp
 LOCAL_MODULE := report_hwc_scenario

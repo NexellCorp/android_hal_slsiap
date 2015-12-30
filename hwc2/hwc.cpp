@@ -65,7 +65,11 @@
 
 #define HWC_SCENARIO_PROPERTY_KEY    "hwc.scenario"
 #define HWC_SCALE_PROPERTY_KEY       "hwc.scale"
+#ifdef LOLLIPOP
+#define HWC_RESOLUTION_PROPERTY_KEY  "persist.hwc.resolution"
+#else
 #define HWC_RESOLUTION_PROPERTY_KEY  "hwc.resolution"
+#endif
 #define HWC_HDMIMODE_PROPERTY_KEY    "hwc.hdmimode"
 #define HWC_SCREEN_DOWNSIZING_PROPERTY_KEY "hwc.screendownsizing"
 #define HWC_EXTERNAL_DISPLAY_PROPERTY_KEY "persist.external_display_device"
@@ -751,6 +755,7 @@ void NXHWC::changeHDMIImpl()
             mHDMIAlternateImpl->disable();
         ALOGD("changeHDMIImpl: force disconnect!");
         mProcs->hotplug(mProcs, HWC_DISPLAY_EXTERNAL, mHDMIPlugged);
+        usleep(1000000);
     }
 
     // 2. create new impl
@@ -794,6 +799,13 @@ void NXHWC::changeHDMIImpl()
     if (hdmi_connected(this)) {
         ALOGD("changeHDMIImpl: force connect!");
         mHDMIPlugged = true;
+        int externalDevice = 0;
+        if (mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_HDMI) {
+            externalDevice = nxp_v4l2_hdmi;
+        } else if (mExternalDisplayDevice == EXTERNAL_DISPLAY_DEVICE_TVOUT) {
+            externalDevice = nxp_v4l2_tvout;
+        }
+        mHDMIImpl->setMyDevice(externalDevice);
         mHDMIImpl->enable();
         mProcs->hotplug(mProcs, HWC_DISPLAY_EXTERNAL, mHDMIPlugged);
     }
@@ -934,9 +946,9 @@ void NXHWC::checkHDMIModeAndSetProperty()
         mode = (char *)"primary";
         close(fd);
     }
-#ifndef LOLLIPOP
+// #ifndef LOLLIPOP
     property_set((const char *)HWC_HDMIMODE_PROPERTY_KEY, mode);
-#endif
+// #endif
 }
 
 void NXHWC::setHDMIPreset(uint32_t preset)
@@ -1084,6 +1096,16 @@ static int hwc_prepare(struct hwc_composer_device_1 *dev,
     return 0;
 }
 
+static void *hwc_change_impl_thread(void *data)
+{
+    struct NXHWC *me = (struct NXHWC *)data;
+    Mutex::Autolock l(me->mChangeImplLock);
+    if (me->mChangingImpl)
+        me->changeHDMIImpl();
+
+    return NULL;
+}
+
 static int hwc_set(struct hwc_composer_device_1 *dev,
         size_t numDisplays, hwc_display_contents_1_t **displays)
 {
@@ -1159,10 +1181,9 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
     }
 #endif
 
-    {
-        Mutex::Autolock l(me->mChangeImplLock);
-        if (me->mChangingImpl)
-            me->changeHDMIImpl();
+    if (me->mChangingImpl) {
+        pthread_t thread;
+        pthread_create(&thread, NULL, hwc_change_impl_thread, me);
     }
 
     return 0;
@@ -1360,9 +1381,9 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     ALOGD("hwc_open");
 
     NXHWC::HWCPropertyChangeListener *listener = NULL;
-#ifndef LOLLIPOP
+//#ifndef LOLLIPOP
     NXHWCService *service = NULL;
-#endif
+//#endif
 
     if (strcmp(name, HWC_HARDWARE_COMPOSER)) {
         ALOGE("invalid name: %s", name);
@@ -1502,7 +1523,7 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     }
     me->mPropertyChangeListener = listener;
 
-#ifndef LOLLIPOP
+//#ifndef LOLLIPOP
     ALOGD("start NXHWCService");
     service = startNXHWCService();
     if (!service) {
@@ -1511,7 +1532,7 @@ static int hwc_open(const struct hw_module_t *module, const char *name, struct h
     }
 
     service->registerListener(listener);
-#endif
+//#endif
 
     // prepare - set sync
 #ifdef USE_PREPARE_SET_SERIALIZING_SYNC
