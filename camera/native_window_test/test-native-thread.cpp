@@ -74,7 +74,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
     SurfaceComposerClient::openGlobalTransaction();
     surfaceControl->show();
     surfaceControl->setLayer(99999);
-#if 1
+#if 0
     if (module == 0) {
         surfaceControl->setPosition(0, 0);
     } else {
@@ -111,6 +111,15 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
         return -1;
     }
+
+    // psw0523 test for rotate
+#if 0
+    ret = native_window_set_buffers_transform(window.get(), NATIVE_WINDOW_TRANSFORM_ROT_270);
+    if (ret) {
+        ALOGE("failed to native_window_set_buffers_transform(): ret %d", ret);
+        return -1;
+    }
+#endif
 
     ANativeWindowBuffer *anBuffer[BUFFER_COUNT];
     private_handle_t const *handle[BUFFER_COUNT];
@@ -255,7 +264,7 @@ int main(int argc, char *argv[])
 
     int ret;
 
-#if 0
+#if 1
     s_thread_data0.module = 0;
     s_thread_data0.width = 704;
     s_thread_data0.height = 480;
