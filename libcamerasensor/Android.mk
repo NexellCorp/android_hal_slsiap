@@ -25,7 +25,8 @@ LOCAL_SRC_FILES := \
 	HM2057.cpp \
 	TW9900.cpp \
 	TW9992.cpp \
-    NVP6114A.cpp 
+    NVP6114A.cpp \
+    DS90UB914Q.cpp
 
 ifeq ($(TARGET_CPU_VARIANT2),s5p4418)
 LOCAL_CFLAGS += -DS5P4418
