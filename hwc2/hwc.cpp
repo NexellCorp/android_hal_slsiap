@@ -266,17 +266,17 @@ static bool hdmi_connected(struct NXHWC *me)
 /**********************************************************************************************
  * VSync & HDMI Hot Plug Monitoring Thread
  */
+static char temp[4069] = {0, };
+static char uevent_desc[4096] = {0, };
 static void *hwc_vsync_thread(void *data)
 {
     struct NXHWC *me = (struct NXHWC *)data;
-    char uevent_desc[4096];
     memset(uevent_desc, 0, sizeof(uevent_desc));
 
     setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
 
     uevent_init();
 
-    char temp[4096];
     int err = read(me->mVsyncMonFd, temp, sizeof(temp));
     if (err < 0) {
         ALOGE("error reading vsync timestamp: %s", strerror(errno));
@@ -609,6 +609,7 @@ void NXHWC::HWCPropertyChangeListener::onPropertyChanged(int code, int val)
     }
 }
 
+static char vsync_buf[4096] = {0, };
 void NXHWC::handleVsyncEvent()
 {
     if (!mProcs)
@@ -620,16 +621,15 @@ void NXHWC::handleVsyncEvent()
         return;
     }
 
-    char buf[4096] = {0, };
-    err = read(mVsyncMonFd, buf, sizeof(buf));
+    err = read(mVsyncMonFd, vsync_buf, sizeof(vsync_buf));
     if (err < 0) {
         ALOGE("error reading vsync timestamp: %s", strerror(errno));
         return;
     }
-    buf[sizeof(buf) - 1] = '\0';
+    vsync_buf[sizeof(vsync_buf) - 1] = '\0';
 
     errno = 0;
-    uint64_t timestamp = strtoull(buf, NULL, 0);
+    uint64_t timestamp = strtoull(vsync_buf, NULL, 0);
     ALOGV("vsync: timestamp %llu", timestamp);
     if (!errno)
         mProcs->vsync(mProcs, 0, timestamp);
