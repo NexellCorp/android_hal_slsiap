@@ -296,8 +296,18 @@ static int gralloc_alloc_yuv(int ionfd, int w, int h, int format, int usage, pri
 
 static int gralloc_alloc(alloc_device_t *dev, int w, int h, int format, int usage, buffer_handle_t *pHandle, int *pStride)
 {
+    // patch for issue 1554 : lcd -- hdmi contents sync problem
+    // check compatible with kitkat
+#if 0
     if (usage & GRALLOC_USAGE_HW_FB)
         return gralloc_alloc_framebuffer(dev, w*h<<2, usage, pHandle, pStride);
+#else
+    if (usage & GRALLOC_USAGE_EXTERNAL_DISP) {
+        // pass
+    } else if (usage & GRALLOC_USAGE_HW_FB) {
+        return gralloc_alloc_framebuffer(dev, w*h<<2, usage, pHandle, pStride);
+    }
+#endif
 
     private_module_t *m = reinterpret_cast<private_module_t *>(dev->common.module);
 

@@ -167,9 +167,9 @@ public:
     Mutex mSyncLock;
     Condition mSyncSignal;
     bool mPrepared;
+#endif
 #ifdef LOLLIPOP
     bool mBlank[2];
-#endif
 #endif
 
     Mutex mChangeImplLock;
@@ -1124,6 +1124,9 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
     if (lcdContents) {
         me->mLCDImpl->set(lcdContents, NULL);
         rgbHandle = me->mLCDImpl->getRgbHandle();
+#ifdef LOLLIPOP
+        me->mLCDImpl->render();
+#endif
     }
 
     if (hdmiContents && me->mHDMIPlugged) {
@@ -1164,9 +1167,11 @@ static int hwc_set(struct hwc_composer_device_1 *dev,
 #endif
     }
 
+#ifndef LOLLIPOP
     if (lcdContents) {
         me->mLCDImpl->render();
     }
+#endif
 
 
     // handle scenario change
