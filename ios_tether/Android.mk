@@ -6,6 +6,7 @@ include $(LOCAL_PATH)/android/jni/libiconv.mk \
 	$(LOCAL_PATH)/android/jni/libusbmuxd.mk \
 	$(LOCAL_PATH)/android/jni/libusb.mk \
 	$(LOCAL_PATH)/android/jni/libimobiledevice.mk \
+	$(LOCAL_PATH)/android/jni/libxml2.mk \
 	$(LOCAL_PATH)/android/jni/usbmuxd.mk
 
 endif
