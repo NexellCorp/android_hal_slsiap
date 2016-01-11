@@ -30,6 +30,7 @@ enum {
 
 const int32_t ResolutionNVP6114A[] = {
     1280, 720,
+    1920, 1080,
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h
@@ -287,5 +288,5 @@ int NVP6114A::setFormat(int width, int height, int format)
 
 bool NVP6114A::isInterlace()
 {
-	return true;
+	return false;
 }

@@ -287,5 +287,5 @@ int DS90UB914Q::setFormat(int width, int height, int format)
 
 bool DS90UB914Q::isInterlace()
 {
-	return true;
+	return false;
 }
