@@ -178,7 +178,7 @@ static int camera_init(int module, int width, int height, bool is_mipi)
     int clipper_id = module == 0 ? nxp_v4l2_clipper0 : nxp_v4l2_clipper1;
     int sensor_id = module == 0 ? nxp_v4l2_sensor0 : nxp_v4l2_sensor1;
 
-    if (module == 0)
+    if (module == 1)
         CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420));
     else
         CHECK_COMMAND(v4l2_set_format(clipper_id, width, height, V4L2_PIX_FMT_YUV420M));
@@ -280,7 +280,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         return ret;
     }
 
-    if (module == 0) {
+    if (module == 1) {
         ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
         if (ret) {
             ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
@@ -411,8 +411,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
 
         ANativeWindowBuffer *tempBuffer;
         int capture_index;
-        //int count = 2000;
-        int count = 200;
+        int count = 2000;
 
         struct nxp_vid_buffer *pDeinterBuf;
         while (count--) {
@@ -421,7 +420,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
                 ALOGE("v4l2_dqbuf ret %d, capture_index %d", ret, capture_index);
                 break;
             }
-            ALOGD("camera dq end: %d", capture_index);
+            //ALOGD("camera dq end: %d", capture_index);
 
             buf = &camera_buffer[capture_index];
             manager->qSrcBuf(capture_index, buf);
@@ -477,7 +476,7 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
 #endif
         }
 
-#if 1
+#if 0
         //static int capture_count = 0;
         char save_file_name[256] = {0, };
         //char command[128] = {0, };
@@ -520,8 +519,8 @@ static void handle_change_event(const char *buf, int len)
 
 static void *backward_camera_monitoring_thread(void *data)
 {
-    const char *state_file = "/sys/devices/virtual/switch/tw9900/state";
-    const char *change_event = "change@/devices/virtual/switch/tw9900";
+    const char *state_file = "/sys/devices/virtual/switch/rearcam/state";
+    const char *change_event = "change@/devices/virtual/switch/rearcam";
 
     int state_fd = open(state_file, O_RDONLY);
     if (state_fd < 0) {
@@ -531,8 +530,10 @@ static void *backward_camera_monitoring_thread(void *data)
     char val;
     if (read(state_fd, &val, 1) == 1 && val == '1') {
         ALOGD("current backward camera state is on");
+        printf("current backward camera state is on\n");
     } else {
         ALOGD("current backward camera state is off");
+        printf("current backward camera state is off\n");
     }
 
     char uevent_desc[4096];
