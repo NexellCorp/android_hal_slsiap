@@ -157,11 +157,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+#if 0
     ALOGD("start front camera");
-    camera_run(1, 720, 480, true, client.get());
+    camera_run(0, 720, 480, true, client.get());
+#else
     ALOGD("start backward camera");
-    camera_run(0, 704, 480, false, client.get());
-
+    camera_run(1, 704, 480, false, client.get());
+#endif
     IPCThreadState::self()->joinThreadPool();
     return 0;
 }
