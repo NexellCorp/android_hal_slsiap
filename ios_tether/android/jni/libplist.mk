@@ -1,6 +1,5 @@
 #libplist
-# LIB_XML_VERSION:=libxml2-android/libxml2
-LIB_XML_VERSION:=../../../../external/libxml2
+LIB_XML_VERSION:=libxml2-android/libxml2
 LIB_ICONV_VERSION:=libiconv-android/libiconv
 
 LIB_VERSION:=libplist
@@ -48,7 +47,6 @@ LOCAL_SRC_FILES := \
 LOCAL_C_INCLUDES := \
  $(LIB_ROOT_ABS)/../../usbmuxd/out/toolchain/sysroot/usr/include \
  $(LIB_ROOT_ABS)/../../usbmuxd/out/toolchain/include/c++/4.8 \
- external/icu/icu4c/source/common/	\
  $(LIB_ROOT_ABS)/src \
  $(LIB_ROOT_ABS)/include \
  $(LIB_ROOT_ABS)/libcnary/include \
@@ -61,7 +59,7 @@ LOCAL_C_INCLUDES := \
  $(LIB_ROOT_ABS)/../$(LIB_ICONV_VERSION)/libcharset/include
 
 LOCAL_STATIC_LIBRARIES := libcnary
-LOCAL_SHARED_LIBRARIES := libiconv libxml2
+LOCAL_SHARED_LIBRARIES := libiconv libxml2_ios
 
 LOCAL_MODULE := libplist
 
@@ -102,7 +100,7 @@ LOCAL_C_INCLUDES := \
  $(LIB_ROOT_ABS)/../$(LIB_ICONV_VERSION)/libcharset/include
 
 LOCAL_STATIC_LIBRARIES := libcnary
-LOCAL_SHARED_LIBRARIES := libiconv libxml2 libplist
+LOCAL_SHARED_LIBRARIES := libiconv libxml2_ios libplist
 
 LOCAL_MODULE := libplist++
 
@@ -134,7 +132,7 @@ LOCAL_C_INCLUDES := \
  $(LIB_ROOT_ABS)/../$(LIB_ICONV_VERSION)/libcharset/include
 
 LOCAL_STATIC_LIBRARIES := libcnary
-LOCAL_SHARED_LIBRARIES := libiconv libxml2 libplist
+LOCAL_SHARED_LIBRARIES := libiconv libxml2_ios libplist
 
 LOCAL_MODULE := plistutil
 
