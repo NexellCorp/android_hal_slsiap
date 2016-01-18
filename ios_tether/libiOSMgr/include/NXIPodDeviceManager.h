@@ -28,6 +28,7 @@ extern "C"{
 
 enum {
 	//	API Error Code
+	ERR_CHANGE_MODE		= -3,		//	Change mode Error
 	ERR_PROPERTY_ACC	= -2,		//	Property Access Error
 	ERR_BINDER_CON		= -1,		//	Binder Connection Error
 
