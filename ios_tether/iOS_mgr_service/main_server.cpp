@@ -18,7 +18,7 @@ int main( int argc, char *argv[] )
 {
 	int32_t ret;
 
-	ALOGD( "%s()  \n", __func__);
+	ALOGD( "%s() Ver.1.00  \n", argv[0]);
 
 	ret = StartIPodDeviceManagerService();
 

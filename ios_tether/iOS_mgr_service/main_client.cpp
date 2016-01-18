@@ -42,9 +42,12 @@ int main( int argc, char *argv[] )
 				ALOGD("Client : Call : NX_IPodGetCurrentMode() : IPOD_MODE_IAP2 Mode. \n");
 			else if(ret == IPOD_MODE_TETHERING)
 				ALOGD("Client : Call : NX_IPodGetCurrentMode() : IPOD_MODE_TETHERING Mode. \n");
-			else 
+			else if(ret == IPOD_MODE_CHANGING)
+				ALOGD("Client : Call : NX_IPodGetCurrentMode() : IPOD_MODE_CHANGING Mode. \n");
+			else if(ret == IPOD_MODE_NO_DEVIDE)
 				ALOGD("Client : Call : NX_IPodGetCurrentMode() : IPOD_MODE_NO_DEVIDE Mode. \n");
-
+			else
+				ALOGD("Client : Call : NX_IPodGetCurrentMode() : unkown Mode. \n");
 			break;
 	}
 	return 0;
