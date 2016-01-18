@@ -37,6 +37,10 @@ enum {
 	IPOD_MODE_IAP2 		= 2,			//	iAP2 Mode
 	IPOD_MODE_TETHERING,			//	Tethering Mode
 	IPOD_MODE_NO_DEVIDE,			//	No device
+
+	IPOD_MODE_IAP1_CHANGING,		//	iAP1 changing
+	IPOD_MODE_IAP2_CHANGING, 		//	iAP2 changing
+	IPOD_MODE_TETHERING_CHANGING,	//	Tethering changing
 };
 
 //
