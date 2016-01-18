@@ -33,6 +33,7 @@
 using namespace android;
 
 #define VID_APPLE 0x5ac
+#define PID_APPLE 0x1200
 
 #define IPOD_INSERT_UEVENT_STRING	"add@/devices/platform/nxp-ehci/usb2/2-1"
 #define IPOD_REMOVE_UEVENT_STRING	"remove@/devices/platform/nxp-ehci/usb2/2-1"
