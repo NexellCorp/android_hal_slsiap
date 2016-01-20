@@ -221,3 +221,17 @@ LOCAL_MODULE := camera_test_switch
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := native_window_test/test-tvout-set.cpp
+LOCAL_SHARED_LIBRARIES := libcutils libv4l2-nexell
+LOCAL_C_INCLUDES := frameworks/native/include \
+					system/core/include \
+					hardware/libhardware/include  \
+					$(LOCAL_PATH)/../include
+
+LOCAL_MODULE := tvout_test_set
+LOCAL_MODULE_TAGS := optional
+
+include $(BUILD_EXECUTABLE)
