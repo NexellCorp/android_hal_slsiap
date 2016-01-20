@@ -83,7 +83,7 @@ struct private_handle_t {
     int width;
     int height;
     int stride;
-    int base;
+    void* base;
     mali_gralloc_yuv_info yuv_info;
 
 #ifdef __cplusplus
@@ -99,7 +99,7 @@ struct private_handle_t {
             int width,
             int height,
             int stride,
-            int base,
+            void* base,
             mali_gralloc_yuv_info yuv_info,
             int fd,
             int fd1 = -1,

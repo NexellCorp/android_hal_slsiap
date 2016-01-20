@@ -1,4 +1,5 @@
 #define LOG_TAG "NXStreamManager"
+#define	LOG_NDEBUG	0
 
 #include <utils/Log.h>
 
@@ -14,6 +15,7 @@
 #include "CallbackThread.h"
 #include "CaptureThread.h"
 #include "RecordThread.h"
+#include "InterlaceRecordThread.h"
 #include "Constants.h"
 #include "NXStreamManager.h"
 
@@ -80,6 +82,7 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
     sp<NXStreamManager> spStreamManager(this);
 
     NXStreamThread *streamThread = NULL;
+	bool	interlace = false;
 
     switch (id) {
     case STREAM_ID_PREVIEW:
@@ -122,11 +125,24 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = DEFAULT_PIXEL_FORMAT;
-        streamThread = new RecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()),
-                width,
-                height,
-                spZoomController,
-                spStreamManager);
+
+		interlace = Parent->Sensor->isInterlace();
+#ifdef ARCH_S5P4418
+		if (interlace || ((width % 128) != 0)) {
+#else
+		if (interlace) {
+#endif
+			streamThread = new InterlaceRecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()), 
+				width,
+				height,
+				spZoomController, 
+				spStreamManager);
+		} else
+			streamThread = new RecordThread((nxp_v4l2_id)get_board_record_v4l2_id(Parent->getCameraId()),
+				  width,
+				  height,
+				  spZoomController,
+				  spStreamManager);
         break;
 
     case STREAM_ID_ZSL:

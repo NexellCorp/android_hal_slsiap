@@ -51,20 +51,26 @@ extern void csc_ARGB8888_to_NV21_NEON(unsigned char *dstY, unsigned char *dstCbC
 }
 
 void csc_ARGB8888_to_NV12(unsigned char *dstY, unsigned char *dstCbCr, unsigned char *src, unsigned int width, unsigned int height);
+void csc_ARGB8888_to_NV21(unsigned char *dstY, unsigned char *dstCbCr, unsigned char *src, unsigned int Width, unsigned int Height);
+
 
 int cscARGBToNV21(char *src, char *dstY, char *dstCbCr, uint32_t srcWidth, uint32_t srcHeight, uint32_t cbFirst)
 {
     if( cbFirst )
     {
-#if 1
-        csc_ARGB8888_to_NV12_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
-#else
+#if ARM64		//	C module
 		csc_ARGB8888_to_NV12((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+#else
+        csc_ARGB8888_to_NV12_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
 #endif
     }
     else
     {
+#if ARM64		//	C module
+        csc_ARGB8888_to_NV21((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+#else
         csc_ARGB8888_to_NV21_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+#endif
     }
     return 0;
 }
@@ -134,6 +140,38 @@ void csc_ARGB8888_to_NV12(unsigned char *dstY, unsigned char *dstCbCr, unsigned 
 				*dstCbCr = (unsigned char)iTmp;		dstCbCr += 1;
 
 				iTmp     = (((112 * byR) - (94 * byG) - (18 * byB) + 128) >> 8) + 128;
+				if (iTmp > 255) iTmp = 255;
+				else if (iTmp < 0) iTmp = 0;
+				*dstCbCr = (unsigned char)iTmp;		dstCbCr += 1;
+			}
+			src     += 4;
+		}
+	}
+}
+
+void csc_ARGB8888_to_NV21(unsigned char *dstY, unsigned char *dstCbCr, unsigned char *src, unsigned int Width, unsigned int Height)
+{
+	int w, h, iTmp;
+
+	for (h = 0 ; h < Height ; h++) {
+		for (w = 0 ; w < Width ; w++) {
+			unsigned char byR = *(src);
+			unsigned char byG = *(src+1);
+			unsigned char byB = *(src+2);
+
+			iTmp     = (((66 * byR) + (129 * byG) + (25 * byB) + (128)) >> 8) + 16;
+			if (iTmp > 255) iTmp = 255;
+			else if (iTmp < 0) iTmp = 0;
+			*dstY    = (unsigned char)iTmp;			dstY    += 1;
+
+			if ( ((h&1)==0) && ((w&1)==0) )
+			{
+				iTmp     = (((112 * byR) - (94 * byG) - (18 * byB) + 128) >> 8) + 128;
+				if (iTmp > 255) iTmp = 255;
+				else if (iTmp < 0) iTmp = 0;
+				*dstCbCr = (unsigned char)iTmp;		dstCbCr += 1;
+
+				iTmp     = (((-38 * byR) - (74 * byG) + (112 * byB) + 128) >> 8) + 128;
 				if (iTmp > 255) iTmp = 255;
 				else if (iTmp < 0) iTmp = 0;
 				*dstCbCr = (unsigned char)iTmp;		dstCbCr += 1;

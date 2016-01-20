@@ -37,7 +37,7 @@ static int write_int(char const *path, int value)
 
 	already_warned = 0;
 
-	ALOGD("write_int: path %s, value %d", path, value);
+	ALOGV("write_int: path %s, value %d", path, value);
 	fd = open(path, O_RDWR);
 
 	if (fd >= 0) {
@@ -100,7 +100,7 @@ static int open_lights(const struct hw_module_t *module, char const *name,
 	int (*set_light)(struct light_device_t *dev,
 		struct light_state_t const *state);
 
-	ALOGD("open_lights: open with %s", name);
+	ALOGV("open_lights: open with %s", name);
 
     if (strcmp(LIGHT_ID_BACKLIGHT, name) == 0)
         set_light = set_light_backlight;
@@ -122,7 +122,7 @@ static int open_lights(const struct hw_module_t *module, char const *name,
 
 	*device = (struct hw_device_t *)dev;
 
-    ALOGD("%s exit", __func__);
+    ALOGV("%s exit", __func__);
 	return 0;
 }
 
@@ -130,7 +130,7 @@ static struct hw_module_methods_t lights_module_methods = {
     .open = open_lights,
 };
 
-const struct hw_module_t HAL_MODULE_INFO_SYM = {
+struct hw_module_t HAL_MODULE_INFO_SYM = {
     .tag = HARDWARE_MODULE_TAG,
     .version_major = 1,
     .version_minor = 0,

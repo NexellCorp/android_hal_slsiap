@@ -72,9 +72,9 @@ int HDMIUseOnlyMirrorImpl::enable()
 {
     if (!mEnabled) {
         ALOGD("Enable");
-        int ret = v4l2_link(mSubID, nxp_v4l2_hdmi);
+        int ret = v4l2_link(mSubID, mMyDevice);
         if (ret < 0) {
-            ALOGE("can't link %d-->%d", mSubID, nxp_v4l2_hdmi);
+            ALOGE("can't link %d-->%d", mSubID, mMyDevice);
             return -EINVAL;
         }
         mEnabled = true;
@@ -87,7 +87,7 @@ int HDMIUseOnlyMirrorImpl::disable()
     // if (mEnabled) {
         ALOGD("Disable");
         mMirrorRenderer->stop();
-        v4l2_unlink(mSubID, nxp_v4l2_hdmi);
+        v4l2_unlink(mSubID, mMyDevice);
         unConfigHDMI();
         mConfigured = false;
         mEnabled = false;

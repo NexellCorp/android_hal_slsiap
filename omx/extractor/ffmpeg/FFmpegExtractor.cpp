@@ -68,6 +68,11 @@ static AVPacket flush_pkt;
 
 namespace android {
 
+static status_t addVorbisCodecInfo(
+        const sp<MetaData> &meta,
+        const void *_codecPrivate, size_t codecPrivateSize);
+
+
 typedef struct {
 	const char *format;
 	const char *container;
@@ -148,15 +153,18 @@ private:
 	mutable Mutex mLock;
 
 	bool mIsAVC;
+	bool mIsHEVC;
 	bool mIsMp3;
 	bool mIsMp3Seek;
 	size_t mNALLengthSize;
 	bool mNal2AnnexB;
+	bool mNeedStartKey;
 
 	AVStream *mStream;
 	PacketQueue *mQueue;
 
 	int64_t mFirstKeyPktTimestamp;
+	int64_t mPktTsPrev;
 
 private:
 	FFMpegSource(const FFMpegSource &);
@@ -167,8 +175,10 @@ FFMpegSource::FFMpegSource(const sp<FFmpegExtractor> &extractor, sp<MetaData> me
 	: mExtractor(extractor)
 	, mMeta(meta)
 	, mIsAVC(isAVC)
+	, mIsHEVC(false)
 	, mIsMp3(false)
 	, mIsMp3Seek(false)
+	, mNeedStartKey(true)
 	, mStream(stream)
 	, mQueue(queue)
 {
@@ -200,13 +210,81 @@ FFMpegSource::FFMpegSource(const sp<FFmpegExtractor> &extractor, sp<MetaData> me
 	}
 
 	//	Check MP3 Codec
-	if( stream->codec->codec_id == AV_CODEC_ID_MP3 )
+	if( AV_CODEC_ID_MP3 == stream->codec->codec_id )
 	{
 		mIsMp3 = true;
+	}
+	else if( AV_CODEC_ID_HEVC == stream->codec->codec_id )
+	{
+
+		/* Codec Private Data
+		The format of the MKV CodecPrivate element for HEVC has been aligned with MP4 and GPAC/MP4Box.
+		The definition of MP4 for HEVC has not been finalized. The version of MP4Box appears to be
+		aligned with the latest version of the HEVC standard. The configuration_version field should be
+		kept 0 until CodecPrivate for HEVC have been finalized. Thereafter it shall have the required value of 1.
+		The CodecPrivate format is flexible and allows storage of arbitrary NAL units.
+		However it is restricted by MP4 to VPS, SPS and PPS headers and SEI messages that apply to the
+		whole stream as for example user data. The table below specifies the format:
+
+		Value                               Bits  Description
+		-----                               ----  -----------
+		configuration_version               8	  The value should be 0 until the format has been finalized.
+		                                          Thereafter is should have the specified value (probably 1).
+		                                          This allows us to recognize (and ignore) non-standard CodecPrivate
+		general_profile_space               2     Specifies the context for the interpretation of general_profile_idc and  general_profile_compatibility_flag
+		general_tier_flag                   1     Specifies the context for the interpretation of general_level_idc
+		general_profile_idc                 5     Defines the profile of the bitstream
+		general_profile_compatibility_flag  32    Defines profile compatibility, see [2] for interpretation
+		general_progressive_source_flag     1     Source is progressive, see [2] for interpretation.
+		general_interlace_source_flag       1     Source is interlaced, see [2] for interpretation.
+		general_nonpacked_constraint_flag   1     If 1 then no frame packing arrangement SEI messages, see [2] for more information
+		general_frame_only_constraint_flag  1     If 1 then no fields, see [2] for interpretation
+		reserved                            44    Reserved field, value TBD 0
+		general_level_idc                   8     Defines the level of the bitstream
+		reserved                            4     Reserved Field, value '1111'b
+		min_spatial_segmentation_idc        12    Maximum possible size of distinct coded spatial segmentation regions in the pictures of the CVS
+		reserved                            6     Reserved Field, value '111111'b
+		parallelism_type                    2     0=unknown, 1=slices, 2=tiles, 3=WPP
+		reserved                            6     Reserved field, value '111111'b
+		chroma_format_idc                   2     See table 6-1, HEVC
+		reserved                            5     Reserved Field, value '11111'b
+		bit_depth_luma_minus8               3     Bit depth luma minus 8
+		reserved                            5     Reserved Field, value '11111'b
+		bit_depth_chroma_minus8             3     Bit depth chroma minus 8
+		reserved                            16    Reserved Field, value 0
+		reserved                            2     Reserved Field, value 0
+		max_sub_layers                      3     maximum number of temporal sub-layers
+		temporal_id_nesting_flag            1     Specifies whether inter prediction is additionally restricted. see [2] for interpretation.
+		size_nalu_minus_one                 2     Size of field NALU Length – 1
+		num_parameter_sets                  8     Number of parameter sets
+
+		for (i=0;i<num_parameter_sets;i++) {
+		  array_completeness                1     1 when there is no duplicate parameter set with same id in the stream, 0 otherwise or unknown
+		  reserved                          1     Value '1'b
+		  nal_unit_type                     6     Nal unit type, restricted to VPS, SPS, PPS and SEI, SEI must be of declarative nature which applies to the whole stream such as user data sei.
+		  nal_unit_count                    16    Number of nal units
+		  for (j=0;j<nalu_unit_count;j+) {
+		    size                            16    Size of nal unit
+		    for(k=0;k<size;k++) {
+		      data[k]                       8     Nalu data+
+		    }
+		  }
+		}*/
+		mNal2AnnexB = false;
+		if( stream->codec->extradata_size > 21 )
+		{
+			if( stream->codec->extradata[0]==1 || stream->codec->extradata[1]==1 )
+			{
+				mIsHEVC = true;
+				mNALLengthSize = 1 + (stream->codec->extradata[14 + 7] & 3);
+				mNal2AnnexB = true;
+			}
+		}
 	}
 
 	mMediaType = mStream->codec->codec_type;
 	mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
+	mPktTsPrev	  = AV_NOPTS_VALUE;	
 }
 
 FFMpegSource::~FFMpegSource() {
@@ -260,6 +338,12 @@ status_t FFMpegSource::read(MediaBuffer **buffer, const ReadOptions *options)
 		mIsMp3Seek = true;
 	}
 
+	if( mNeedStartKey )
+	{
+		mNeedStartKey = false;
+		waitKeyPkt = true;
+	}
+
 retry:
 	if (mExtractor->packet_queue_get(mQueue, &pkt, 1) < 0)
 	{
@@ -288,6 +372,7 @@ retry:
 		ALOGV("read %s flush pkt", av_get_media_type_string(mMediaType));
 		av_free_packet(&pkt);
 		mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
+		mPktTsPrev = AV_NOPTS_VALUE;
 		goto retry;
 	}
 	else if (pkt.data == NULL && pkt.size == 0)
@@ -301,8 +386,16 @@ retry:
 	key = (pkt.flags & AV_PKT_FLAG_KEY) ? 1 : 0;
 	pktTS = pkt.pts;
 	// use dts when AVI
-	if (pkt.pts == AV_NOPTS_VALUE)
+	if ( (pkt.pts == AV_NOPTS_VALUE) && (pkt.dts != AV_NOPTS_VALUE) )
 		pktTS = pkt.dts;
+	else if ( (pkt.pts == AV_NOPTS_VALUE) && (pkt.dts == AV_NOPTS_VALUE) )
+		pktTS = mPktTsPrev;
+
+	// mPktTsPrev Update
+	if( (mPktTsPrev == AV_NOPTS_VALUE) && (pktTS != AV_NOPTS_VALUE) )
+		mPktTsPrev = pktTS;
+	else if( (mPktTsPrev != AV_NOPTS_VALUE) && (pktTS != AV_NOPTS_VALUE) )
+		mPktTsPrev = pktTS;
 
 	if (waitKeyPkt)
 	{
@@ -319,6 +412,13 @@ retry:
 		}
 	}
 
+	if (pktTS == AV_NOPTS_VALUE)
+	{
+		av_free_packet(&pkt);
+		goto retry;
+	}
+
+
 	if (mFirstKeyPktTimestamp == AV_NOPTS_VALUE)
 	{
 		// update the first key timestamp
@@ -332,18 +432,20 @@ retry:
 		goto retry;
 	}
 
-	MediaBuffer *mediaBuffer = new MediaBuffer(pkt.size + FF_INPUT_BUFFER_PADDING_SIZE);
-	mediaBuffer->meta_data()->clear();
-	mediaBuffer->set_range(0, pkt.size);
+	MediaBuffer *mediaBuffer;
+
 #if DISABLE_NAL_TO_ANNEXB
 	mNal2AnnexB = false;
 #endif
-	if (mIsAVC && mNal2AnnexB)
+	if ((mIsAVC||mIsHEVC) && mNal2AnnexB)
 	{
+		mediaBuffer = new MediaBuffer(pkt.size + FF_INPUT_BUFFER_PADDING_SIZE + 1024);
+		mediaBuffer->meta_data()->clear();
 		/* Convert H.264 NAL format to annex b */
-		if (mNALLengthSize >= 3 && mNALLengthSize <= 4 )
+		if ( 0<mNALLengthSize && mNALLengthSize<5 )
 		{
 			uint8_t *dst = (uint8_t *)mediaBuffer->data();
+			int32_t iAnnexBSize = 0;
 
 			/* This only works for NAL sizes 3-4 */
 			size_t len = pkt.size, i;
@@ -354,15 +456,17 @@ retry:
 				for( i = 0; i < mNALLengthSize; i++ )
 				{
 					nal_len = (nal_len << 8) | ptr[i];
-					dst[i] = 0;
 				}
-				dst[mNALLengthSize - 1] = 1;
 				if (nal_len > INT_MAX || nal_len > (unsigned int)len)
 				{
 					status = ERROR_MALFORMED;
 					break;
 				}
-				dst += mNALLengthSize;
+				//	Add NAL Start Code
+				*dst++ = 0;
+				*dst++ = 0;
+				*dst++ = 0;
+				*dst++ = 1;
 				ptr += mNALLengthSize;
 				len -= mNALLengthSize;
 
@@ -371,7 +475,9 @@ retry:
 				dst += nal_len;
 				ptr += nal_len;
 				len -= nal_len;
+				iAnnexBSize += nal_len+4;
 			}
+			mediaBuffer->set_range(0, iAnnexBSize);
 		}
 		else
 		{
@@ -389,6 +495,9 @@ retry:
 	}
 	else if( mIsMp3 )
 	{
+		mediaBuffer = new MediaBuffer(pkt.size + FF_INPUT_BUFFER_PADDING_SIZE);
+		mediaBuffer->meta_data()->clear();
+		mediaBuffer->set_range(0, pkt.size);
 		uint32_t mp3Header;
 		if( pkt.size < 4 )
 		{
@@ -396,7 +505,7 @@ retry:
 			return 0;
 		}
 		mp3Header = pkt.data[0]<<24 | pkt.data[1]<<16 | pkt.data[2]<<8 | pkt.data[3];
-		if( ((mp3Header&0xffe00000) != 0xffe00000) && mIsMp3Seek )
+		if( ( ((mp3Header&0xffff0000) != 0xfffb0000) && ((mp3Header&0xffff0000) != 0xfff30000) && ((mp3Header&0xffff0000) != 0xfffa0000)) && mIsMp3Seek )
 		{
 			av_free_packet(&pkt);
 			goto retry;
@@ -405,11 +514,24 @@ retry:
 		{
 			mIsMp3Seek = false;
 		}
+		// ALOGD("====================MP3 Payload : Header(0x%08x) size: %d, flags: %d(key=%d), pts: %lld, dts: %lld, timeUs[-startTime]: %llu us (%.2f secs)",
+		// 	mp3Header, pkt.size, pkt.flags, key, pkt.pts, pkt.dts, timeUs, timeUs/1E6);
 		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
 	}
 	else
 	{
+		mediaBuffer = new MediaBuffer(pkt.size + FF_INPUT_BUFFER_PADDING_SIZE);
+		mediaBuffer->meta_data()->clear();
+		mediaBuffer->set_range(0, pkt.size);
 		memcpy(mediaBuffer->data(), pkt.data, pkt.size);
+		/*
+		if(AVMEDIA_TYPE_VIDEO==mMediaType)
+		{
+			uint8_t *buf = pkt.data;
+			ALOGD("------------- Size(%6d) 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x\n",
+				pkt.size,buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7],buf[8],buf[9],buf[10],buf[11],buf[12],buf[13],buf[14],buf[15] );
+		}
+		*/
 	}
 
 	int64_t start_time = mStream->start_time != AV_NOPTS_VALUE ? mStream->start_time : 0;
@@ -450,6 +572,9 @@ FFmpegExtractor::FFmpegExtractor(const sp<DataSource> &source)
 	int err = 0;
 
 	buildFileName(source);
+
+	memset(&mAudioQ, 0, sizeof(PacketQueue));
+	memset(&mVideoQ, 0, sizeof(PacketQueue));
 
 	err = initStreams();
 	if (err < 0) {
@@ -842,12 +967,14 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	case AV_CODEC_ID_H263:
 	case AV_CODEC_ID_H263P:
 	case AV_CODEC_ID_H263I:
+	case AV_CODEC_ID_MPEG1VIDEO:
 	case AV_CODEC_ID_MPEG2VIDEO:
 	case AV_CODEC_ID_WMV3:
 	case AV_CODEC_ID_VC1:
 	case AV_CODEC_ID_VP8:
 	case AV_CODEC_ID_VP9:
 	case AV_CODEC_ID_RV40:
+	case AV_CODEC_ID_HEVC:
 
 	//
 	//	Audio
@@ -994,14 +1121,13 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 				}
 			}
 			break;
+		case AV_CODEC_ID_MPEG1VIDEO:
 		case AV_CODEC_ID_MPEG2VIDEO:
-			ALOGV("MPEG2VIDEO");
+			ALOGV("MPEG2VIDEO(ExtraSize = %d)\n", avctx->extradata_size);
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_MPEG2);
+			if( avctx->extradata_size>0 )
 			{
-				sp<ABuffer> csd = new ABuffer(avctx->extradata_size);
-				memcpy(csd->data(), avctx->extradata, avctx->extradata_size);
-				sp<ABuffer> esds = MakeMPEGVideoESDS(csd);
-				meta->setData(kKeyESDS, kTypeESDS, esds->data(), esds->size());
+				meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 			}
 			break;
 		case AV_CODEC_ID_VC1:
@@ -1042,6 +1168,22 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP9);
 			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 			break;
+		#ifdef LOLLIPOP
+		case AV_CODEC_ID_HEVC:
+			ALOGV("HEVC");
+			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_HEVC);
+			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
+
+			if (avctx->extradata[0] == 1 /* configurationVersion */) {
+				// H.265 bitstream without start codes.
+				meta->setData(kKeyHVCC, kTypeHVCC, avctx->extradata, avctx->extradata_size);
+			} else{
+				//
+				//	FIXME : S/W H264 Need HVCC Data, We Should be setting kKeyHVCC Data.
+				//
+			}
+			break;
+		#endif /* LOLLIPOP */
 		default:
 			CHECK(!"Should not be here. Unsupported codec.");
 			break;
@@ -1211,6 +1353,8 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			ALOGV("VORBIS");
 			meta = new MetaData;
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_VORBIS);
+			if( avctx->extradata_size > 0 )
+				addVorbisCodecInfo( meta, avctx->extradata, avctx->extradata_size);
 			break;
 		default:
 			CHECK(!"Should not be here. Unsupported codec.");
@@ -1431,7 +1575,6 @@ void FFmpegExtractor::setFFmpegDefaultOpts()
 	mEOF          = false;
 }
 
-
 int av_find_best_audio_stream(AVFormatContext *ic,
 	                          enum AVMediaType type,
 	                          int wanted_stream_nb,
@@ -1470,7 +1613,6 @@ int av_find_best_audio_stream(AVFormatContext *ic,
 			case AV_CODEC_ID_AC3:
 			case AV_CODEC_ID_MP1:
 			case AV_CODEC_ID_MP2:
-			case AV_CODEC_ID_MP3:
 			case AV_CODEC_ID_WMAV1:
 			case AV_CODEC_ID_WMAV2:
 			case AV_CODEC_ID_WMAPRO:
@@ -1478,6 +1620,7 @@ int av_find_best_audio_stream(AVFormatContext *ic,
 			case AV_CODEC_ID_COOK:
 			case AV_CODEC_ID_APE:
 			case AV_CODEC_ID_DTS:
+			case AV_CODEC_ID_MP3:
 			case AV_CODEC_ID_FLAC:
 			case AV_CODEC_ID_VORBIS:
 			case AV_CODEC_ID_PCM_S16LE:
@@ -1949,12 +2092,14 @@ static int get_num_supported_video_tracks(AVFormatContext *avfctx)
 			case AV_CODEC_ID_H263:
 			case AV_CODEC_ID_H263P:
 			case AV_CODEC_ID_H263I:
+			case AV_CODEC_ID_MPEG1VIDEO:
 			case AV_CODEC_ID_MPEG2VIDEO:
 			case AV_CODEC_ID_WMV3:
 			case AV_CODEC_ID_VC1:
 			case AV_CODEC_ID_VP8:
 			case AV_CODEC_ID_VP9:
 			case AV_CODEC_ID_RV40:
+			case AV_CODEC_ID_HEVC:
 				count ++;
 				break;
 			default:
@@ -2217,6 +2362,28 @@ ErrorExit:
 	return container;
 }
 
+bool SniffAVIFFMPEG(
+        const sp<DataSource> &source, String8 *mimeType, float *confidence,
+        sp<AMessage> *) {
+    char tmp[12];
+    if (source->readAt(0, tmp, 12) < 12) {
+        return false;
+    }
+
+    if (!memcmp(tmp, "RIFF", 4) && !memcmp(&tmp[8], "AVI ", 4)) {
+        mimeType->setTo(MEDIA_MIMETYPE_CONTAINER_AVI);
+
+        // Just a tad over the mp3 extractor's confidence, since
+        // these .avi files may contain .mp3 content that otherwise would
+        // mistakenly lead to us identifying the entire file as a .mp3 file.
+        *confidence = 0.21;
+
+        return true;
+    }
+
+    return false;
+}
+
 bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confidence, sp<AMessage> *meta)
 {
 	ALOGV("SniffFFMPEG");
@@ -2289,5 +2456,71 @@ bool SniffFFMPEG( const sp<DataSource> &source, String8 *mimeType, float *confid
 }
 //
 //////////////////////////////////////////////////////////////////////////////
+
+
+static status_t addVorbisCodecInfo(
+        const sp<MetaData> &meta,
+        const void *_codecPrivate, size_t codecPrivateSize) {
+    // hexdump(_codecPrivate, codecPrivateSize);
+
+    if (codecPrivateSize < 1) {
+        return ERROR_MALFORMED;
+    }
+
+    const uint8_t *codecPrivate = (const uint8_t *)_codecPrivate;
+
+    if (codecPrivate[0] != 0x02) {
+        return ERROR_MALFORMED;
+    }
+
+    // codecInfo starts with two lengths, len1 and len2, that are
+    // "Xiph-style-lacing encoded"...
+
+    size_t offset = 1;
+    size_t len1 = 0;
+    while (offset < codecPrivateSize && codecPrivate[offset] == 0xff) {
+        len1 += 0xff;
+        ++offset;
+    }
+    if (offset >= codecPrivateSize) {
+        return ERROR_MALFORMED;
+    }
+    len1 += codecPrivate[offset++];
+
+    size_t len2 = 0;
+    while (offset < codecPrivateSize && codecPrivate[offset] == 0xff) {
+        len2 += 0xff;
+        ++offset;
+    }
+    if (offset >= codecPrivateSize) {
+        return ERROR_MALFORMED;
+    }
+    len2 += codecPrivate[offset++];
+
+    if (codecPrivateSize < offset + len1 + len2) {
+        return ERROR_MALFORMED;
+    }
+
+    if (codecPrivate[offset] != 0x01) {
+        return ERROR_MALFORMED;
+    }
+    meta->setData(kKeyVorbisInfo, 0, &codecPrivate[offset], len1);
+
+    offset += len1;
+    if (codecPrivate[offset] != 0x03) {
+        return ERROR_MALFORMED;
+    }
+
+    offset += len2;
+    if (codecPrivate[offset] != 0x05) {
+        return ERROR_MALFORMED;
+    }
+
+    meta->setData(
+            kKeyVorbisBooks, 0, &codecPrivate[offset],
+            codecPrivateSize - offset);
+
+    return OK;
+}
 
 }  // namespace android

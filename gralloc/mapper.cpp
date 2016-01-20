@@ -29,7 +29,7 @@ static int gralloc_map(gralloc_module_t const *module, buffer_handle_t handle)
         ALOGE("%s: could not mmap at %p, err %s", __func__, hnd, strerror(errno));
         return -errno;
     }
-    hnd->base = (int)mappedAddress;
+    hnd->base = (void*)mappedAddress;
     return 0;
 }
 

@@ -32,6 +32,9 @@ public:
     virtual int setFormat(int width, int height, int format) {
         return v4l2_set_format(V4l2ID, width, height, format);
     }
+	virtual bool isInterlace() {
+		return false;	
+	}
 
 protected:
     uint32_t V4l2ID;

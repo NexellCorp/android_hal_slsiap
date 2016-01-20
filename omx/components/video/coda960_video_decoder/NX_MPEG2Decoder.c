@@ -81,10 +81,23 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 	//	Step 2. Find First Key Frame & Do Initialize VPU
 	if( OMX_FALSE == pDecComp->bInitialized )
 	{
-		int initBufSize = inSize + pDecComp->codecSpecificDataSize;
-		unsigned char *initBuf = (unsigned char *)malloc( initBufSize );
-		memcpy( initBuf, pDecComp->codecSpecificData, pDecComp->codecSpecificDataSize );
-		memcpy( initBuf + pDecComp->codecSpecificDataSize, inData, inSize );
+		int initBufSize;
+		unsigned char *initBuf;
+
+		if( pDecComp->codecSpecificDataSize == 0 && pDecComp->nExtraDataSize>0 )
+		{
+			initBufSize = inSize + pDecComp->nExtraDataSize;
+			initBuf = (unsigned char *)malloc( initBufSize );
+			memcpy( initBuf, pDecComp->pExtraData, pDecComp->nExtraDataSize );
+			memcpy( initBuf + pDecComp->nExtraDataSize, inData, inSize );
+		}
+		else
+		{
+			initBufSize = inSize + pDecComp->codecSpecificDataSize;
+			initBuf = (unsigned char *)malloc( initBufSize );
+			memcpy( initBuf, pDecComp->codecSpecificData, pDecComp->codecSpecificDataSize );
+			memcpy( initBuf + pDecComp->codecSpecificDataSize, inData, inSize );
+		}
 
 		//	Initialize VPU
 		ret = InitializeCodaVpu(pDecComp, initBuf, initBufSize );
@@ -94,8 +107,10 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 		{
 			ErrMsg("VPU initialized Failed!!!!\n");
 			goto Exit;
-		}else if( ret > 0  )
+		}
+		else if( ret > 0  )
 		{
+			ret = 0;
 			goto Exit;
 		}
 
@@ -143,7 +158,9 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 		}
 		else
 		{
-			//if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType != PIC_TYPE_I )
+			int32_t OutIdx = ( pDecComp->bInterlaced == 0 ) ? ( decOut.outImgIdx ) : ( GetUsableBufferIdx(pDecComp) );
+
+			//if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType[DECODED_FRAME] != PIC_TYPE_I )
 			//{
 			//	NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 			//	goto Exit;
@@ -152,9 +169,9 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 
 			//	Native Window Buffer Mode
 			//	Get Output Buffer Pointer From Output Buffer Pool
-			pOutBuf = pDecComp->pOutputBuffers[decOut.outImgIdx];
+			pOutBuf = pDecComp->pOutputBuffers[OutIdx];
 
-			if( pDecComp->outBufferUseFlag[decOut.outImgIdx] == 0 )
+			if( pDecComp->outBufferUseFlag[OutIdx] == 0 )
 			{
 				OMX_TICKS timestamp;
 				OMX_U32 flag;
@@ -163,7 +180,8 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit\n");
 				goto Exit;
 			}
-			pDecComp->outBufferUseFlag[decOut.outImgIdx] = 0;
+			pDecComp->outBufferValidFlag[OutIdx] = 1;
+			pDecComp->outBufferUseFlag[OutIdx] = 0;
 			pDecComp->curOutBuffers --;
 
 			pOutBuf->nFilledLen = sizeof(struct private_handle_t);
@@ -173,6 +191,8 @@ int NX_DecodeMpeg2Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 				pOutBuf->nFlags     = pInBuf->nFlags;
 			}
 			TRACE("pOutBuf->nTimeStamp = %lld\n", pOutBuf->nTimeStamp/1000);
+
+			DeInterlaceFrame( pDecComp, &decOut );
 			pDecComp->outFrameCount++;
 			pDecComp->pCallbacks->FillBufferDone(pDecComp->hComp, pDecComp->hComp->pApplicationPrivate, pOutBuf);
 		}

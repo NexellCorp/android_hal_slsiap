@@ -147,7 +147,7 @@ public:
     }
 
 protected:
-    virtual void init(nxp_v4l2_id id) = 0;
+    virtual void init(nxp_v4l2_id id);
 
 protected:
     char ThreadName[MAX_THREAD_NAME];

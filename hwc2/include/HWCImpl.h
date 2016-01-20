@@ -43,6 +43,17 @@ public:
     virtual int enable() = 0;
     virtual int disable() = 0;
 
+    virtual void setGeometry(int *geometry) {
+        mGeometry[0] = geometry[0];
+        mGeometry[1] = geometry[1];
+        mGeometry[2] = geometry[2];
+        mGeometry[3] = geometry[3];
+    }
+
+    virtual void setMyDevice(int myDevice) {
+        mMyDevice = myDevice;
+    }
+
     int getWidth() const {
         return mWidth;
     }
@@ -114,6 +125,9 @@ protected:
     int mSrcWidth;
     int mSrcHeight;
     bool mEnabled;
+
+    int mGeometry[4];
+    int mMyDevice;
 };
 
 }; // namespace

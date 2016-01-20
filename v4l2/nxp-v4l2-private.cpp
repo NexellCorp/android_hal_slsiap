@@ -850,6 +850,7 @@ int V4l2NexellPrivate::createDevices()
 
     /* HDMI */
     if (UsageScheme.useHdmi) {
+    	ALOGE("UseSchem.useHdmi");
         ret = createSubDevice(Hdmi, &device);
         if (ret < 0) {
             ALOGE("can't create hdmi");

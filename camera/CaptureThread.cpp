@@ -310,12 +310,14 @@ void CaptureThread::freeCaptureBuffer()
 
 bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsigned int srcCRPhys,
         unsigned int srcYVirt, unsigned int srcCBVirt, unsigned int srcCRVirt,
-        void *dstBase, int dstSize, int width, int height, uint32_t dstOffset)
+        void *dstBase, int dstSize, int width, int height, uint32_t dstOffset, uint32_t yStride)
 {
     int jpegSize;
     int jpegBufSize;
     char *jpegBuf;
     camera2_jpeg_blob *jpegBlob;
+
+	//ALOGD("KEUN : width : %d, height : %d\n", width, height);
 
     if (PixelIndex == YUV422_PACKED) {
 #ifdef USE_HW_JPEG
@@ -327,12 +329,14 @@ bool CaptureThread::capture(unsigned int srcYPhys, unsigned int srcCBPhys, unsig
 #endif
     } else {
 #ifdef USE_HW_JPEG
+
+		uint32_t stride = (yStride == 0) ? width : yStride;
         ALOGV("jpeg src buf: 0x%x, 0x%x, 0x%x, dst virt 0x%x", srcYPhys, srcCBPhys, srcCRPhys, dstBase);
         jpegSize = NX_JpegHWEncoding((void *)(((uint32_t)dstBase) + dstOffset), dstSize,
                 width, height, FOURCC_MVS0,
-                srcYPhys, srcYVirt, width,
-                srcCBPhys, srcCBVirt, width >> 1,
-                srcCRPhys, srcCRVirt, width >> 1,
+                srcYPhys, srcYVirt, stride,
+                srcCBPhys, srcCBVirt, stride >> 1,
+                srcCRPhys, srcCRVirt, stride >> 1,
                 dstOffset == 0);
 #else
         struct ycbcr_planar planar;
@@ -369,7 +373,7 @@ bool CaptureThread::capture(struct nxp_vid_buffer *srcBuf, private_handle_t cons
     bool captured = capture((unsigned int)srcBuf->phys[0], (unsigned int)srcBuf->phys[1], (unsigned int)srcBuf->phys[2],
             (unsigned int)srcBuf->virt[0], (unsigned int)srcBuf->virt[1], (unsigned int)srcBuf->virt[2],
             //(void *)dstHandle->base, dstHandle->size, width, height, dstOffset);
-            (void *)dstVirt, dstHandle->size, width, height, dstOffset);
+            (void *)dstVirt, dstHandle->size, width, height, dstOffset, width);
     releaseVirtForHandle(dstHandle, dstVirt);
     return captured;
 }
@@ -391,7 +395,7 @@ bool CaptureThread::capture(private_handle_t const *srcHandle, private_handle_t 
     bool captured = capture(phys[0], phys[1], phys[2],
             //srcHandle->base, srcHandle->base1, srcHandle->base2,
             0, 0, 0,
-            (void *)dstVirt, dstHandle->size, width, height, dstOffset);
+            (void *)dstVirt, dstHandle->size, width, height, dstOffset, srcHandle->stride);
     releaseVirtForHandle(dstHandle, dstVirt);
     return captured;
 }
