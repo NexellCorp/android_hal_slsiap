@@ -1692,25 +1692,25 @@ int openVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 		case NX_AVC_DEC:
 			pDecComp->DecodeFrame = NX_DecodeAvcFrame;
 			break;
-		case NX_MP2_DEC:
-			pDecComp->DecodeFrame = NX_DecodeMpeg2Frame;
-			break;
+		// case NX_MP2_DEC:
+		// 	pDecComp->DecodeFrame = NX_DecodeMpeg2Frame;
+		// 	break;
 		case NX_MP4_DEC:
-		case NX_H263_DEC:
+		// case NX_H263_DEC:
 			pDecComp->DecodeFrame = NX_DecodeMpeg4Frame;
 			break;
-		case NX_DIV3_DEC:
-			pDecComp->DecodeFrame = NX_DecodeDiv3Frame;
-			break;
-		case NX_VC1_DEC:
-			pDecComp->DecodeFrame = NX_DecodeVC1Frame;
-			break;
-		case NX_RV_DEC:
-			pDecComp->DecodeFrame = NX_DecodeRVFrame;
-			break;
-		case NX_VP8_DEC:
-			pDecComp->DecodeFrame = NX_DecodeVP8Frame;
-			break;
+		// case NX_DIV3_DEC:
+		// 	pDecComp->DecodeFrame = NX_DecodeDiv3Frame;
+		// 	break;
+		// case NX_VC1_DEC:
+		// 	pDecComp->DecodeFrame = NX_DecodeVC1Frame;
+		// 	break;
+		// case NX_RV_DEC:
+		// 	pDecComp->DecodeFrame = NX_DecodeRVFrame;
+		// 	break;
+		// case NX_VP8_DEC:
+		// 	pDecComp->DecodeFrame = NX_DecodeVP8Frame;
+		// 	break;
 		default:
 			pDecComp->DecodeFrame = NULL;
 			break;

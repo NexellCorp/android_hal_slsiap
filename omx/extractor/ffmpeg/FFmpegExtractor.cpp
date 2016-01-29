@@ -132,6 +132,11 @@ private:
 //	Implementation FFMpegSource class
 //
 //
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
+#define LOG_TAG "FFMpegSource"
+
 class FFMpegSource : public MediaSource {
 	FFMpegSource(const sp<FFmpegExtractor> &extractor, sp<MetaData> meta, bool isAVC, AVStream *stream, PacketQueue *queue);
 	virtual status_t start(MetaData *params);
@@ -141,6 +146,7 @@ class FFMpegSource : public MediaSource {
 
 protected:
 	virtual ~FFMpegSource();
+	bool Mp3CheckHeader(uint32_t h);
 
 private:
 	friend struct FFmpegExtractor;
@@ -155,7 +161,6 @@ private:
 	bool mIsAVC;
 	bool mIsHEVC;
 	bool mIsMp3;
-	bool mIsMp3Seek;
 	size_t mNALLengthSize;
 	bool mNal2AnnexB;
 	bool mNeedStartKey;
@@ -177,7 +182,6 @@ FFMpegSource::FFMpegSource(const sp<FFmpegExtractor> &extractor, sp<MetaData> me
 	, mIsAVC(isAVC)
 	, mIsHEVC(false)
 	, mIsMp3(false)
-	, mIsMp3Seek(false)
 	, mNeedStartKey(true)
 	, mStream(stream)
 	, mQueue(queue)
@@ -308,6 +312,23 @@ sp<MetaData> FFMpegSource::getFormat() {
 	return mMeta;
 }
 
+bool FFMpegSource::Mp3CheckHeader(uint32_t h){
+
+	uint32_t v;
+    if ((h&0xffe00000)^0xffe00000)
+        return false;
+    if (((h>>19)&3) == 1)	//version
+        return false;
+    if (((h>>17)&3) == 0)	//layer
+        return false;
+    if (((h>>10)&3) == 3)	//frequency
+        return false;
+    if (((v=(h>>12)&0x0f) == 0x00) || v == 0x0f)	//bit rate
+        return false;
+
+	return true;
+}
+
 status_t FFMpegSource::read(MediaBuffer **buffer, const ReadOptions *options)
 {
 	*buffer = NULL;
@@ -334,8 +355,21 @@ status_t FFMpegSource::read(MediaBuffer **buffer, const ReadOptions *options)
 
 		if (mExtractor->stream_seek(seekTimeUs, mMediaType) == SEEK){
 			seeking = true;
+
+			//
+			// Check Entry Status
+			//
+			ALOGI("~~~~~~~~~~~~~~~~~~~~ Check Entry Status ");
+			if( mExtractor->mEOF )
+			{
+				//	Maybe 
+			ALOGI("~~~~~~~~~~~~~~~~~~~~ Check Entry Status EOS");
+				mExtractor->stopReaderThread();
+				mExtractor->startReaderThread();
+				mExtractor->mAbortRequest = 0;
+			}
+
 		}
-		mIsMp3Seek = true;
 	}
 
 	if( mNeedStartKey )
@@ -372,7 +406,6 @@ retry:
 		ALOGV("read %s flush pkt", av_get_media_type_string(mMediaType));
 		av_free_packet(&pkt);
 		mFirstKeyPktTimestamp = AV_NOPTS_VALUE;
-		mPktTsPrev = AV_NOPTS_VALUE;
 		goto retry;
 	}
 	else if (pkt.data == NULL && pkt.size == 0)
@@ -411,13 +444,6 @@ retry:
 			waitKeyPkt = false;
 		}
 	}
-
-	if (pktTS == AV_NOPTS_VALUE)
-	{
-		av_free_packet(&pkt);
-		goto retry;
-	}
-
 
 	if (mFirstKeyPktTimestamp == AV_NOPTS_VALUE)
 	{
@@ -499,20 +525,18 @@ retry:
 		mediaBuffer->meta_data()->clear();
 		mediaBuffer->set_range(0, pkt.size);
 		uint32_t mp3Header;
+		bool	 bFindHeader;
 		if( pkt.size < 4 )
 		{
 			av_free_packet(&pkt);
 			return 0;
 		}
 		mp3Header = pkt.data[0]<<24 | pkt.data[1]<<16 | pkt.data[2]<<8 | pkt.data[3];
-		if( ( ((mp3Header&0xffff0000) != 0xfffb0000) && ((mp3Header&0xffff0000) != 0xfff30000) && ((mp3Header&0xffff0000) != 0xfffa0000)) && mIsMp3Seek )
+		bFindHeader = Mp3CheckHeader(mp3Header);
+		if(!bFindHeader)
 		{
 			av_free_packet(&pkt);
 			goto retry;
-		}
-		else
-		{
-			mIsMp3Seek = false;
 		}
 		// ALOGD("====================MP3 Payload : Header(0x%08x) size: %d, flags: %d(key=%d), pts: %lld, dts: %lld, timeUs[-startTime]: %llu us (%.2f secs)",
 		// 	mp3Header, pkt.size, pkt.flags, key, pkt.pts, pkt.dts, timeUs, timeUs/1E6);
@@ -561,6 +585,11 @@ retry:
 //
 //		Implementation FFMPEG Extractor
 //
+
+#ifdef LOG_TAG
+#undef LOG_TAG
+#endif
+#define LOG_TAG "NX_FFmpegExtractor"
 
 FFmpegExtractor::FFmpegExtractor(const sp<DataSource> &source)
 	: mDataSource(source)
@@ -962,37 +991,37 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	//
 	case AV_CODEC_ID_H264:
 	case AV_CODEC_ID_MPEG4:
-	case AV_CODEC_ID_FLV1:
-	case AV_CODEC_ID_MSMPEG4V3:
-	case AV_CODEC_ID_H263:
-	case AV_CODEC_ID_H263P:
-	case AV_CODEC_ID_H263I:
-	case AV_CODEC_ID_MPEG1VIDEO:
-	case AV_CODEC_ID_MPEG2VIDEO:
-	case AV_CODEC_ID_WMV3:
-	case AV_CODEC_ID_VC1:
-	case AV_CODEC_ID_VP8:
-	case AV_CODEC_ID_VP9:
-	case AV_CODEC_ID_RV40:
-	case AV_CODEC_ID_HEVC:
+	// case AV_CODEC_ID_FLV1:
+	// case AV_CODEC_ID_MSMPEG4V3:
+	// case AV_CODEC_ID_H263:
+	// case AV_CODEC_ID_H263P:
+	// case AV_CODEC_ID_H263I:
+	// case AV_CODEC_ID_MPEG1VIDEO:
+	// case AV_CODEC_ID_MPEG2VIDEO:
+	// case AV_CODEC_ID_WMV3:
+	// case AV_CODEC_ID_VC1:
+	// case AV_CODEC_ID_VP8:
+	// case AV_CODEC_ID_VP9:
+	// case AV_CODEC_ID_RV40:
+	// case AV_CODEC_ID_HEVC:
 
 	//
 	//	Audio
 	//
-	case AV_CODEC_ID_AAC:
-	case AV_CODEC_ID_AC3:
-	case AV_CODEC_ID_MP1:
-	case AV_CODEC_ID_MP2:
+	// case AV_CODEC_ID_AAC:
+	// case AV_CODEC_ID_AC3:
+	// case AV_CODEC_ID_MP1:
+	// case AV_CODEC_ID_MP2:
 	case AV_CODEC_ID_MP3:
-	case AV_CODEC_ID_WMAV1:
-	case AV_CODEC_ID_WMAV2:
-	case AV_CODEC_ID_WMAPRO:
-	case AV_CODEC_ID_WMALOSSLESS:
-	case AV_CODEC_ID_COOK:
-	case AV_CODEC_ID_APE:
-	case AV_CODEC_ID_DTS:
+	// case AV_CODEC_ID_WMAV1:
+	// case AV_CODEC_ID_WMAV2:
+	// case AV_CODEC_ID_WMAPRO:
+	// case AV_CODEC_ID_WMALOSSLESS:
+	// case AV_CODEC_ID_COOK:
+	// case AV_CODEC_ID_APE:
+	// case AV_CODEC_ID_DTS:
 	case AV_CODEC_ID_VORBIS:
-	case AV_CODEC_ID_FLAC:
+	// case AV_CODEC_ID_FLAC:
 	case AV_CODEC_ID_PCM_S16LE:
 		supported = true;
 		break;
@@ -1201,9 +1230,12 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			printTime(duration);
 			ALOGV("video startTime: %lld", mVideoStream->start_time);
 			meta->setInt64(kKeyDuration, duration);
+			meta->setInt64(kKeyThumbnailTime, duration/4);
+			
 		} else {
 			// default when no stream duration
 			meta->setInt64(kKeyDuration, mFormatCtx->duration);
+			meta->setInt64(kKeyThumbnailTime, mFormatCtx->duration/4);
 		}
 
 		ALOGV("create a video track");
@@ -1609,19 +1641,19 @@ int av_find_best_audio_stream(AVFormatContext *ic,
 
 		switch(avctx->codec_id)
 		{
-			case AV_CODEC_ID_AAC:
-			case AV_CODEC_ID_AC3:
-			case AV_CODEC_ID_MP1:
-			case AV_CODEC_ID_MP2:
-			case AV_CODEC_ID_WMAV1:
-			case AV_CODEC_ID_WMAV2:
-			case AV_CODEC_ID_WMAPRO:
-			case AV_CODEC_ID_WMALOSSLESS:
-			case AV_CODEC_ID_COOK:
-			case AV_CODEC_ID_APE:
-			case AV_CODEC_ID_DTS:
+			// case AV_CODEC_ID_AAC:
+			// case AV_CODEC_ID_AC3:
+			// case AV_CODEC_ID_MP1:
+			// case AV_CODEC_ID_MP2:
+			// case AV_CODEC_ID_WMAV1:
+			// case AV_CODEC_ID_WMAV2:
+			// case AV_CODEC_ID_WMAPRO:
+			// case AV_CODEC_ID_WMALOSSLESS:
+			// case AV_CODEC_ID_COOK:
+			// case AV_CODEC_ID_APE:
+			// case AV_CODEC_ID_DTS:
 			case AV_CODEC_ID_MP3:
-			case AV_CODEC_ID_FLAC:
+ 			// case AV_CODEC_ID_FLAC:
 			case AV_CODEC_ID_VORBIS:
 			case AV_CODEC_ID_PCM_S16LE:
 				break;
@@ -1776,6 +1808,7 @@ status_t FFmpegExtractor::startReaderThread() {
 	if (mReaderThreadStarted)
 		return OK;
 
+	mAbortRequest = 0;
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -2054,18 +2087,18 @@ static int get_num_supported_audio_tracks(AVFormatContext *avfctx)
 	{
 		switch ( avfctx->streams[i]->codec->codec_id )
 		{
-			case AV_CODEC_ID_AAC:
-			case AV_CODEC_ID_AC3:
-			case AV_CODEC_ID_MP1:
-			case AV_CODEC_ID_MP2:
+			// case AV_CODEC_ID_AAC:
+			// case AV_CODEC_ID_AC3:
+			// case AV_CODEC_ID_MP1:
+			// case AV_CODEC_ID_MP2:
 			case AV_CODEC_ID_MP3:
-			case AV_CODEC_ID_WMAV1:
-			case AV_CODEC_ID_WMAV2:
-			case AV_CODEC_ID_WMAPRO:
-			case AV_CODEC_ID_WMALOSSLESS:
-			case AV_CODEC_ID_COOK:
-			case AV_CODEC_ID_DTS:
-			case AV_CODEC_ID_FLAC:
+			// case AV_CODEC_ID_WMAV1:
+			// case AV_CODEC_ID_WMAV2:
+			// case AV_CODEC_ID_WMAPRO:
+			// case AV_CODEC_ID_WMALOSSLESS:
+			// case AV_CODEC_ID_COOK:
+			// case AV_CODEC_ID_DTS:
+			// case AV_CODEC_ID_FLAC:
 			case AV_CODEC_ID_VORBIS:
 			case AV_CODEC_ID_PCM_S16LE:
 				count ++;
@@ -2204,7 +2237,7 @@ const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 
 	if( dumpInfo )
 		av_dump_format(ic, 0, uri, 0);
-
+#if 0
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
 		AVCodecID codec_id = ic->streams[i]->codec->codec_id;
@@ -2236,6 +2269,7 @@ const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 			useFFMPEG= true;
 		}
 	}
+#endif	
 
 	ALOGI("FFmpegExtrator::BetterSniffFFMPEG uri: %s, format_name: %s, format_long_name: %s", uri, ic->iformat->name, ic->iformat->long_name);
 #if 0
@@ -2304,7 +2338,7 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bo
 		ALOGI("Better2SniffFFMPEG() :Have no video stream for playable.!!");
 		goto ErrorExit;
 	}
-
+#if 0
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
 		AVCodecID codec_id = ic->streams[i]->codec->codec_id;
@@ -2336,6 +2370,7 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bo
 			useFFMPEG= true;
 		}
 	}
+#endif	
 
 #if 0
 	ALOGI("list the format suppoted by ffmpeg: ");
