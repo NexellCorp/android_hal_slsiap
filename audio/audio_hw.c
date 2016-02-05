@@ -493,55 +493,32 @@ static int do_output_standby(struct stream_out *out);
 
 static void select_devices(struct audio_device *adev)
 {
-    int output_device_id = get_output_device_id(adev->out_device);
-    int input_source_id = get_input_source_id(adev->input_source);
-    const char *output_route = NULL;
-    const char *input_route = NULL;
-    int new_route_id;
+    int headphone_on;
+    int speaker_on;
+    int lineout_on;
+    int main_mic_on;
+ 
+    headphone_on = adev->out_device & (AUDIO_DEVICE_OUT_WIRED_HEADSET |
+                                    AUDIO_DEVICE_OUT_WIRED_HEADPHONE);
+    speaker_on = adev->out_device & AUDIO_DEVICE_OUT_SPEAKER;
+    lineout_on = adev->out_device & AUDIO_DEVICE_OUT_ANLG_DOCK_HEADSET;
+    main_mic_on = adev->in_device & AUDIO_DEVICE_IN_BUILTIN_MIC;
 
     audio_route_reset(adev->ar);
 
-    new_route_id = (1 << (input_source_id + OUT_DEVICE_CNT)) + (1 << output_device_id);
-    if (new_route_id == adev->cur_route_id)
-        return;
-    adev->cur_route_id = new_route_id;
-
-    if (input_source_id != IN_SOURCE_NONE) {
-        if (output_device_id != OUT_DEVICE_NONE) {
-            input_route =
-                    route_configs[input_source_id][output_device_id]->input_route;
-            output_route =
-                    route_configs[input_source_id][output_device_id]->output_route;
-        } else {
-            switch (adev->in_device) {
-            case AUDIO_DEVICE_IN_WIRED_HEADSET & ~AUDIO_DEVICE_BIT_IN:
-                output_device_id = OUT_DEVICE_HEADSET;
-                break;
-            default:
-                output_device_id = OUT_DEVICE_SPEAKER;
-                break;
-            }
-            input_route =
-                    route_configs[input_source_id][output_device_id]->input_route;
-        }
-    } else {
-        if (output_device_id != OUT_DEVICE_NONE) {
-            output_route =
-                    route_configs[IN_SOURCE_MIC][output_device_id]->output_route;
-        }
-    }
-
-    ALOGV("select_devices() devices %#x input src %d output route %s input route %s",
-          adev->out_device, adev->input_source,
-          output_route ? output_route : "none",
-          input_route ? input_route : "none");
-
-    if (output_route)
-        audio_route_apply_path(adev->ar, output_route);
-    if (input_route)
-        audio_route_apply_path(adev->ar, input_route);
+    if (speaker_on)
+        audio_route_apply_path(adev->ar, "speaker");
+    if (headphone_on)
+        audio_route_apply_path(adev->ar, "headphone");
+    if (main_mic_on)
+        audio_route_apply_path(adev->ar, "main-mic");
+    if (lineout_on)
+        audio_route_apply_path(adev->ar, "lineout");
 
     audio_route_update_mixer(adev->ar);
+
+    ALOGV("hp=%c speaker=%c main-mic=%c lineout_on : %c", headphone_on ? 'y' : 'n',
+          speaker_on ? 'y' : 'n', main_mic_on ? 'y' : 'n', lineout_on? 'y':'n');
 }
 
 
