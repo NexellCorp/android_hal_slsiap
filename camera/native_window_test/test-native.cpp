@@ -32,7 +32,8 @@
     } while (0)
 using namespace android;
 
-#define BUFFER_COUNT    6
+//#define BUFFER_COUNT    6
+#define BUFFER_COUNT    25
 
 static int camera_init(int module, int width, int height, bool is_mipi)
 {
@@ -157,8 +158,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    ALOGD("start front camera");
-    camera_run(1, 720, 480, true, client.get());
+    //ALOGD("start front camera");
+    //camera_run(1, 720, 480, true, client.get());
     ALOGD("start backward camera");
     camera_run(0, 704, 480, false, client.get());
 
