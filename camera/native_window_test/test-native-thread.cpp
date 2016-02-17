@@ -247,8 +247,15 @@ static struct thread_data s_thread_data0;
 static struct thread_data s_thread_data1;
 int main(int argc, char *argv[])
 {
-	argc = argc;
-	argv++;
+	int index = 0;
+
+	if (argc != 2) {
+		printf("usage: %s camera_index(front : 1. back : 0)\n",
+		       argv[0]);
+		return -1;
+	}
+
+	index = atoi(argv[1]);
 
 	if (false == android_nxp_v4l2_init()) {
 		ALOGE("failed to android_nxp_v4l2_init");
@@ -266,34 +273,35 @@ int main(int argc, char *argv[])
 
 	int ret;
 
-#if 1
-	s_thread_data0.module = 0;
-	s_thread_data0.width = 704;
-	s_thread_data0.height = 480;
-	s_thread_data0.is_mipi = false;
-	s_thread_data0.client = client.get();
-	pthread_t camera0_thread;
+	switch (index) {
+	case 0:
+		s_thread_data0.module = 0;
+		s_thread_data0.width = 704;
+		s_thread_data0.height = 480;
+		s_thread_data0.is_mipi = false;
+		s_thread_data0.client = client.get();
+		pthread_t camera0_thread;
 
-	ret = pthread_create(&camera0_thread, NULL, camera_thread, &s_thread_data0);
-	if (ret) {
-		ALOGE("failed to start camera0 thread: %s", strerror(ret));
-		return ret;
+		ret = pthread_create(&camera0_thread, NULL, camera_thread, &s_thread_data0);
+		if (ret) {
+			ALOGE("failed to start camera0 thread: %s", strerror(ret));
+			return ret;
+		}
+		break;
+	case 1:
+		s_thread_data1.module = 1;
+		s_thread_data1.width = 640;
+		s_thread_data1.height = 480;
+		s_thread_data1.is_mipi = false;
+		s_thread_data1.client = client.get();
+		pthread_t camera1_thread;
+		ret = pthread_create(&camera1_thread, NULL, camera_thread, &s_thread_data1);
+		if (ret) {
+			ALOGE("failed to start camera1 thread: %s", strerror(ret));
+			return ret;
+		}
+		break;
 	}
-#endif
-
-#if 0
-	s_thread_data1.module = 1;
-	s_thread_data1.width = 720;
-	s_thread_data1.height = 480;
-	s_thread_data1.is_mipi = true;
-	s_thread_data1.client = client.get();
-	pthread_t camera1_thread;
-	ret = pthread_create(&camera1_thread, NULL, camera_thread, &s_thread_data1);
-	if (ret) {
-		ALOGE("failed to start camera1 thread: %s", strerror(ret));
-		return ret;
-	}
-#endif
 #if 0
 	pthread_t backward_camera_monitor_thread;
 	ret = pthread_create(&backward_camera_monitor_thread, NULL, backward_camera_monitoring_thread, NULL);
