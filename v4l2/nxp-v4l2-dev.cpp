@@ -1,7 +1,7 @@
+#define LOG_TAG "nxp-v4l2-dev"
 #include "nxp-v4l2-dev.h"
 
 #ifdef ANDROID
-#define LOG_TAG "nxp-v4l2-dev"
 #include <utils/Log.h>
 #else
 #define ALOGE(x...) fprintf(stderr, x)
@@ -105,18 +105,19 @@ V4l2Device::checkLink(int myPad, int remoteEntity, int remotePad)
     for (int i = 0; i < LinkNum; i++) {
         source = &ldesc->source;
         sink = &ldesc->sink;
-        if (sink->entity == EntityID && sink->index == myPad &&
-            source->entity == remoteEntity && source->index == remotePad)
+        if ((int)sink->entity == EntityID && sink->index == myPad &&
+            (int)source->entity == remoteEntity && source->index == remotePad) {
             if (ldesc->flags & MEDIA_LNK_FL_ENABLED)
                 return LINK_CONNECTED;
             else
                 return LINK_DISCONNECTED;
-        else if (sink->entity == remoteEntity && sink->index == remotePad &&
-                 source->entity == EntityID && source->index == myPad)
+	} else if ((int)sink->entity == remoteEntity && sink->index == remotePad &&
+                 (int)source->entity == EntityID && source->index == myPad) {
             if (ldesc->flags & MEDIA_LNK_FL_ENABLED)
                 return LINK_CONNECTED;
             else
                 return LINK_DISCONNECTED;
+	}
         ldesc++;
     }
 
@@ -131,7 +132,7 @@ int V4l2Device::getSinkPadFor(int remoteEntity, int remotePad)
     for (int i = 0; i < LinkNum; i++) {
         source = &ldesc->source;
         sink = &ldesc->sink;
-        if (source->entity == remoteEntity)  {
+        if ((int)source->entity == remoteEntity)  {
             if (remotePad == -1)
                 return sink->index;
             if (source->index == remotePad)
@@ -151,7 +152,7 @@ int V4l2Device::getSourcePadFor(int remoteEntity, int remotePad)
     for (int i = 0; i < LinkNum; i++) {
         source = &ldesc->source;
         sink = &ldesc->sink;
-        if (sink->entity == remoteEntity) {
+        if ((int)sink->entity == remoteEntity) {
             if (remotePad == -1)
                 return source->index;
             if (sink->index == remotePad)
@@ -229,7 +230,8 @@ int V4l2Subdev::setPreset(uint32_t preset)
 }
 
 /* V4l2Video */
-int V4l2Video::setFormat(int w, int h, int format, int index)
+int V4l2Video::setFormat(int w, int h, int format,
+			 __attribute__((__unused__)) int index)
 {
     struct v4l2_format v4l2_fmt;
     bzero(&v4l2_fmt, sizeof(v4l2_fmt));
@@ -259,7 +261,8 @@ int V4l2Video::setFormat(int w, int h, int format, int index)
     }
 }
 
-int V4l2Video::getFormat(int *w, int *h, int *format, int index)
+int V4l2Video::getFormat(int *w, int *h, int *format,
+			 __attribute__((__unused__)) int index)
 {
     struct v4l2_format v4l2_fmt;
     bzero(&v4l2_fmt, sizeof(v4l2_fmt));
@@ -287,7 +290,8 @@ int V4l2Video::setCrop(int l, int t, int w, int h, int index)
     return ioctl(FD, VIDIOC_S_CROP, &crop);
 }
 
-int V4l2Video::getCrop(int *l, int *t, int *w, int *h, int index)
+int V4l2Video::getCrop(int *l, int *t, int *w, int *h,
+		       __attribute__((__unused__)) int index)
 {
     struct v4l2_crop crop;
     bzero(&crop, sizeof(crop));
@@ -599,7 +603,7 @@ bool V4l2Composite::linkDefault(int srcPad, int sinkPad)
         }
         V4l2Device::LinkStatus lstat = checkLink(myPad, VideoDev->getEntityID(), 0);
         if (lstat == LINK_INVALID) {
-            ALOGE("link [%d,%d] to [%d,%d] is invalid",
+            ALOGV("link [%d,%d] to [%d,%d] is invalid",
                     SubDev->getEntityID(), myPad,
                     VideoDev->getEntityID(), 0);
             return false;
@@ -622,7 +626,7 @@ bool V4l2Composite::linkDefault(int srcPad, int sinkPad)
 
         int ret = ioctl(MediaFD, MEDIA_IOC_SETUP_LINK, &setupLink);
         if (ret) {
-            ALOGE("%s: failed to IOC_SETUP_LINK(ret: %d", __func__, ret);
+            ALOGV("%s: failed to IOC_SETUP_LINK(ret: %d", __func__, ret);
             return false;
         }
         return true;
@@ -633,7 +637,7 @@ bool V4l2Composite::linkDefault(int srcPad, int sinkPad)
         } else {
             myPad = VideoDev->getSourcePadFor(SubDev->getEntityID(), 1);
             if (myPad < 0) {
-                ALOGE("pad invalid");
+                ALOGV("pad invalid");
                 return false;
             }
         }
@@ -643,7 +647,7 @@ bool V4l2Composite::linkDefault(int srcPad, int sinkPad)
         }
         V4l2Device::LinkStatus lstat = VideoDev->checkLink(myPad, SubDev->getEntityID(), remotePad);
         if (lstat == LINK_INVALID) {
-            ALOGE("link [%d,%d] to [%d,%d] is invalid",
+            ALOGV("link [%d,%d] to [%d,%d] is invalid",
                     VideoDev->getEntityID(), myPad,
                     SubDev->getEntityID(), 0);
             return false;
@@ -666,7 +670,7 @@ bool V4l2Composite::linkDefault(int srcPad, int sinkPad)
 
         int ret = ioctl(MediaFD, MEDIA_IOC_SETUP_LINK, &setupLink);
         if (ret) {
-            ALOGE("%s: failed to IOC_SETUP_LINK(ret: %d", __func__, ret);
+            ALOGV("%s: failed to IOC_SETUP_LINK(ret: %d", __func__, ret);
             return false;
         }
         return true;

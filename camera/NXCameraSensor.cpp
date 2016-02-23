@@ -29,15 +29,15 @@ const uint32_t NXCameraSensor::kMaxRawValue = 4000;
 const uint32_t NXCameraSensor::kBlackLevel = 1000;
 
 const uint64_t kAvailableRawMinDurations[1] = {
-    NXCameraSensor::kFrameDurationRange[0],
+    (uint64_t)NXCameraSensor::kFrameDurationRange[0],
 };
 
 const uint64_t kAvailableProcessedMinDurations[1] = {
-    NXCameraSensor::kFrameDurationRange[0],
+    (uint64_t)NXCameraSensor::kFrameDurationRange[0],
 };
 
 const uint64_t kAvailableJpegMinDurations[1] = {
-    NXCameraSensor::kFrameDurationRange[0],
+    (uint64_t)NXCameraSensor::kFrameDurationRange[0],
 };
 
 NXCameraSensor::NXCameraSensor(int cameraId)
@@ -94,7 +94,7 @@ static status_t addOrSize(camera_metadata_t *request,
 }
 
 status_t NXCameraSensor::constructStaticInfo(camera_metadata_t **info,
-        int cameraId, bool sizeRequest)
+        __attribute__((__unused__)) int cameraId, bool sizeRequest)
 {
     size_t entryCount = 0;
     size_t dataCount = 0;

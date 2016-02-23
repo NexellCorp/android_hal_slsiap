@@ -281,11 +281,24 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
     }
 
     if (module == 1) {
-        ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
-        if (ret) {
-            ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
-            return -1;
-        }
+        // ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
+        // if (ret) {
+        //     ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
+        //     return -1;
+        // }
+
+	ret = native_window_set_buffers_dimensions(window.get(), width, height);
+	if (ret) {
+		ALOGE("failed to native_window_set_buffers_dimensions(): ret %d", ret);
+		return -1; 
+	}   
+
+	ret = native_window_set_buffers_format(window.get(), HAL_PIXEL_FORMAT_YV12);
+	if (ret) {
+		ALOGE("failed to native_window_set_buffers_format(): ret %d", ret);
+		return -1;
+	}   
+
 
         ANativeWindowBuffer *anBuffer[BUFFER_COUNT];
         private_handle_t const *handle[BUFFER_COUNT];
@@ -362,11 +375,23 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         int deinter_width = width;
         int deinter_height = height;
 
-        ret = native_window_set_buffers_geometry(window.get(), deinter_width, deinter_height, HAL_PIXEL_FORMAT_YV12);
-        if (ret) {
-            ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
-            return -1;
-        }
+        // ret = native_window_set_buffers_geometry(window.get(), deinter_width, deinter_height, HAL_PIXEL_FORMAT_YV12);
+        // if (ret) {
+        //     ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
+        //     return -1;
+        // }
+
+	ret = native_window_set_buffers_dimensions(window.get(), deinter_width, deinter_height);
+	if (ret) {
+		ALOGE("failed to native_window_set_buffers_dimensions(): ret %d", ret);
+		return -1; 
+	}   
+
+	ret = native_window_set_buffers_format(window.get(), HAL_PIXEL_FORMAT_YV12);
+	if (ret) {
+		ALOGE("failed to native_window_set_buffers_format(): ret %d", ret);
+		return -1;
+	}   
 
         ANativeWindowBuffer *anBuffer[BUFFER_COUNT];
         private_handle_t const *handle[BUFFER_COUNT];
@@ -517,7 +542,7 @@ static void handle_change_event(const char *buf, int len)
     ALOGD("on: %d", on);
 }
 
-static void *backward_camera_monitoring_thread(void *data)
+static void *backward_camera_monitoring_thread(__attribute__((__unused__)) void *data)
 {
     const char *state_file = "/sys/devices/virtual/switch/rearcam/state";
     const char *change_event = "change@/devices/virtual/switch/rearcam";

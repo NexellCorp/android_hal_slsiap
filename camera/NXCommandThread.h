@@ -25,10 +25,15 @@ public:
     // listener interface
     struct CommandListener: virtual public RefBase {
         virtual void onCommand(int32_t id, camera_metadata_t *metadata) = 0;
-        virtual void onZoomChanged(int left, int top, int width, int height, int baseWidth, int baseHeight) {
+        virtual void onZoomChanged(__attribute__((__unused__)) int left,
+				   __attribute__((__unused__)) int top,
+				   __attribute__((__unused__)) int width,
+				   __attribute__((__unused__)) int height,
+				   __attribute__((__unused__)) int baseWidth,
+				   __attribute__((__unused__))int baseHeight) {
             return;
         }
-        virtual void onExifChanged(exif_attribute_t *exif) {
+        virtual void onExifChanged(__attribute__((__unused__)) exif_attribute_t *exif) {
             return;
         }
     };

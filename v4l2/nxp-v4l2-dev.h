@@ -141,18 +141,34 @@ public:
     virtual int setCrop(int l, int t, int w, int h, int index = 0);
     virtual int getCrop(int *l, int *t, int *w, int *h, int index = 0);
     virtual int setPreset(uint32_t preset);
-    virtual int reqBuf(int count) {
+    virtual int reqBuf( __attribute__((__unused__)) int count) {
         return -EINVAL;
     }
-    virtual int qBuf(int planeNum, int index0, int *fds0, int *sizes0,
-            int index1 = 0, int *fds1 = NULL, int *sizes1 = NULL, int *syncfd0 = NULL, int *syncfd1 = NULL) {
+    virtual int qBuf(__attribute__((__unused__)) int planeNum,
+		     __attribute__((__unused__)) int index0,
+		     __attribute__((__unused__)) int *fds0,
+		     __attribute__((__unused__)) int *sizes0,
+		     __attribute__((__unused__)) int index1 = 0,
+		     __attribute__((__unused__)) int *fds1 = NULL,
+		     __attribute__((__unused__)) int *sizes1 = NULL,
+		     __attribute__((__unused__)) int *syncfd0 = NULL,
+		     __attribute__((__unused__)) int *syncfd1 = NULL) {
         return -EINVAL;
     }
-    virtual int qBuf(int planeNum, int index0, int const *fds0, int const *sizes0,
-            int index1 = 0, int const *fds1 = NULL, int const *sizes1 = NULL, int *syncfd0 = NULL, int *syncfd1 = NULL) {
+    virtual int qBuf(__attribute__((__unused__)) int planeNum,
+		     __attribute__((__unused__)) int index0,
+		     __attribute__((__unused__)) int const *fds0,
+		     __attribute__((__unused__)) int const *sizes0,
+		     __attribute__((__unused__)) int index1 = 0,
+		     __attribute__((__unused__)) int const *fds1 = NULL,
+		     __attribute__((__unused__)) int const *sizes1 = NULL,
+		     __attribute__((__unused__)) int *syncfd0 = NULL,
+		     __attribute__((__unused__)) int *syncfd1 = NULL) {
         return -EINVAL;
     }
-    virtual int dqBuf(int planeNum, int *index0, int *index1) {
+    virtual int dqBuf(__attribute__((__unused__)) int planeNum,
+		      __attribute__((__unused__)) int *index0,
+		      __attribute__((__unused__)) int *index1) {
         return -EINVAL;
     }
     virtual int streamOn() {
@@ -164,7 +180,8 @@ public:
     virtual long long getTimeStamp() {
         return 0;
     }
-    virtual bool linkDefault(int srcPad=-1, int sinkPad=-1) {
+    virtual bool linkDefault(__attribute__((__unused__)) int srcPad=-1,
+			     __attribute__((__unused__)) int sinkPad=-1) {
         return true;
     }
 };
@@ -206,10 +223,11 @@ public:
     virtual long long getTimeStamp() {
         return TimeStamp;
     }
-    virtual bool linkDefault(int srcPad=-1, int sinkPad=-1) {
+    virtual bool linkDefault(__attribute__((__unused__)) int srcPad=-1,
+			     __attribute__((__unused__)) int sinkPad=-1) {
         return true;
     }
-    virtual int setPreset(uint32_t preset) {
+    virtual int setPreset(__attribute__((__unused__)) uint32_t preset) {
         return -EINVAL;
     }
 
@@ -250,16 +268,20 @@ public:
     virtual ~V4l2Composite() {
     }
 
-    virtual int setFormat(int w, int h, int format, int index = 0) {
+    virtual int setFormat(int w, int h, int format,
+			  __attribute__((__unused__)) int index = 0) {
         return VideoDev->setFormat(w, h, format);
     }
-    virtual int getFormat(int *w, int *h, int *format, int index = 0) {
+    virtual int getFormat(int *w, int *h, int *format,
+			  __attribute__((__unused__)) int index = 0) {
         return VideoDev->getFormat(w, h, format);
     }
-    virtual int setCrop(int l, int t, int w, int h, int index = 0) {
+    virtual int setCrop(int l, int t, int w, int h,
+			__attribute__((__unused__)) int index = 0) {
         return VideoDev->setCrop(l, t, w, h, index);
     }
-    virtual int getCrop(int *l, int *t, int *w, int *h, int index = 0) {
+    virtual int getCrop(int *l, int *t, int *w, int *h,
+			__attribute__((__unused__)) int index = 0) {
         return VideoDev->getCrop(l, t, w, h);
     }
     virtual int setCtrl(int ctrlId, int value) {

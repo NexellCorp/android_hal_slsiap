@@ -214,9 +214,13 @@ int NXCameraHWInterface2::releaseStream(uint32_t streamId)
     return 0;
 }
 
-int NXCameraHWInterface2::allocateReprocessStream(uint32_t width, uint32_t height, uint32_t format,
-            const camera2_stream_in_ops_t *ops,
-            uint32_t *streamId, uint32_t *consumerUsage, uint32_t *maxBuffers)
+int NXCameraHWInterface2::allocateReprocessStream(__attribute__((__unused__)) uint32_t width,
+						  __attribute__((__unused__)) uint32_t height,
+						  __attribute__((__unused__)) uint32_t format,
+						  __attribute__((__unused__)) const camera2_stream_in_ops_t *ops,
+						  __attribute__((__unused__)) uint32_t *streamId,
+						  __attribute__((__unused__)) uint32_t *consumerUsage,
+						  __attribute__((__unused__)) uint32_t *maxBuffers)
 {
     trace();
     return 0;
@@ -237,7 +241,7 @@ int NXCameraHWInterface2::allocateReprocessStreamFromStream(uint32_t outputStrea
     return 0;
 }
 
-int NXCameraHWInterface2::releaseReprocessStream(uint32_t streamId)
+int NXCameraHWInterface2::releaseReprocessStream(__attribute__((__unused__)) uint32_t streamId)
 {
     trace();
     return 0;
@@ -276,7 +280,7 @@ int NXCameraHWInterface2::getMetadataVendorTagOps(vendor_tag_query_ops_t **ops)
     return 0;
 }
 
-int NXCameraHWInterface2::dump(int fd)
+int NXCameraHWInterface2::dump( __attribute__((__unused__)) int fd)
 {
     trace();
     return 0;
@@ -444,6 +448,8 @@ static camera2_device_ops_t camera2_device_ops = {
     set_notify_callback:                 set_notify_callback,
     get_metadata_vendor_tag_ops:         get_metadata_vendor_tag_ops,
     dump:                                dump,
+
+    get_instance_metadata:		 0,
 };
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -562,6 +568,11 @@ extern "C" {
          },
         get_number_of_cameras   : get_number_of_cameras,
         get_camera_info         : get_camera_info,
+
+	set_callbacks		: 0,
+	get_vendor_tag_ops	: 0,
+	open_legacy		: 0,
+	reserved		: {0},
     };
 }
 
