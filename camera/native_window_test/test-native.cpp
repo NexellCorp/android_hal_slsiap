@@ -89,10 +89,22 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         return ret;
     }
 
-    ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
+    // ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
+    // if (ret) {
+    //     ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
+    //     return -1;
+    // }
+    
+    ret = native_window_set_buffers_dimensions(window.get(), width, height);
     if (ret) {
-        ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
-        return -1;
+        ALOGE("failed to native_window_set_buffers_dimensions(): ret %d", ret);
+	return -1;
+    }
+
+    ret = native_window_set_buffers_format(window.get(), HAL_PIXEL_FORMAT_YV12);
+    if (ret) {
+        ALOGE("failed to native_window_set_buffers_format(): ret %d", ret);
+	return -1;
     }
 
     ANativeWindowBuffer *anBuffer[BUFFER_COUNT];

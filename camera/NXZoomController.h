@@ -16,11 +16,14 @@ public:
     virtual ~NXZoomController();
 
     virtual void setBase(int baseWidth, int baseHeight) = 0;
-    virtual void getBase(int &baseWidth, int &baseHeight) {
+    virtual void getBase(__attribute__((__unused__)) int &baseWidth,
+			 __attribute__((__unused__)) int &baseHeight) {
     }
-    virtual void setSource(int width, int height) {
+    virtual void setSource(__attribute__((__unused__)) int width,
+			   __attribute__((__unused__)) int height) {
     }
-    virtual void setDest(int width, int height) {
+    virtual void setDest(__attribute__((__unused__)) int width,
+			 __attribute__((__unused__)) int height) {
     }
     virtual void setCrop(int left, int top, int srcWidth, int srcHeight) = 0;
     // TODO this is ugly code!!!

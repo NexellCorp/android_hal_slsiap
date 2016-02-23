@@ -25,7 +25,7 @@ public:
     virtual void onCommand(int32_t streamId, camera_metadata_t *metadata);
 
 protected:
-    virtual void init(nxp_v4l2_id id) {
+    virtual void init(__attribute__((__unused__)) nxp_v4l2_id id) {
         // do nothing
     }
 

@@ -106,11 +106,24 @@ static int camera_run(int module, int width, int height, bool is_mipi, SurfaceCo
         return ret;
     }
 
-    ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
+    // ret = native_window_set_buffers_geometry(window.get(), width, height, HAL_PIXEL_FORMAT_YV12);
+    // if (ret) {
+    //     ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
+    //     return -1;
+    // }
+
+    ret = native_window_set_buffers_dimensions(window.get(), width, height);
     if (ret) {
-        ALOGE("failed to native_window_set_buffers_geometry(): ret %d", ret);
-        return -1;
-    }
+	    ALOGE("failed to native_window_set_buffers_dimensions(): ret %d", ret);
+	    return -1; 
+    }   
+
+    ret = native_window_set_buffers_format(window.get(), HAL_PIXEL_FORMAT_YV12);
+    if (ret) {
+	    ALOGE("failed to native_window_set_buffers_format(): ret %d", ret);
+	    return -1;
+    }   
+
 
     // psw0523 test for rotate
 #if 0
@@ -182,7 +195,7 @@ static void handle_change_event(const char *buf, int len)
     ALOGD("on: %d", on);
 }
 
-static void *backward_camera_monitoring_thread(void *data)
+static void *backward_camera_monitoring_thread(__attribute__((__unused__)) void *data)
 {
     const char *state_file = "/sys/devices/virtual/switch/rearcam/state";
     const char *change_event = "change@/devices/virtual/switch/rearcam";
