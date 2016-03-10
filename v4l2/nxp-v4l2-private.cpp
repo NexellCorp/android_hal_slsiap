@@ -395,7 +395,7 @@ V4l2NexellPrivate::DeviceInfo *V4l2NexellPrivate::getDevice(char *name)
         ALOGV("find tvout");
         pDevice = &Devices[Tvout];
     } else {
-        ALOGV("Unknown name %s", name);
+        ALOGE("Unknown name %s", name);
     }
 
     ALOGV("p: %p", pDevice);
@@ -456,7 +456,7 @@ int V4l2NexellPrivate::enumDevices()
         }
         DeviceInfo *pDevice = getDevice(entryName);
         if (!pDevice) {
-            ALOGV("%s: can't get device for %s", __func__, entryName);
+            ALOGE("%s: can't get device for %s", __func__, entryName);
             continue;
         }
         sprintf(pDevice->Devnode, "/dev/%s", items[i]->d_name);
