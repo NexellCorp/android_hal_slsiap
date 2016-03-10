@@ -29,6 +29,10 @@ InterlaceRecordThread::~InterlaceRecordThread()
 {
 }
 
+void InterlaceRecordThread::init(nxp_v4l2_id id)
+{
+}
+
 void InterlaceRecordThread::onCommand(int32_t streamId, camera_metadata_t *metadata)
 {
 	if(streamId == STREAM_ID_RECORD) {

@@ -66,8 +66,6 @@ private:
     exif_attribute_t *Exif;
     exif_attribute_t *CurrentExif;
     NXExifProcessor *ExifProcessor;
-
-    bool UseHWJpeg;
 };
 
 }; // namespace

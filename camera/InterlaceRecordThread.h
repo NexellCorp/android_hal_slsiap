@@ -28,6 +28,9 @@ public:
 	virtual status_t readyToRun();
 	virtual void onCommand(int32_t streamId, camera_metadata_t *metadata);
 
+protected:
+	virtual void init(nxp_v4l2_id id);
+
 private:
 	virtual bool threadLoop();
 

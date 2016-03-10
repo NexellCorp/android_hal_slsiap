@@ -123,7 +123,7 @@ int alloc_buffers(int ion_fd, int count, struct nxp_vid_buffer *bufs, int width,
 #define V4L2_CID_CAMERA_MODE_CHANGE     (V4L2_CTRL_CLASS_CAMERA | 0x1003)
 
 // # ./test w h
-int main(__attribute__((__unused__)) int argc, __attribute__((__unused__)) char *argv[])
+int main(int argc, char *argv[])
 {
     int ion_fd = ion_open();
     int width;

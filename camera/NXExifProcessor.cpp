@@ -410,10 +410,7 @@ bool NXExifProcessor::processExif()
 
     // APP1 Data Size
     tmp = 10 + LongerTagOffset - 2;
-    unsigned char local_data = tmp;
-    unsigned char app_data_size[2]; // = { (local_data >> 8) & 0xFF, local_data & 0xFF };
-    app_data_size[0] = (local_data >> 8) & 0xff;
-    app_data_size[1] = local_data & 0xff;
+    unsigned char app_data_size[2] = {(tmp >> 8) & 0xFF, tmp & 0xFF};
     memcpy(pApp1Start, app_data_size, 2);
 
     // calc OutSize
