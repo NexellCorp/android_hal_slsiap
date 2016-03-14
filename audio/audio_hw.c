@@ -1764,7 +1764,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->io_handle = handle;
 
 	/* resampler */
-    if (in->request_rate != pcm->rate) {
+    if ((in->request_rate != pcm->rate) || (in->channel_mask != pcm->channels)) {
     	int format_byte = pcm_format_to_bytes(pcm->format);
 		int length = pcm->period_size * pcm->channels * format_byte;
 
