@@ -40,7 +40,8 @@ adb push $PATH_LOCAL/$BOARD_NAME/system/bin/ipod_dev_mgr_client /system/bin
 echo "adb push $PATH_LOCAL/$BOARD_NAME/system/bin/ipod_dev_mgr_server /system/bin"
 adb push $PATH_LOCAL/$BOARD_NAME/system/bin/ipod_dev_mgr_server /system/bin
 
+echo "adb push $PATH_LOCAL/$BOARD_NAME/system/bin/usbmuxdd /system/bin"
+adb push $PATH_LOCAL/$BOARD_NAME/system/bin/usbmuxdd /system/bin
+
 cp -v $PATH_LOCAL/$BOARD_NAME/system/lib/libiOSMgr.so $PATH_LOCAL_BIN/libiOSMgr/lib/libiOSMgr.so
-cp -v $PATH_LOCAL/$BOARD_NAME/system/bin/ipod_dev_mgr_client $PATH_LOCAL_BIN/iOS_mgr_service/ipod_dev_mgr_client
-cp -v $PATH_LOCAL/$BOARD_NAME/system/bin/ipod_dev_mgr_server $PATH_LOCAL_BIN/iOS_mgr_service/ipod_dev_mgr_server
 
