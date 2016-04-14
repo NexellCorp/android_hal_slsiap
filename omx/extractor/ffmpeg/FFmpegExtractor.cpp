@@ -1008,7 +1008,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	//
 	//	Audio
 	//
-	// case AV_CODEC_ID_AAC:
+	case AV_CODEC_ID_AAC:
 	// case AV_CODEC_ID_AC3:
 	// case AV_CODEC_ID_MP1:
 	// case AV_CODEC_ID_MP2:
@@ -1641,7 +1641,7 @@ int av_find_best_audio_stream(AVFormatContext *ic,
 
 		switch(avctx->codec_id)
 		{
-			// case AV_CODEC_ID_AAC:
+			case AV_CODEC_ID_AAC:
 			// case AV_CODEC_ID_AC3:
 			// case AV_CODEC_ID_MP1:
 			// case AV_CODEC_ID_MP2:
@@ -2087,7 +2087,7 @@ static int get_num_supported_audio_tracks(AVFormatContext *avfctx)
 	{
 		switch ( avfctx->streams[i]->codec->codec_id )
 		{
-			// case AV_CODEC_ID_AAC:
+			case AV_CODEC_ID_AAC:
 			// case AV_CODEC_ID_AC3:
 			// case AV_CODEC_ID_MP1:
 			// case AV_CODEC_ID_MP2:
@@ -2237,10 +2237,11 @@ const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 
 	if( dumpInfo )
 		av_dump_format(ic, 0, uri, 0);
-#if 0
+#if 1
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
 		AVCodecID codec_id = ic->streams[i]->codec->codec_id;
+		#if 0
 		if( codec_id == AV_CODEC_ID_MP1         ||
 			codec_id == AV_CODEC_ID_MP2         ||
 			codec_id == AV_CODEC_ID_MP3         ||
@@ -2255,6 +2256,7 @@ const char *BetterSniffFFMPEG(const char * uri, bool &useFFMPEG, bool dumpInfo)
 		{
 			useFFMPEG= true;
 		}
+		#endif
 		if( codec_id == AV_CODEC_ID_AAC )
 		{
 			if( ic->streams[i]->codec->profile == FF_PROFILE_AAC_MAIN )
@@ -2338,10 +2340,11 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bo
 		ALOGI("Better2SniffFFMPEG() :Have no video stream for playable.!!");
 		goto ErrorExit;
 	}
-#if 0
+#if 1
 	for( i=0 ; i < ic->nb_streams ;  i++ )
 	{
 		AVCodecID codec_id = ic->streams[i]->codec->codec_id;
+		#if 0
 		if( codec_id == AV_CODEC_ID_MP1         ||
 			codec_id == AV_CODEC_ID_MP2         ||
 			codec_id == AV_CODEC_ID_MP3         ||
@@ -2356,6 +2359,7 @@ const char *Better2SniffFFMPEG(const sp<DataSource> &source, bool &useFFMPEG, bo
 		{
 			useFFMPEG= true;
 		}
+		#endif
 		if( codec_id == AV_CODEC_ID_AAC )
 		{
 			if( ic->streams[i]->codec->profile == FF_PROFILE_AAC_MAIN )
