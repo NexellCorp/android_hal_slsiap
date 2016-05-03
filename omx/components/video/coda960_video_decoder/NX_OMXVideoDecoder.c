@@ -188,7 +188,7 @@ OMX_ERRORTYPE NX_VideoDecoder_ComponentInit (OMX_HANDLETYPE hComponent)
 #ifdef LOLLIPOP
 	pDecComp->bEnableThumbNailMode = OMX_FALSE;
 #else
-	pDecComp->bEnableThumbNailMode = OMX_TRUE;
+	pDecComp->bEnableThumbNailMode = OMX_FALSE;
 #endif
 
 	pDecComp->bMetaDataInBuffers = OMX_FALSE;

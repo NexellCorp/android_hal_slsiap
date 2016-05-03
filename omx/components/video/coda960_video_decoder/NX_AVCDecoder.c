@@ -333,6 +333,105 @@ int NX_DecodeAvcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, N
 			pDecComp->pCallbacks->FillBufferDone(pDecComp->hComp, pDecComp->hComp->pApplicationPrivate, pOutBuf);
 		}
 	}
+	else
+	{
+		int32_t iRemainSize = 0;
+
+		do {
+			decIn.strmBuf = inData;
+			decIn.strmSize = 0;
+			decIn.timeStamp = pInBuf->nTimeStamp;
+			decIn.eos = 0;
+			
+			ret = NX_VidDecDecodeFrame( pDecComp->hVpuCodec, &decIn, &decOut );
+
+			if( ret==VID_ERR_NONE && decOut.outImgIdx >= 0 && ( decOut.outImgIdx < NX_OMX_MAX_BUF ) )
+			{
+				if( OMX_TRUE == pDecComp->bEnableThumbNailMode )
+				{
+					//	Thumbnail Mode
+					NX_VID_MEMORY_INFO *pImg = &decOut.outImg;
+					NX_PopQueue( pOutQueue, (void**)&pOutBuf );
+					CopySurfaceToBufferYV12( (OMX_U8*)pImg->luVirAddr, (OMX_U8*)pImg->cbVirAddr, (OMX_U8*)pImg->crVirAddr,
+						pOutBuf->pBuffer, pImg->luStride, pImg->cbStride, pDecComp->width, pDecComp->height );
+
+					NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
+					pOutBuf->nFilledLen = pDecComp->width * pDecComp->height * 3 / 2;
+					if( 0 != PopVideoTimeStamp(pDecComp, &pOutBuf->nTimeStamp, &pOutBuf->nFlags )  )
+					{
+						pOutBuf->nTimeStamp = pInBuf->nTimeStamp;
+						pOutBuf->nFlags     = pInBuf->nFlags;
+					}
+					DbgMsg("ThumbNail Mode : pOutBuf->nAllocLen = %ld, pOutBuf->nFilledLen = %ld\n", pOutBuf->nAllocLen, pOutBuf->nFilledLen );
+					pDecComp->outFrameCount++;
+					pDecComp->pCallbacks->FillBufferDone(pDecComp->hComp, pDecComp->hComp->pApplicationPrivate, pOutBuf);
+					goto Exit;
+				}
+				else
+				{
+					int32_t OutIdx = ( pDecComp->bInterlaced == 0 ) ? ( decOut.outImgIdx ) : ( GetUsableBufferIdx(pDecComp) );
+					// if( pDecComp->isOutIdr == OMX_FALSE && decOut.picType[DECODED_FRAME] != PIC_TYPE_I )
+					// {
+					// 	OMX_TICKS timestamp;
+					// 	OMX_U32 flag;
+					// 	PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+					// 	NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
+					// 	goto Exit;
+					// }
+					pDecComp->isOutIdr = OMX_TRUE;
+
+					//	Native Window Buffer Mode
+					//	Get Output Buffer Pointer From Output Buffer Pool
+					pOutBuf = pDecComp->pOutputBuffers[OutIdx];
+					// if( OMX_TRUE == pDecComp->bMetaDataInBuffers )
+					// {
+					// 	uint32_t *pOutBufType = pDecComp->pOutputBuffers[decOut.outImgIdx];
+					// 	*pOutBufType = kMetadataBufferTypeGrallocSource;
+					// 	pOutBuf = (OMX_BUFFERHEADERTYPE*)(((unsigned char*)pDecComp->pOutputBuffers[decOut.outImgIdx])+4);
+					// 	DbgMsg("~~~~~~~~~~~~~~~~~~~ Outbuffer Data Type ~~~~~~~~~~~~~~~~~~~~~");
+					// }
+
+					if( pDecComp->outBufferUseFlag[OutIdx] == 0 )
+					{
+						OMX_TICKS timestamp;
+						OMX_U32 flag;
+						PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+						NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
+						ErrMsg("Unexpected Buffer Handling!!!! Goto Exit(%ld,%d)\n", pDecComp->curOutBuffers, decOut.outImgIdx);
+						goto Exit;
+					}
+					else
+					{
+						DbgBuffer("curOutBuffers(%ld),idx(%d)\n", pDecComp->curOutBuffers, decOut.outImgIdx);
+					}
+					pDecComp->outBufferValidFlag[OutIdx] = 1;
+					pDecComp->outBufferUseFlag[OutIdx] = 0;
+					pDecComp->curOutBuffers --;
+
+					pOutBuf->nFilledLen = sizeof(struct private_handle_t);
+					if( 0 != PopVideoTimeStamp(pDecComp, &pOutBuf->nTimeStamp, &pOutBuf->nFlags )  )
+					{
+						pOutBuf->nTimeStamp = pInBuf->nTimeStamp;
+						pOutBuf->nFlags     = pInBuf->nFlags;
+					}
+					TRACE("pOutBuf->nTimeStamp = %lld\n", pOutBuf->nTimeStamp/1000);
+
+					DeInterlaceFrame( pDecComp, &decOut );
+					pDecComp->outFrameCount++;
+					pDecComp->pCallbacks->FillBufferDone(pDecComp->hComp, pDecComp->hComp->pApplicationPrivate, pOutBuf);
+				}
+			}
+
+			if( decOut.strmReadPos <= decOut.strmWritePos )
+			{
+				iRemainSize = decOut.strmWritePos - decOut.strmReadPos;
+			}
+			else
+			{
+				iRemainSize = 4 * 1024 * 1024 - (decOut.strmReadPos - decOut.strmWritePos);
+			}
+		} while( (iRemainSize > 0) && (pDecComp->curOutBuffers > pDecComp->minRequiredFrameBuffer) );
+	}
 
 Exit:
 	pInBuf->nFilledLen = 0;
