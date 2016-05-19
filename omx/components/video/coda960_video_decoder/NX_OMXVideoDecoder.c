@@ -529,6 +529,14 @@ static OMX_ERRORTYPE NX_VidDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTYPE
 				pDecComp->inputFormat.nPortIndex= 0;
 				pDecComp->videoCodecId = NX_VP8_DEC;
 			}
+			else if ( !strcmp( (OMX_STRING)pInRole->cRole, "video_decoder.hevc") )
+			{
+				//	Set Input Format
+				pDecComp->inputFormat.eCompressionFormat = OMX_VIDEO_CodingHEVC;
+				pDecComp->inputFormat.eColorFormat = OMX_COLOR_FormatUnused;
+				pDecComp->inputFormat.nPortIndex= 0;
+				pDecComp->videoCodecId = NX_HEVC_DEC;
+			}
 			else
 			{
 				//	Error
@@ -1699,6 +1707,9 @@ int openVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 		// case NX_H263_DEC:
 			pDecComp->DecodeFrame = NX_DecodeMpeg4Frame;
 			break;
+		case NX_HEVC_DEC:
+			pDecComp->DecodeFrame = NX_DecodeHevcFrame;
+			break;
 		// case NX_DIV3_DEC:
 		// 	pDecComp->DecodeFrame = NX_DecodeDiv3Frame;
 		// 	break;
@@ -1747,6 +1758,21 @@ void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 
 			pDecComp->bInterlaced = 0;
 			pDecComp->hDeinterlace = NULL;
+		}
+
+		if ( NX_HEVC_DEC == pDecComp->videoCodecId )
+		{
+			int32_t i, size, vstride;
+			for ( i = 0 ; i < MAX_DEC_FRAME_BUFFERS ; i ++ )
+			{
+				if( pDecComp->vidFrameBuf[i].luVirAddr )
+				{
+					vstride = ALIGN(pDecComp->vidFrameBuf[i].imgHeight, 16);
+					size = pDecComp->vidFrameBuf[i].luStride * vstride;
+					size += ALIGN((pDecComp->vidFrameBuf[i].luStride>>1),16) * ALIGN(vstride>>1,16);
+					munmap( pDecComp->vidFrameBuf[i].luVirAddr, size );
+				}
+			}
 		}
 
 		NX_VidDecFlush( pDecComp->hVpuCodec );
@@ -1901,6 +1927,14 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 				pDecComp->vidFrameBuf[i].crPhyAddr = pDecComp->vidFrameBuf[i].cbPhyAddr + ALIGN(handle->stride>>1,16) * ALIGN(vstride>>1,16);
 				pDecComp->vidFrameBuf[i].luStride  = handle->stride;
 				pDecComp->vidFrameBuf[i].cbStride  = pDecComp->vidFrameBuf[i].crStride = handle->stride >> 1;
+
+				if ( NX_HEVC_DEC == pDecComp->videoCodecId )
+				{
+					pDecComp->vidFrameBuf[i].luVirAddr = (unsigned int)mmap(NULL, handle->size, PROT_READ|PROT_WRITE, MAP_SHARED, handle->share_fd, 0);
+					pDecComp->vidFrameBuf[i].cbVirAddr = pDecComp->vidFrameBuf[i].luVirAddr + handle->stride * vstride;
+					pDecComp->vidFrameBuf[i].crVirAddr = pDecComp->vidFrameBuf[i].cbVirAddr + ALIGN(handle->stride>>1,16) * ALIGN(vstride>>1,16);
+					DbgMsg("===== Virtual Address(0x%08x,0x%08x,0x%08x)\n", pDecComp->vidFrameBuf[i].luVirAddr, pDecComp->vidFrameBuf[i].cbVirAddr, pDecComp->vidFrameBuf[i].crVirAddr );
+				}
 
 				TRACE("===== Physical Address(0x%08x,0x%08x,0x%08x), H Stride(%d), V Stride(%d)\n",
 						pDecComp->vidFrameBuf[i].luPhyAddr, pDecComp->vidFrameBuf[i].cbPhyAddr, pDecComp->vidFrameBuf[i].crPhyAddr, handle->stride, vstride );

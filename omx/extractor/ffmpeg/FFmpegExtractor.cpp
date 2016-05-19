@@ -1003,7 +1003,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	// case AV_CODEC_ID_VP8:
 	// case AV_CODEC_ID_VP9:
 	// case AV_CODEC_ID_RV40:
-	// case AV_CODEC_ID_HEVC:
+	case AV_CODEC_ID_HEVC:
 
 	//
 	//	Audio
@@ -1197,12 +1197,12 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_VP9);
 			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 			break;
-		#ifdef LOLLIPOP
 		case AV_CODEC_ID_HEVC:
 			ALOGV("HEVC");
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_HEVC);
 			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 
+#if 0
 			if (avctx->extradata[0] == 1 /* configurationVersion */) {
 				// H.265 bitstream without start codes.
 				meta->setData(kKeyHVCC, kTypeHVCC, avctx->extradata, avctx->extradata_size);
@@ -1211,8 +1211,8 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 				//	FIXME : S/W H264 Need HVCC Data, We Should be setting kKeyHVCC Data.
 				//
 			}
+#endif
 			break;
-		#endif /* LOLLIPOP */
 		default:
 			CHECK(!"Should not be here. Unsupported codec.");
 			break;

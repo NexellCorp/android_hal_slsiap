@@ -78,6 +78,8 @@ static OMX_ERRORTYPE RegisterAllComponents()
 	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.rv",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.x-pn-realvideo",NULL);
 	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.vp8",				"libNX_OMX_VIDEO_DECODER",			"video_decoder.vp8",		NULL);
 
+	NX_OMXRegisterComponent("OMX.NX.VIDEO_DECODER.hevc",			"libNX_OMX_VIDEO_DECODER",			"video_decoder.hevc",		NULL);		// Added by RayPark for HEVC S/W Decoder(20160517)
+
 	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER.avc",				"libNX_OMX_VIDEO_ENCODER",			"video_encoder.avc",		NULL);			// modified by kshblue(14.07.04)
 	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER.mpeg4",			"libNX_OMX_VIDEO_ENCODER",			"video_encoder.mpeg4",		NULL);		// modified by kshblue(14.11.05)
 	NX_OMXRegisterComponent("OMX.NX.VIDEO_ENCODER.3gpp",			"libNX_OMX_VIDEO_ENCODER",			"video_encoder.h263",		NULL);
