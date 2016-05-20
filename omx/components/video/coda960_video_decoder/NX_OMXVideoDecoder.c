@@ -1770,9 +1770,9 @@ void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 					vstride = ALIGN(pDecComp->vidFrameBuf[i].imgHeight, 16);
 					size = pDecComp->vidFrameBuf[i].luStride * vstride;
 					size += (ALIGN((pDecComp->vidFrameBuf[i].luStride>>1),16) * ALIGN(vstride>>1,16))*2;
-					munmap( pDecComp->vidFrameBuf[i].luVirAddr, size );
+					munmap( (void*)pDecComp->vidFrameBuf[i].luVirAddr, size );
 					DbgMsg("===== UnMap size( %d )\n", size );
-					pDecComp->vidFrameBuf[i].luVirAddr = NULL;
+					pDecComp->vidFrameBuf[i].luVirAddr = 0;
 				}
 			}
 		}
@@ -1845,7 +1845,7 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 			char value[PROPERTY_VALUE_MAX];
 			property_get("deinterlace.mode", value, "0");
 
-			DbgMsg("[%ld] Native Buffer Mode : iNumCurRegBuf=%ld, ExtraSize = %ld, MAX_DEC_FRAME_BUFFERS = %d\n",
+			DbgMsg("[%ld] Native Buffer Mode : iNumCurRegBuf=%d, ExtraSize = %ld, MAX_DEC_FRAME_BUFFERS = %d\n",
 				pDecComp->instanceId, iNumCurRegBuf, pDecComp->codecSpecificDataSize, MAX_DEC_FRAME_BUFFERS );
 
 			if ( (seqOut.isInterlace) && (pDecComp->bInterlaced == 0) && (strcmp(value, "0")) )
@@ -2139,7 +2139,6 @@ int processEOSforFlush(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 {
 	if( pDecComp->hVpuCodec )
 	{
-		int i=0;
 		VID_ERROR_E ret;
 		NX_VID_DEC_IN decIn;
 		NX_VID_DEC_OUT decOut;
@@ -2179,11 +2178,11 @@ void DeInterlaceFrame( NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_VID_DEC_OUT *pDec
 		}
 
 		pDecComp->hVidFrameBuf[iIdx]->luVirAddr = (unsigned int)mmap(NULL, handle->size, PROT_READ|PROT_WRITE, MAP_SHARED, handle->share_fd, 0);
-		if ( pDecComp->hVidFrameBuf[iIdx]->luVirAddr == MAP_FAILED )
+		if ( pDecComp->hVidFrameBuf[iIdx]->luVirAddr == (uint32_t)MAP_FAILED )
 		{
 			ALOGE("%s: failed to mmap", __func__);
 			close(ion_fd);
-			return -1;
+			return;
 		}
 
 		vstride = ALIGN(handle->height, 16);
