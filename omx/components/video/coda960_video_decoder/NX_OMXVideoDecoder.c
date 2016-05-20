@@ -1772,6 +1772,7 @@ void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 					size += (ALIGN((pDecComp->vidFrameBuf[i].luStride>>1),16) * ALIGN(vstride>>1,16))*2;
 					munmap( pDecComp->vidFrameBuf[i].luVirAddr, size );
 					DbgMsg("===== UnMap size( %d )\n", size );
+					pDecComp->vidFrameBuf[i].luVirAddr = NULL;
 				}
 			}
 		}
