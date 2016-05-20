@@ -1769,8 +1769,9 @@ void closeVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 				{
 					vstride = ALIGN(pDecComp->vidFrameBuf[i].imgHeight, 16);
 					size = pDecComp->vidFrameBuf[i].luStride * vstride;
-					size += ALIGN((pDecComp->vidFrameBuf[i].luStride>>1),16) * ALIGN(vstride>>1,16);
+					size += (ALIGN((pDecComp->vidFrameBuf[i].luStride>>1),16) * ALIGN(vstride>>1,16))*2;
 					munmap( pDecComp->vidFrameBuf[i].luVirAddr, size );
+					DbgMsg("===== UnMap size( %d )\n", size );
 				}
 			}
 		}
@@ -1933,7 +1934,7 @@ int InitializeCodaVpu(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, unsigned char *buf, i
 					pDecComp->vidFrameBuf[i].luVirAddr = (unsigned int)mmap(NULL, handle->size, PROT_READ|PROT_WRITE, MAP_SHARED, handle->share_fd, 0);
 					pDecComp->vidFrameBuf[i].cbVirAddr = pDecComp->vidFrameBuf[i].luVirAddr + handle->stride * vstride;
 					pDecComp->vidFrameBuf[i].crVirAddr = pDecComp->vidFrameBuf[i].cbVirAddr + ALIGN(handle->stride>>1,16) * ALIGN(vstride>>1,16);
-					DbgMsg("===== Virtual Address(0x%08x,0x%08x,0x%08x)\n", pDecComp->vidFrameBuf[i].luVirAddr, pDecComp->vidFrameBuf[i].cbVirAddr, pDecComp->vidFrameBuf[i].crVirAddr );
+					DbgMsg("===== Virtual Address(0x%08x,0x%08x,0x%08x), size( %d )\n", pDecComp->vidFrameBuf[i].luVirAddr, pDecComp->vidFrameBuf[i].cbVirAddr, pDecComp->vidFrameBuf[i].crVirAddr, handle->size );
 				}
 
 				TRACE("===== Physical Address(0x%08x,0x%08x,0x%08x), H Stride(%d), V Stride(%d)\n",
