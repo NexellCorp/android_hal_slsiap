@@ -151,13 +151,13 @@ int CopySurfaceToBufferYV12( uint8_t *srcY, uint8_t *srcU, uint8_t *srcV, uint8_
         for( i=0 ; i<height ; i++ )
         {
             memcpy( dst, srcU, width );
-            srcY += strideY;
+            srcU += strideUV;
             dst += width;
         }
         for( i=0 ; i<height ; i++ )
         {
             memcpy( dst, srcV, width );
-            srcY += strideY;
+            srcV += strideUV;
             dst += width;
         }
     }
