@@ -293,6 +293,14 @@ int NX_DecodeHevcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, 
 			pDecComp->pCallbacks->FillBufferDone(pDecComp->hComp, pDecComp->hComp->pApplicationPrivate, pOutBuf);
 		}
 	}
+	else if( ret == VID_ERR_RUN )
+	{
+		// HEVC S/W Run Error : Need TimeStamp Pop
+		OMX_TICKS timestamp;
+		OMX_U32 flag;
+		PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+		ret = 0;
+	}
 
 Exit:
 	pInBuf->nFilledLen = 0;
