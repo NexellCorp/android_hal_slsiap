@@ -8,12 +8,12 @@
 //  BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS
 //  FOR A PARTICULAR PURPOSE.
 //
-//	Module		: 
-//	File		: 
-//	Description	: 
-//	Author		: 
-//	Export		: 
-//	History		: 
+//	Module		:
+//	File		:
+//	Description	:
+//	Author		:
+//	Export		:
+//	History		:
 //
 //--------------------------------------------------------------------------------
 
@@ -35,6 +35,7 @@ public:
 	virtual int32_t		RemoveTrack( int32_t iIndex ) = 0;
 
 	virtual int32_t		Write( int32_t iIndex, int8_t *pBuf, int32_t iBufSize ) = 0;
+	virtual int32_t		Flush( int32_t iIndex ) = 0;
 
 public:
 	virtual int32_t		GetVersion( int32_t *iMajor, int32_t *iMinor, int32_t *iRevision, int32_t *iReservced ) = 0;
