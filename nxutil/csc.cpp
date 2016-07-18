@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <pthread.h>
 
 #include <utils/Log.h>
 
@@ -54,25 +55,95 @@ void csc_ARGB8888_to_NV12(unsigned char *dstY, unsigned char *dstCbCr, unsigned 
 void csc_ARGB8888_to_NV21(unsigned char *dstY, unsigned char *dstCbCr, unsigned char *src, unsigned int Width, unsigned int Height);
 
 
-int cscARGBToNV21(char *src, char *dstY, char *dstCbCr, uint32_t srcWidth, uint32_t srcHeight, uint32_t cbFirst)
+#define MAX_THREAD_NUM		4
+
+typedef struct tCSC_THREAD_PARA {
+	pthread_t 		hCscThread;
+
+	char 				*src;
+	char 				*dstY;
+	char 				*dstCbCr;
+	uint32_t 			srcWidth;
+	uint32_t 			srcHeight;
+
+	bool				bCompleted;
+
+	void				(*pvCscFunc)(unsigned char *, unsigned char *, unsigned char *, unsigned int, unsigned int);
+} CSC_THREAD_PARA;
+
+
+void *thread_cscARGBToNV21(void *arg)
 {
+	CSC_THREAD_PARA *pstCscPara = (CSC_THREAD_PARA *)arg;
+
+	while (pstCscPara->bCompleted != true)
+	{
+		pstCscPara->pvCscFunc((unsigned char *)pstCscPara->dstY, (unsigned char *)pstCscPara->dstCbCr, (unsigned char *)pstCscPara->src, pstCscPara->srcWidth, pstCscPara->srcHeight);
+		pstCscPara->bCompleted = true;
+	}
+
+	return (void *)pstCscPara;
+}
+
+int cscARGBToNV21(char *src, char *dstY, char *dstCbCr, uint32_t srcWidth, uint32_t srcHeight, uint32_t cbFirst, int32_t threadNum)
+{
+	void (*pvCscFunc)(unsigned char *, unsigned char *, unsigned char *, unsigned int, unsigned int) = NULL;
+
     if( cbFirst )
     {
 #if ARM64		//	C module
-		csc_ARGB8888_to_NV12((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+		pvCscFunc = csc_ARGB8888_to_NV12;
 #else
-        csc_ARGB8888_to_NV12_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+        pvCscFunc = csc_ARGB8888_to_NV12_NEON;
 #endif
     }
     else
     {
 #if ARM64		//	C module
-        csc_ARGB8888_to_NV21((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+        pvCscFunc = csc_ARGB8888_to_NV21;
 #else
-        csc_ARGB8888_to_NV21_NEON((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+        pvCscFunc = csc_ARGB8888_to_NV21_NEON;
 #endif
     }
-    return 0;
+
+	if ((srcHeight > 320) && (threadNum > 1))
+	{
+		CSC_THREAD_PARA stCscPara[MAX_THREAD_NUM];
+		int i, subHeight;
+
+		if (threadNum > MAX_THREAD_NUM)
+			threadNum = MAX_THREAD_NUM;
+
+		subHeight = srcHeight / threadNum;
+
+		for (i=0 ; i<threadNum ; i++)
+		{
+			stCscPara[i].src = src + (i * subHeight * srcWidth * 4);
+			stCscPara[i].dstY = dstY + (i * subHeight * srcWidth);
+			stCscPara[i].dstCbCr = dstCbCr + (i * subHeight * srcWidth / 2);
+			stCscPara[i].srcWidth = srcWidth;
+			stCscPara[i].srcHeight = (i < (threadNum -1)) ? (subHeight) : (srcHeight - subHeight*i);
+			stCscPara[i].bCompleted = false;
+			stCscPara[i].pvCscFunc = pvCscFunc;
+
+			if (pthread_create(&stCscPara[i].hCscThread, NULL, thread_cscARGBToNV21, (void *)&stCscPara[i]) < 0)
+			{
+				ALOGE("Cannot Create CSC Thread!!!\n");
+				return -1;
+			}
+		}
+
+		for (i=0 ; i<threadNum ; i++)
+		{
+			pthread_join(stCscPara[i].hCscThread, NULL);
+		}
+	}
+	else
+	{
+		pvCscFunc((unsigned char *)dstY, (unsigned char *)dstCbCr, (unsigned char *)src, srcWidth, srcHeight);
+	}
+
+	return 0;
 }
 
 //  Copy Virtual Address Space to H/W Addreadd Space
