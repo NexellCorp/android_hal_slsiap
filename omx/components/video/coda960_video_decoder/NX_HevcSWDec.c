@@ -209,6 +209,25 @@ int NX_DecodeHevcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, 
 		if ( 0 > ret )
 		{
 			ErrMsg("VPU initialized Failed!!!!\n");
+			if (1)
+			{
+				uint8_t *tmp = inData;
+				DbgMsg("0x%02x%02x%02x%02x 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x 0x%02x%02x%02x%02x\n", 
+					tmp[ 0], tmp[ 1], tmp[ 2], tmp[ 3], tmp[ 4], tmp[ 5], tmp[ 6], tmp[ 7],
+					tmp[ 8], tmp[ 9], tmp[10], tmp[11], tmp[12], tmp[13], tmp[14], tmp[15] );
+			}
+
+			//	TimeStamp Dummy Pop
+			if ( !(pInBuf->nFlags & OMX_BUFFERFLAG_CODECCONFIG) ){
+				int64_t time;
+				uint32_t flag;
+				if( 0 != PopVideoTimeStamp(pDecComp, &time, &flag )  )
+				{
+					pOutBuf->nTimeStamp = pInBuf->nTimeStamp;
+					pOutBuf->nFlags     = pInBuf->nFlags;
+				}
+			}
+			ret = 0;
 			goto Exit;
 		}
 		else if ( ret > 0  )
