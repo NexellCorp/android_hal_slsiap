@@ -112,6 +112,7 @@ typedef struct NX_FFDEC_AUDIO_COMP_TYPE{
 		OMX_AUDIO_PARAM_RATYPE raType;
 		OMX_AUDIO_PARAM_WMATYPE wmaType;
 		OMX_AUDIO_PARAM_MP3TYPE mp3Type;
+		OMX_AUDIO_PARAM_AACPROFILETYPE aacType;	//	Added by RayPark for AAC 5.1 channel
 	}inPortType;
 
 	/*				Audio Format				*/

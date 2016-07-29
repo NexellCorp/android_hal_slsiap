@@ -343,6 +343,18 @@ static OMX_ERRORTYPE NX_FFAudDec_GetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 			NxMemcpy( ComponentParamStruct, &pDecComp->inPortType, sizeof(OMX_AUDIO_PARAM_MP3TYPE) );
 			break;
 		}
+		case OMX_IndexParamAudioAac:
+		{
+			OMX_AUDIO_PARAM_AACPROFILETYPE *pAacType = (OMX_AUDIO_PARAM_AACPROFILETYPE *)ComponentParamStruct;
+			DbgMsg("%s, ++  OMX_IndexParamAudioAac\n", __FUNCTION__);
+			if( pAacType->nPortIndex != FFDEC_AUD_INPORT_INDEX){
+				NX_ErrMsg("%s Bad port index.(%d)\n", __FUNCTION__, nParamIndex);
+				return OMX_ErrorBadPortIndex;
+			}
+			DbgMsg("%s, --  OMX_IndexParamAudioAac\n", __FUNCTION__);
+			NxMemcpy( ComponentParamStruct, &pDecComp->inPortType, sizeof(OMX_AUDIO_PARAM_AACPROFILETYPE) );
+			break;
+		}
 		default :
 			return NX_BaseGetParameter( hComp, nParamIndex, ComponentParamStruct );
 	}
@@ -420,6 +432,16 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
 				pDecComp->inCodingType = OMX_AUDIO_CodingWMA;
 				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingWMA;
+			}
+			//	Added by RayPark for AAC 5.1 channel
+			else if( !strcmp( (OMX_STRING)pInRole->cRole, "audio_decoder.aac" ) )
+			{
+				//	Real audio
+				if( pDecComp->compRole )
+					free(pDecComp->compRole);
+				pDecComp->compRole = strdup((OMX_STRING)pInRole->cRole);
+				pDecComp->inCodingType = OMX_AUDIO_CodingAAC;
+				pDecComp->pInputPort->stdPortDef.format.audio.eEncoding = OMX_AUDIO_CodingAAC;
 			}
 			else
 			{
@@ -545,6 +567,25 @@ static OMX_ERRORTYPE NX_FFAudDec_SetParameter (OMX_HANDLETYPE hComp, OMX_INDEXTY
 			pDecComp->outPortType.nSamplingRate = pMp3Type->nSampleRate;
 
 			TRACE("%s() OK. (Channels=%ld, BitRate=%ld)\n", __FUNCTION__, pMp3Type->nChannels, pMp3Type->nBitRate );
+			break;
+		}
+		//	Added by RayPark for AAC 5.1 Channel
+		case OMX_IndexParamAudioAac:
+		{
+			OMX_AUDIO_PARAM_AACPROFILETYPE *pAacType = (OMX_AUDIO_PARAM_AACPROFILETYPE *)ComponentParamStruct;
+
+			if( pAacType->nPortIndex != FFDEC_AUD_INPORT_INDEX){
+				NX_ErrMsg("%s Bad port index.(%d)\n", __FUNCTION__, nParamIndex);
+				return OMX_ErrorBadPortIndex;
+			}
+
+			memcpy( &pDecComp->inPortType.aacType, pAacType, sizeof(OMX_AUDIO_PARAM_AACPROFILETYPE) );
+
+			//	Modify Out Port Information
+			pDecComp->outPortType.nChannels = FFMIN(2, pAacType->nChannels);
+			pDecComp->outPortType.nSamplingRate = pAacType->nSampleRate;
+
+			TRACE("%s() OK. (Channels=%ld, BitRate=%ld)\n", __FUNCTION__, pAacType->nChannels, pAacType->nBitRate );
 			break;
 		}
 		case OMX_IndexAudioDecoderFFMpegExtradata:
@@ -1115,6 +1156,14 @@ static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp)
 			sampleRate = pDecComp->inPortType.mp3Type.nSampleRate;
 			bitRate = pDecComp->inPortType.mp3Type.nBitRate;
 			DbgMsg("Audio coding type MP3, channels=%d, samplingrate=%d, codecId = %d\n", channels, sampleRate, codecId);
+			break;
+		// Added by RayPark for AAC 5.1 Channel
+		case OMX_AUDIO_CodingAAC:
+			codecId = CODEC_ID_AAC;
+			channels = pDecComp->inPortType.aacType.nChannels;
+			sampleRate = pDecComp->inPortType.aacType.nSampleRate;
+			bitRate = pDecComp->inPortType.aacType.nBitRate;
+			DbgMsg("Audio coding type AAC, channels=%d, samplingrate=%d, codecId = %d\n", channels, sampleRate, codecId);
 			break;
 		default:
 			//DbgMsg("Audio coding type WMA, channels=%d, samplingrate=%d, codecId = %d\n", channels, sampleRate, codecId);
