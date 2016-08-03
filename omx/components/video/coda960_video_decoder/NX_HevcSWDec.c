@@ -165,7 +165,6 @@ int NX_DecodeHevcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, 
 	if ( !(pInBuf->nFlags & OMX_BUFFERFLAG_CODECCONFIG) )
 		PushVideoTimeStamp(pDecComp, pInBuf->nTimeStamp, pInBuf->nFlags );
 
-
 	//	Step 2. Find First Key Frame & Do Initialize VPU
 	if ( OMX_FALSE == pDecComp->bInitialized )
 	{
@@ -190,8 +189,8 @@ int NX_DecodeHevcFrame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue, 
 				initBuf = (unsigned char *)malloc( pDecComp->nExtraDataSize + 1024 + inSize );
 				NX_ParseHEVCCfgFromHVC1( pDecComp->pExtraData, pDecComp->nExtraDataSize, &hevcHeader );
 				NX_MakeHEVCStreamHVC1ANNEXB( &hevcHeader, initBuf, &initBufSize );
-				// memcpy( initBuf + initBufSize, inData, inSize );
-				// initBufSize += inSize;
+				memcpy( initBuf + initBufSize, inData, inSize );
+				initBufSize += inSize;
 			}
 		}
 		else
