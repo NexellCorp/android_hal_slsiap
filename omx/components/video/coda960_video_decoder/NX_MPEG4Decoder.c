@@ -184,6 +184,13 @@ int NX_DecodeMpeg4Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 			pDecComp->pCallbacks->FillBufferDone(pDecComp->hComp, pDecComp->hComp->pApplicationPrivate, pOutBuf);
 		}
 	}
+	//	Added by Ray Park for Skip Frame
+	else if( ret==VID_ERR_NONE && decOut.outDecIdx <= 0 )
+	{
+		OMX_TICKS timestamp;
+		OMX_U32 flag;
+		PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+	}
 
 Exit:
 	pInBuf->nFilledLen = 0;
