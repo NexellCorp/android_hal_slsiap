@@ -160,9 +160,7 @@ int NX_DecodeMpeg4Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 
 			if( (pDecComp->outBufferUseFlag[OutIdx] == 0) || (OutIdx < 0) )
 			{
-				OMX_TICKS timestamp;
-				OMX_U32 flag;
-				PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+				PopVideoTimeStamp(pDecComp, NULL, NULL );
 				NX_VidDecClrDspFlag( pDecComp->hVpuCodec, NULL, decOut.outImgIdx );
 				ErrMsg("Unexpected Buffer Handling!!!! Goto Exit\n");
 				goto Exit;
@@ -187,9 +185,7 @@ int NX_DecodeMpeg4Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 	//	Added by Ray Park for Skip Frame
 	else if( ret==VID_ERR_NONE && decOut.outDecIdx <= 0 )
 	{
-		OMX_TICKS timestamp;
-		OMX_U32 flag;
-		PopVideoTimeStamp(pDecComp, &timestamp, &flag );
+		PopVideoTimeStamp(pDecComp, NULL, NULL );
 	}
 
 Exit:

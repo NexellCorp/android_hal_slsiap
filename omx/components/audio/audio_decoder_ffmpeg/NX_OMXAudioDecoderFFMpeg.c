@@ -1205,7 +1205,8 @@ static int openAudioCodec(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp)
 	pDecComp->avctx->block_align = blockAlign;
 	pDecComp->avctx->bit_rate = bitRate;
 
-	TRACE("channels = %d, request_channels = %d, block_align=%d\n", pDecComp->avctx->channels, pDecComp->avctx->request_channels, pDecComp->avctx->block_align );
+	TRACE("channels = %d, request_channels = %d, block_align=%d, extraSize(%d)\n",
+			pDecComp->avctx->channels, pDecComp->avctx->request_channels, pDecComp->avctx->block_align, pDecComp->nExtraDataSize );
 
 	if( pDecComp->pExtraData )
 	{

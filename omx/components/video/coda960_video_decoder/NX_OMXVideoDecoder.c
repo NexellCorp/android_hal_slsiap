@@ -1719,9 +1719,9 @@ int openVideoCodec(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp)
 		// case NX_RV_DEC:
 		// 	pDecComp->DecodeFrame = NX_DecodeRVFrame;
 		// 	break;
-		// case NX_VP8_DEC:
-		// 	pDecComp->DecodeFrame = NX_DecodeVP8Frame;
-		// 	break;
+		case NX_VP8_DEC:
+			pDecComp->DecodeFrame = NX_DecodeVP8Frame;
+			break;
 		default:
 			pDecComp->DecodeFrame = NULL;
 			break;
@@ -2011,8 +2011,10 @@ int PopVideoTimeStamp(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, OMX_TICKS *timestamp,
 	}
 	if( minIdx != -1 )
 	{
-		*timestamp = pDecComp->outTimeStamp[minIdx].timestamp;
-		*flag      = pDecComp->outTimeStamp[minIdx].flag;
+		if( NULL != timestamp )
+			*timestamp = pDecComp->outTimeStamp[minIdx].timestamp;
+		if( NULL != flag )
+			*flag = pDecComp->outTimeStamp[minIdx].flag;
 		pDecComp->outTimeStamp[minIdx].flag = (OMX_U32)-1;
 		return 0;
 	}

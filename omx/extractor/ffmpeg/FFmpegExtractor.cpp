@@ -1000,7 +1000,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 	// case AV_CODEC_ID_MPEG2VIDEO:
 	// case AV_CODEC_ID_WMV3:
 	// case AV_CODEC_ID_VC1:
-	// case AV_CODEC_ID_VP8:
+	case AV_CODEC_ID_VP8:
 	// case AV_CODEC_ID_VP9:
 	// case AV_CODEC_ID_RV40:
 	case AV_CODEC_ID_HEVC:
@@ -1324,6 +1324,7 @@ int FFmpegExtractor::stream_component_open(int stream_index)
 			meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_AUDIO_AAC);
 			meta->setInt32(kKeyBlockAlign, avctx->block_align);
 			meta->setInt32(kKeyAACProfile, profile);
+			meta->setData(kKeyRawCodecSpecificData, 0, avctx->extradata, avctx->extradata_size);
 			break;
 		case AV_CODEC_ID_WMAV1:  // TODO, version?
 			ALOGV("WMAV1");
