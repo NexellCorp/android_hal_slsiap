@@ -1880,7 +1880,7 @@ void FFmpegExtractor::readerEntry() {
 #endif
 
 		if (mSeekReq) {
-			ALOGI("readerEntry, mSeekReq: %d, mSeekFlags=0x%08x", mSeekReq, mSeekFlags);
+			ALOGI("readerEntry, mSeekPos: %lld, mSeekReq: %d, mSeekFlags=0x%08x", mSeekPos, mSeekReq, mSeekFlags);
 			ret = avformat_seek_file(mFormatCtx, -1, INT64_MIN, mSeekPos, INT64_MAX, mSeekFlags);
 			if (ret < 0) {
 				ALOGE("%s: error while seeking", mFormatCtx->filename);

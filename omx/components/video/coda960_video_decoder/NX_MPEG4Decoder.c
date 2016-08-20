@@ -120,7 +120,8 @@ int NX_DecodeMpeg4Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 		decIn.eos = 0;
 		ret = NX_VidDecDecodeFrame( pDecComp->hVpuCodec, &decIn, &decOut );
 	}
-	TRACE("decOut : readPos = %d, writePos = %d, decIdx = %d, dispIdx = %d \n", decOut.strmReadPos, decOut.strmWritePos, decOut.outDecIdx, decOut.outImgIdx );
+	TRACE("decOut : readPos = %d, writePos = %d, decIdx = %d/%d, dispIdx = %d/%d\n",
+			decOut.strmReadPos, decOut.strmWritePos, decOut.outDecIdx, decOut.picType[DECODED_FRAME], decOut.outImgIdx, decOut.picType[DISPLAY_FRAME] );
 
 	if( ret==VID_ERR_NONE && decOut.outImgIdx >= 0 && ( decOut.outImgIdx < NX_OMX_MAX_BUF ) )
 	{
@@ -183,7 +184,7 @@ int NX_DecodeMpeg4Frame(NX_VIDDEC_VIDEO_COMP_TYPE *pDecComp, NX_QUEUE *pInQueue,
 		}
 	}
 	//	Added by Ray Park for Skip Frame
-	else if( ret==VID_ERR_NONE && decOut.outDecIdx <= 0 )
+	else if( ret==VID_ERR_NONE && decOut.outDecIdx < 0 )
 	{
 		PopVideoTimeStamp(pDecComp, NULL, NULL );
 	}
