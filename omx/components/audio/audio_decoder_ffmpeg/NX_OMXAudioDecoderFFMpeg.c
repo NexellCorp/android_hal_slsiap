@@ -54,7 +54,7 @@ static int decodeAudioFrame(NX_FFDEC_AUDIO_COMP_TYPE *pDecComp, NX_QUEUE *pInQue
 
 
 static OMX_S32		gstNumInstance = 0;
-static OMX_S32		gstMaxInstance = 1;
+static OMX_S32		gstMaxInstance = 5;
 
 
 
