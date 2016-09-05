@@ -1,1 +1,1 @@
-../../../../device/nexell/s5p6818_avn_ref/v4l2/android-nxp-v4l2.cpp
+../../../../device/nexell/s5p4418_digital_cinema/v4l2/android-nxp-v4l2.cpp
