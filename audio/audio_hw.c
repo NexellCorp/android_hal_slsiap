@@ -84,11 +84,11 @@ static struct snd_card_dev pcm_out = {
 	.device		= 0,
 	.flags		= PCM_OUT,
 	.config		= {
-		.channels		= 2,
-		.rate			= 48000,
-    	.period_size 	= 1024,
-    	.period_count 	= 4,
-    	.format 		= PCM_FORMAT_S16_LE,
+		.channels	= 2,
+		.rate		= 48000,
+		.period_size	= 1024,
+		.period_count	= 4,
+		.format		= PCM_FORMAT_S16_LE,
 	},
 };
 
@@ -98,11 +98,11 @@ static struct snd_card_dev pcm_in = {
 	.device		= 0,
 	.flags		= PCM_IN,
 	.config		= {
-		.channels		= 2,
-		.rate			= 48000,
-    	.period_size 	= 1024,
-    	.period_count 	= 4,
-    	.format 		= PCM_FORMAT_S16_LE,
+		.channels	= 2,
+		.rate		= 48000,
+		.period_size	= 1024,
+		.period_count	= 4,
+		.format		= PCM_FORMAT_S16_LE,
 	},
 };
 
@@ -112,11 +112,11 @@ static struct snd_card_dev spdif_out = {
 	.device		= 0,
 	.flags		= PCM_OUT,
 	.config		= {
-		.channels		= 2,
-		.rate			= 48000,
-    	.period_size 	= 1024,
-    	.period_count 	= 4,
-    	.format 		= PCM_FORMAT_S16_LE,
+		.channels	= 2,
+		.rate		= 48000,
+		.period_size	= 1024,
+		.period_count	= 4,
+		.format		= PCM_FORMAT_S16_LE,
 	},
 };
 
@@ -583,6 +583,7 @@ static int pcm_output_start(struct stream_out *out)
 	if (card->refcount)
 		return -1;
 
+		card->flags |= PCM_MONOTONIC;
 		out->pcm = pcm_open(card->card, card->device, card->flags, pcm);
 
         if (out->pcm && !pcm_is_ready(out->pcm)) {
@@ -1095,11 +1096,14 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
 
     /* Write to all active PCMs (I2S/SPDIF) */
 	if (out->pcm) {
-		pcm_write(out->pcm, (void *)buffer, bytes);
+		ret = pcm_write(out->pcm, (void *)buffer, bytes);
 	#ifdef	DUMP_PLAYBACK
 		if (out->file)
 			fwrite(buffer, 1, bytes, out->file);
 	#endif
+		if (ret == 0)
+			out->written += bytes / (out->config.channels *
+						 sizeof(short));
 	}
 
 err_write:
