@@ -743,6 +743,7 @@ bool NXCommandThread::processCommand()
     status_t ret = NO_ERROR;
 
     while (!exitPending()) {
+		usleep(10*1000);
         camera_metadata_t *request = NULL;
 
         RequestQueueSrcOps->dequeue_request(RequestQueueSrcOps, &request);

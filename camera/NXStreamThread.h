@@ -119,15 +119,19 @@ public:
     }
 
     void setState(int32_t state) {
-        android_atomic_release_cas(State, state, &State);
+		android_atomic_acquire_store(state, &State);
     }
 
-    int32_t getState() const {
+    int32_t getState() {
         return android_atomic_acquire_load(&State);
     }
 
-    bool isRunning() const {
-        return getState() == STATE_RUNNING;
+    bool isRunning() {
+		Mutex::Autolock l(StateLock);
+		if(State == STATE_RUNNING)
+			return true;
+		else
+			return false;
     }
 
     virtual void pause() {
@@ -175,6 +179,7 @@ private:
     Mutex StreamLock; // for Streams
 
     Mutex PauseLock;
+	Mutex StateLock;
     Condition SignalResume;
     bool Pausing;
 
