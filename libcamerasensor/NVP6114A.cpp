@@ -30,7 +30,7 @@ enum {
 
 const int32_t ResolutionNVP6114A[] = {
     1280, 720,
-    1920, 1080,
+//  1920, 1080,
 };
 
 // TOP/system/media/camera/include/system/camera_metadata_tags.h
