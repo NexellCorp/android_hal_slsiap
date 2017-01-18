@@ -403,6 +403,7 @@ nmea_reader_update_speed( NmeaReader*  r,
 
     r->fix.flags   |= GPS_LOCATION_HAS_SPEED;
     r->fix.speed    = str2float(tok.p, tok.end);
+	r->fix.speed   *= 0.514444;
     return 0;
 }
 
