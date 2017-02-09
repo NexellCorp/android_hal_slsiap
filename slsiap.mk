@@ -38,7 +38,8 @@ PRODUCT_PACKAGES += \
 	libNX_OMX_VIDEO_ENCODER \
 	libNX_OMX_Base \
 	libNX_OMX_Core \
-	libNX_OMX_Common
+	libNX_OMX_Common \
+	libnxgraphictools
 
 
 # stagefright FFMPEG compnents
