@@ -56,11 +56,28 @@ bool NXCameraHWInterface2::init()
 
 void NXCameraHWInterface2::release()
 {
-    trace();
-    if (IonFd >= 0) {
-        ion_close(IonFd);
-        IonFd = -1;
-    }
+	trace();
+	if (IonFd >= 0) {
+		ion_close(IonFd);
+		IonFd = -1;
+	}
+
+	if (CommandThread != NULL) {
+		NXCommandThread *cthread = CommandThread.get();
+		cthread->requestExit();
+		cthread->wakeup();
+		cthread->join();
+	} else
+		ALOGE("CommandThread is NULL!!!");
+
+	if (SensorThread != NULL) {
+		NXSensorThread *sthread = SensorThread.get();
+		sthread->requestExit();
+		sthread->wakeon();
+		if (sthread->isRunning())
+			sthread->join();
+	} else
+		ALOGE("SensorThread is NULL!!!");
 }
 
 // public interface

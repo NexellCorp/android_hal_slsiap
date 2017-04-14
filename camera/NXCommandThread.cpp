@@ -77,11 +77,16 @@ bool NXCommandThread::threadLoop()
         ALOGD("exit Pending!!!");
         return false;
     }
+
     SignalMutex.lock();
     while (!MsgReceived)
         SignalCondition.wait(SignalMutex);
     MsgReceived = false;
     SignalMutex.unlock();
+
+    if (exitPending())
+	return false;
+
     return processCommand();
 #endif
 }

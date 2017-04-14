@@ -28,16 +28,25 @@ public:
         sendMessage(message);
     }
 
+    virtual void wakeon(void) {
+        Mutex::Autolock lock(QLock);
+        QCondition.signal();
+    }
+
 private:
     // virtual bool processMessage(const T& message) = 0;
     virtual bool processMessage(const T message) = 0;
     virtual bool threadLoop() {
         QLock.lock();
-        while(queue.isEmpty()) {
+        while(!exitPending() && queue.isEmpty()) {
             QCondition.wait(QLock);
         }
         const T& msg = queue.dequeue();
         QLock.unlock();
+
+	if (exitPending())
+		return false;
+
         return processMessage(msg);
     }
 
