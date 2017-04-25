@@ -15,13 +15,15 @@
 #include "InterlaceRecordThread.h"
 
 namespace android {
-	InterlaceRecordThread::InterlaceRecordThread(nxp_v4l2_id id, 
+	InterlaceRecordThread::InterlaceRecordThread(nxp_v4l2_id id,
 		int width,
 		int height,
 		sp<NXZoomController> &zoomController,
 		sp<NXStreamManager> &streamManager)
 	: NXStreamThread(id, width, height, zoomController, streamManager)
 {
+	srcOldHandle = NULL;
+
 	init(id);
 }
 
@@ -58,13 +60,13 @@ status_t InterlaceRecordThread::readyToRun()
 	status_t res	=	stream->initBuffer();
 	if(res != NO_ERROR) {
 		ALOGE("failed to initBuffer.");
-		return NO_INIT; 
+		return NO_INIT;
 	}
 
 	InitialSkipCount	=	get_board_preview_skip_frame(SensorId);
-	
+
 	ALOGV("readyToRun exit");
-	return NO_ERROR;	
+	return NO_ERROR;
 }
 
 bool InterlaceRecordThread::threadLoop()
@@ -94,10 +96,17 @@ bool InterlaceRecordThread::threadLoop()
 	int width, height;
 	private_handle_t const *srcHandle = previewThread->getLastBuffer(width, height);
 	if (!srcHandle) {
-		ALOGE("can't get preview thread laast buffer...wait");
+		ALOGE("can't get preview thread last buffer...wait");
 		usleep(500*1000);
 		return true;
 	}
+
+	if (srcHandle == srcOldHandle) {
+		ALOGV("same source frame. try after sleep 16ms.");
+		usleep(16 * 1000);
+		return true;
+	} else
+		srcOldHandle = srcHandle;
 
 	CHECK_AND_EXIT();
 
@@ -105,8 +114,8 @@ bool InterlaceRecordThread::threadLoop()
 		ALOGE("preview wxh(%dx%d is diffent from me(%dx%d", width, height, Width, Height);
 		ERROR_EXIT();
 	}
-	
-	//ALOGD("dqIdx: %d\n", dqIdx);
+
+	ALOGD("dqIdx: %d\n", dqIdx);
 
 	private_handle_t const *dstHandle = stream->getNextBuffer();
 	if (!dstHandle) {
@@ -117,20 +126,20 @@ bool InterlaceRecordThread::threadLoop()
 	ALOGV("src format: 0x%X, dst format: 0x%X", srcHandle->format, dstHandle->format);
 	ALOGV("srcHadle %p, dstHandle %p", srcHandle, dstHandle);
 
-//	nxCopySrcData(srcHandle, dstHandle, Width, Height);
+	/*	nxCopySrcData(srcHandle, dstHandle, Width, Height);	*/
 	nxMemcpyHandle(dstHandle, srcHandle);
 
-	ret = stream->enqueueBuffer(systemTime(SYSTEM_TIME_MONOTONIC));	
+	ret = stream->enqueueBuffer(systemTime(SYSTEM_TIME_MONOTONIC));
 	if (ret != NO_ERROR) {
 		ALOGE("failed to enqueue_buffer (idx:%d)", dqIdx);
 		ERROR_EXIT();
 	}
 
 	ALOGV("end enqueueBuffer");
-	
+
 	CHECK_AND_EXIT();
 
-	ret = stream->dequeueBuffer(&buf);	
+	ret = stream->dequeueBuffer(&buf);
 	if (ret != NO_ERROR || buf == NULL) {
 		ALOGE("failed to dequeue_buffer");
 		ERROR_EXIT();

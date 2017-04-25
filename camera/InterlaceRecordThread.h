@@ -14,11 +14,11 @@
 #include "NXStreamManager.h"
 
 namespace android	{
-	
+
 class InterlaceRecordThread:	public NXStreamThread
 {
 public:
-	InterlaceRecordThread(nxp_v4l2_id id, 
+	InterlaceRecordThread(nxp_v4l2_id id,
 		int width,
 		int height,
 		sp<NXZoomController> &zoomController,
@@ -38,6 +38,8 @@ private:
 	bool 		UseZoom;
 	uint32_t	PlaneNum;
 	uint32_t	Format;
+
+	private_handle_t const *srcOldHandle;
 };
 
 };	//	namespace
