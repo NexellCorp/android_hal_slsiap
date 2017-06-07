@@ -1719,16 +1719,24 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 	DLOGI("*** %s (devices=0x%x, request rate=%d, channel_mask=0x%x) ***\n",
 		__FUNCTION__, devices, config->sample_rate, config->channel_mask);
 
+    if (stream_in_refcount != 1) {
+	stream_in_refcount--;
+        return -EBUSY;
+    }
+
     /* Respond with a request for mono if a different format is given. */
     if (config->channel_mask != AUDIO_CHANNEL_IN_MONO &&
         config->channel_mask != AUDIO_CHANNEL_IN_FRONT_BACK) {
         config->channel_mask  = AUDIO_CHANNEL_IN_MONO;
+	stream_in_refcount--;
         return -EINVAL;
     }
 
     in = (struct stream_in *)calloc(1, sizeof(struct stream_in));
-    if (!in)
+    if (!in) {
+	stream_in_refcount--;
         return -ENOMEM;
+    }
 
     in->stream.common.get_sample_rate = in_get_sample_rate;
     in->stream.common.set_sample_rate = in_set_sample_rate;
@@ -1814,6 +1822,7 @@ err_resampler:
 	free(in->buffer);
 err_open:
     free(in);
+    stream_in_refcount--;
     return ret;
 }
 
