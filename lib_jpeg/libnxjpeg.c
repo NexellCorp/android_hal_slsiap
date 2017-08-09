@@ -190,6 +190,8 @@ struct convert_context {
 	int width;
 	int height;
 	int imagesize;
+	int ystride;
+	int cstride;
 	NXPixFormat input_fmt;
 	union {
 		struct jpeg_data *j;  //the converter's data
@@ -270,10 +272,18 @@ static void jpeg_encode_yuv420(struct convert_context *d, unsigned char *src, un
 
 	JSAMPROW y[16],cb[16],cr[16];
 	JSAMPARRAY data[3];
-	int i, line, rgb_size, width, height;
+	int i, line, rgb_size, width, height, ystride, cstride;
 	struct jpeg_compress_struct *cinfo = d->j->cinfo;
 	width = d->width;
-	height = d->height ;
+	height = d->height;
+	if (d->ystride)
+		ystride = d->ystride;
+	else
+		ystride = width;
+	if (d->cstride)
+		cstride = d->cstride;
+	else
+		cstride = width/2;
 
 	data[0] = y;
 	data[1] = cb;
@@ -305,16 +315,20 @@ static void jpeg_encode_yuv420(struct convert_context *d, unsigned char *src, un
         struct ycbcr_planar *planar = (struct ycbcr_planar *)src;
         for (line=0; line<height; line+=16) {
             for (i=0; i<16; i++) {
-                y[i] = (unsigned char *)planar->y + width*(i+line);
+                y[i] = (unsigned char *)planar->y + ystride*(i+line);
                 if (i%2 == 0) {
-                    cb[i/2] = (unsigned char *)planar->cb + width/2*((i+line)/2);
-                    cr[i/2] = (unsigned char *)planar->cr + width/2*((i+line)/2);
+                    cb[i/2] = (unsigned char *)planar->cb + cstride*((i+line)/2);
+                    cr[i/2] = (unsigned char *)planar->cr + cstride*((i+line)/2);
                 }
             }
+	if (DEBUG_MESSAGE)
+		dprint(LOG_JPEG, "[JPEG] %d - %d\n", line, i);
             jpeg_write_raw_data(cinfo, data, 16);
         }
     }
 #endif
+	if (DEBUG_MESSAGE)
+		dprint(LOG_JPEG, "[JPEG] Finis compression\n");
 	jpeg_finish_compress(cinfo);
 	d->len = rgb_size - cinfo->dest->free_in_buffer;
 	if (DEBUG_MESSAGE)
@@ -920,6 +934,8 @@ int NX_JpegEncoding(unsigned char *destImage,
         const unsigned char *inputImage,
         int width,
         int height,
+	int ystride,
+	int cstride,
         int quality,
         NXPixFormat pixFormat)
 {
@@ -928,6 +944,8 @@ int NX_JpegEncoding(unsigned char *destImage,
 
 	d.width 		= width;
 	d.height 		= height;
+	d.ystride		= ystride;
+	d.cstride		= cstride;
 	d.imagesize = imageSize;
 	d.capture_len	= imageSize;
 	d.input_fmt = pixFormat;
@@ -937,6 +955,7 @@ int NX_JpegEncoding(unsigned char *destImage,
 		SLOGE("%s error: init_jpeg_compressor(%d)", __func__, ret);
 		return ret;
 	}
+	SLOGD("%s convert inputImage to JPEG\n", __func__);
 	d.convert(&d, inputImage, destImage);
 	destroy_jpeg_compressor(&d);
 
