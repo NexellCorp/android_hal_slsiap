@@ -42,9 +42,8 @@ private:
     bool UseZoom;
     uint32_t PlaneNum;
     uint32_t Format;
-#ifdef WORKAROUND_128BYTE_ALIGN
     uint32_t CropWidth;
-#endif
+    uint32_t CropHeight;
 };
 
 }; // namespace

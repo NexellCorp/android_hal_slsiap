@@ -40,13 +40,16 @@ PreviewThread::PreviewThread(nxp_v4l2_id id,
         PlaneNum = 1;
         Format = V4L2_PIX_FMT_YUV420;
     }
+    CropHeight = Height;
 #ifdef WORKAROUND_128BYTE_ALIGN
     if (Width % 128)
         CropWidth = ALIGN(Width - 128, 128);
     else
         CropWidth = Width;
 
-    ZoomController->setSource(CropWidth, Height);
+    ZoomController->setSource(CropWidth, CropHeight);
+#else
+    CropWidth = Width;
 #endif
 }
 
@@ -98,11 +101,7 @@ status_t PreviewThread::readyToRun()
         Width = stream->getWidth();
         Height = stream->getHeight();
         ZoomController->freeBuffer();
-#ifdef WORKAROUND_128BYTE_ALIGN
-        ZoomController->setSource(CropWidth, Height);
-#else
-        ZoomController->setSource(Width, Height);
-#endif
+        ZoomController->setSource(CropWidth, CropHeight);
         ZoomController->setDest(Width, Height);
     }
 
@@ -128,7 +127,7 @@ status_t PreviewThread::readyToRun()
         //return NO_INIT;
     }
 
-    ret = v4l2_set_crop(Id, 0, 0, CropWidth, Height);
+    ret = v4l2_set_crop(Id, 0, 0, CropWidth, CropHeight);
     if (ret < 0) {
         ALOGE("failed to v4l2_set_crop for %d", Id);
         return NO_INIT;
@@ -166,17 +165,10 @@ status_t PreviewThread::readyToRun()
         uint32_t zoomFormat;
         zoomFormat = PIXINDEX2PIXFORMAT(PixelIndex);
 
-#ifdef WORKAROUND_128BYTE_ALIGN
-        if (false == ZoomController->allocBuffer(MAX_PREVIEW_ZOOM_BUFFER, CropWidth, Height, zoomFormat)) {
+        if (false == ZoomController->allocBuffer(MAX_PREVIEW_ZOOM_BUFFER, CropWidth, CropHeight, zoomFormat)) {
             ALOGE("failed to allocate preview zoom buffer");
             return NO_MEMORY;
         }
-#else
-        if (false == ZoomController->allocBuffer(MAX_PREVIEW_ZOOM_BUFFER, Width, Height, zoomFormat)) {
-            ALOGE("failed to allocate preview zoom buffer");
-            return NO_MEMORY;
-        }
-#endif
         ret = v4l2_reqbuf(Id, ZoomController->getBufferCount());
         if (ret < 0) {
             ALOGE("failed to v4l2_reqbuf for preview");

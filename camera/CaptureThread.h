@@ -66,6 +66,9 @@ private:
     exif_attribute_t *Exif;
     exif_attribute_t *CurrentExif;
     NXExifProcessor *ExifProcessor;
+
+    uint32_t CropWidth;
+    uint32_t CropHeight;
 };
 
 }; // namespace

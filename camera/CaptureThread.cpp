@@ -45,6 +45,17 @@ CaptureThread::CaptureThread(nxp_v4l2_id id,
       CurrentExif(NULL)
 {
     init(id);
+    CropHeight = height;
+#ifdef WORKAROUND_128BYTE_ALIGN
+    if (width % 128)
+        CropWidth = ALIGN(width - 128, 128);
+    else
+        CropWidth = width;
+
+    ZoomController->setSource(CropWidth, CropHeight);
+#else
+    CropWidth = width;
+#endif
 }
 
 void CaptureThread::init(nxp_v4l2_id id)
@@ -118,7 +129,7 @@ status_t CaptureThread::readyToRun()
 
     sp<NXStreamThread> recordThread = StreamManager->getStreamThread(STREAM_ID_RECORD);
     if (!(recordThread != NULL && recordThread->isRunning())) {
-        if (allocCaptureBuffer(Width, Height) == false) {
+        if (allocCaptureBuffer(CropWidth, CropHeight) == false) {
             return NO_MEMORY;
         }
 
@@ -128,7 +139,7 @@ status_t CaptureThread::readyToRun()
             return NO_INIT;
         }
 
-        ret = v4l2_set_crop(Id, 0, 0, Width, Height);
+        ret = v4l2_set_crop(Id, 0, 0, CropWidth, CropHeight);
         if (ret < 0) {
             ALOGE("failed to v4l2_set_crop for capture");
             return NO_INIT;
@@ -460,8 +471,10 @@ bool CaptureThread::threadLoop()
             struct nxp_vid_buffer *srcBuf = &CaptureBuffer[dqIdx];
             ALOGD("src phys: 0x%lx, 0x%lx, 0x%lx", srcBuf->phys[0], srcBuf->phys[1], srcBuf->phys[2]);
 
-            if (ZoomController->useZoom() && ZoomController->isZoomAvaliable()) {
-                if (false == ZoomController->allocBuffer(MAX_CAPTURE_ZOOM_BUFFER, Width, Height, PIXINDEX2PIXFORMAT(PixelIndex))) {
+            if (ZoomController->useZoom()) {
+            //if (ZoomController->useZoom() && ZoomController->isZoomAvaliable()) {
+                if (false == ZoomController->allocBuffer(MAX_CAPTURE_ZOOM_BUFFER, Width, Height,
+							 PIXINDEX2PIXFORMAT(PixelIndex))) {
                     ALOGE("failed to allocate capture zoom buffer");
                     ERROR_EXIT();
                 }

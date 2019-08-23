@@ -65,11 +65,12 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
     }
 
     NXZoomController *zoomController = NULL;
+    uint32_t cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight;
+
+    cropLeft = cropTop = cropWidth = cropHeight = baseWidth = baseHeight = 0;
     if (useSensorZoom) {
         zoomController = new NullZoomController();
     } else {
-        uint32_t cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight;
-        cropLeft = cropTop = cropWidth = cropHeight = baseWidth = baseHeight = 0;
         Parent->getCrop(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight);
         zoomController = new ScalerZoomController(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight, width, height);
     }
@@ -82,7 +83,7 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
     sp<NXStreamManager> spStreamManager(this);
 
     NXStreamThread *streamThread = NULL;
-	bool	interlace = false;
+    bool	interlace = false;
 
     switch (id) {
     case STREAM_ID_PREVIEW:
@@ -92,8 +93,6 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = DEFAULT_PIXEL_FORMAT;
 #ifdef WORKAROUND_128BYTE_ALIGN
-        uint32_t cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight;
-        cropLeft = cropTop = cropWidth = cropHeight = baseWidth = baseHeight = 0;
         Parent->getCrop(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight);
         spZoomController = new W128BAScalerZoomController(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight, width, height);
         //free(zoomController);
@@ -111,6 +110,11 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = HAL_PIXEL_FORMAT_BLOB;
+#ifdef WORKAROUND_128BYTE_ALIGN
+        Parent->getCrop(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight);
+        spZoomController = new W128BAScalerZoomController(cropLeft, cropTop, cropWidth, cropHeight, baseWidth, baseHeight, width, height);
+        //free(zoomController);
+#endif
         streamThread = new CaptureThread((nxp_v4l2_id)get_board_capture_v4l2_id(Parent->getCameraId()),
                 Parent->getFrameQueueDstOps(),
                 width,
@@ -126,7 +130,7 @@ int NXStreamManager::allocateStream(uint32_t width, uint32_t height, int format,
         *maxBuffers = MAX_STREAM_BUFFERS;
         *formatActual = DEFAULT_PIXEL_FORMAT;
 
-		interlace = Parent->Sensor->isInterlace();
+	interlace = Parent->Sensor->isInterlace();
 #ifdef ARCH_S5P4418
 		if (interlace || ((width % 128) != 0)) {
 #else
